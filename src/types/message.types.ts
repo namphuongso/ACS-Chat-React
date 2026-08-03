@@ -80,3 +80,13 @@ export interface SendMessageOptions {
   /** Optional file attachments */
   attachments?: FileAttachment[];
 }
+
+/**
+ * Options when listing messages from a thread
+ */
+export interface ListMessagesOptions {
+  /** Maximum number of messages per page */
+  maxPageSize?: number;
+  /** Start time to fetch messages from */
+  startTime?: Date;
+}

@@ -15,3 +15,15 @@ export interface ConversationParticipant extends ChatParticipant {
   /** Role of the participant in the conversation */
   role?: 'owner' | 'admin' | 'member';
 }
+
+/**
+ * Options when adding participants to a conversation thread
+ */
+export interface AddParticipantOptions {
+  /** User's ACS Communication User ID */
+  userId: string;
+  /** Optional display name of the user */
+  displayName?: string;
+  /** Optional timestamp from which to share message history */
+  shareHistoryTime?: Date;
+}
