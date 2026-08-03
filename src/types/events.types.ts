@@ -27,4 +27,9 @@ export interface ChatDomainEvent<T = unknown> {
   timestamp: Date;
   /** Event-specific payload data */
   payload: T;
+} /**
+ * Interface for domain event handlers
+ */
+export interface ChatEventHandler {
+  onEvent(event: ChatDomainEvent): void;
 }
