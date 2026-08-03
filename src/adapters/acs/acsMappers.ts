@@ -5,7 +5,10 @@ import type {
   ChatParticipant as ACSChatParticipant,
   ChatMessageReadReceipt,
 } from '@azure/communication-chat';
-import type { CommunicationIdentifier, CommunicationIdentifierKind } from '@azure/communication-common';
+import type {
+  CommunicationIdentifier,
+  CommunicationIdentifierKind,
+} from '@azure/communication-common';
 import type {
   ChatUser,
   ChatMessage,
@@ -73,11 +76,7 @@ export function mapAcsMessageToMessage(
     acsMsg.type === 'participantAdded' ||
     acsMsg.type === 'participantRemoved';
 
-  const type: MessageType = isSystem
-    ? 'system'
-    : acsMsg.type === 'html'
-    ? 'html'
-    : 'text';
+  const type: MessageType = isSystem ? 'system' : acsMsg.type === 'html' ? 'html' : 'text';
 
   const sender = mapAcsIdentifierToUser(acsMsg.sender, acsMsg.senderDisplayName);
 
@@ -112,15 +111,14 @@ export function mapAcsMessageToMessage(
     status: 'sent',
     metadata: acsMsg.metadata,
     systemEvent,
+    sequenceId: acsMsg.sequenceId,
   };
 }
 
 /**
  * Map ACS ChatThreadItem to Library Partial<Conversation>.
  */
-export function mapAcsThreadItemToConversation(
-  threadItem: ChatThreadItem
-): Partial<Conversation> {
+export function mapAcsThreadItemToConversation(threadItem: ChatThreadItem): Partial<Conversation> {
   const result: Partial<GroupConversation> = {
     id: threadItem.id,
     type: 'group',
@@ -167,9 +165,7 @@ export function mapAcsParticipantToParticipant(
 /**
  * Map ACS ChatMessageReadReceipt to Library ReadReceipt.
  */
-export function mapAcsReadReceiptToReadReceipt(
-  receipt: ChatMessageReadReceipt
-): ReadReceipt {
+export function mapAcsReadReceiptToReadReceipt(receipt: ChatMessageReadReceipt): ReadReceipt {
   return {
     messageId: receipt.chatMessageId,
     user: mapAcsIdentifierToUser(receipt.sender),
@@ -180,10 +176,7 @@ export function mapAcsReadReceiptToReadReceipt(
 /**
  * Map ACS Error / RestError / Unknown Error to Library AcsChatError.
  */
-export function mapAcsErrorToChatError(
-  error: unknown,
-  operation?: string
-): AcsChatError {
+export function mapAcsErrorToChatError(error: unknown, operation?: string): AcsChatError {
   if (error instanceof AcsChatError) {
     return error;
   }

@@ -59,3 +59,41 @@ export const selectGroupConversations = (state: ConversationState): GroupConvers
     (conv): conv is GroupConversation => conv.type === 'group'
   );
 };
+
+/* -------------------------------------------------------------------------- */
+/*                              Message Selectors                             */
+/* -------------------------------------------------------------------------- */
+
+import type { MessageState, ConversationMessages } from './messageStore';
+import type { ChatMessage } from '../types/message.types';
+
+/**
+ * Selector: Get messages array for a given conversation ID
+ */
+export const selectMessagesByConversation = (
+  state: MessageState,
+  conversationId: string
+): ChatMessage[] => {
+  return state.messagesByConversation[conversationId]?.messages || [];
+};
+
+/**
+ * Selector: Get full ConversationMessages store data for a conversation ID
+ */
+export const selectConversationMessagesData = (
+  state: MessageState,
+  conversationId: string
+): ConversationMessages | undefined => {
+  return state.messagesByConversation[conversationId];
+};
+
+/**
+ * Selector: Get the latest message for a conversation ID
+ */
+export const selectLatestMessage = (
+  state: MessageState,
+  conversationId: string
+): ChatMessage | undefined => {
+  const messages = selectMessagesByConversation(state, conversationId);
+  return messages.length > 0 ? messages[messages.length - 1] : undefined;
+};

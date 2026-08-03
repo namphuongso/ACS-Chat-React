@@ -67,6 +67,8 @@ export interface ChatMessage {
   };
   /** Temporary client-generated ID before ACS server confirmation */
   clientMessageId?: string;
+  /** ACS sequence ID for ordering messages */
+  sequenceId?: string;
 }
 
 /**
