@@ -60,3 +60,41 @@ export interface ChatError {
   /** Timestamp when the error occurred */
   timestamp: Date;
 }
+
+/**
+ * Custom Error class thrown by the ACS Chat Library
+ */
+export class AcsChatError extends Error implements ChatError {
+  readonly code: ChatErrorCode;
+  readonly cause?: unknown;
+  readonly operation?: string;
+  readonly conversationId?: string;
+  readonly messageId?: string;
+  readonly retryable: boolean;
+  readonly timestamp: Date;
+
+  constructor(
+    code: ChatErrorCode,
+    message: string,
+    options?: {
+      cause?: unknown;
+      operation?: string;
+      conversationId?: string;
+      messageId?: string;
+      retryable?: boolean;
+    }
+  ) {
+    super(message);
+    this.name = 'AcsChatError';
+    this.code = code;
+    this.cause = options?.cause;
+    this.operation = options?.operation;
+    this.conversationId = options?.conversationId;
+    this.messageId = options?.messageId;
+    this.retryable = options?.retryable ?? false;
+    this.timestamp = new Date();
+
+    Object.setPrototypeOf(this, AcsChatError.prototype);
+  }
+}
+
