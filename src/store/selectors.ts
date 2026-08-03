@@ -97,3 +97,54 @@ export const selectLatestMessage = (
   const messages = selectMessagesByConversation(state, conversationId);
   return messages.length > 0 ? messages[messages.length - 1] : undefined;
 };
+
+/* -------------------------------------------------------------------------- */
+/*                       Participant & Typing Selectors                       */
+/* -------------------------------------------------------------------------- */
+
+import type { ParticipantState, TypingUser } from './participantStore';
+import type { ConversationParticipant } from '../types/participant.types';
+import type { ReadReceipt } from '../models/ReadReceipt';
+
+/**
+ * Selector: Get participants array for a given conversation ID
+ */
+export const selectParticipantsByConversation = (
+  state: ParticipantState,
+  conversationId: string
+): ConversationParticipant[] => {
+  return state.participantsByConversation[conversationId] || [];
+};
+
+/**
+ * Selector: Get list of typing users for a given conversation ID
+ */
+export const selectTypingUsersByConversation = (
+  state: ParticipantState,
+  conversationId: string
+): TypingUser[] => {
+  const userMap = state.typingUsers[conversationId];
+  return userMap ? Object.values(userMap) : [];
+};
+
+/**
+ * Selector: Get all read receipts for a given conversation ID
+ */
+export const selectReadReceiptsByConversation = (
+  state: ParticipantState,
+  conversationId: string
+): ReadReceipt[] => {
+  const receiptMap = state.readReceipts[conversationId];
+  return receiptMap ? Object.values(receiptMap) : [];
+};
+
+/**
+ * Selector: Get read receipt for a specific user in a conversation
+ */
+export const selectReadReceiptForUser = (
+  state: ParticipantState,
+  conversationId: string,
+  userId: string
+): ReadReceipt | undefined => {
+  return state.readReceipts[conversationId]?.[userId];
+};
