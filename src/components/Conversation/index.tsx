@@ -1,5 +1,6 @@
 import React from 'react';
 
-export const Conversation: React.FC = () => {
-  return <div>Conversation</div>;
+export const ConversationView: React.FC = () => {
+  return <div>ConversationView</div>;
 };
+
