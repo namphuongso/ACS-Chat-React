@@ -7,6 +7,7 @@ import {
 import { useChatStore } from '../store/chatStore';
 import { useConversationStore } from '../store/conversationStore';
 import { useParticipantStore } from '../store/participantStore';
+import { useMessageStore } from '../store/messageStore';
 import type {
   BaseConversation,
   Conversation,
@@ -379,6 +380,9 @@ export class ConversationService {
     store.setActiveConversation(conversationId);
     store.resetUnreadCount(conversationId);
 
+    // Memory optimization: trim cached messages for inactive conversations
+    useMessageStore.getState().trimInactiveConversations(conversationId, 50);
+
     logger.info(`Conversation ${conversationId} opened`);
   }
 
@@ -395,6 +399,10 @@ export class ConversationService {
     }
 
     store.setActiveConversation(null);
+
+    // Memory optimization: trim cached messages for inactive conversations
+    useMessageStore.getState().trimInactiveConversations(null, 50);
+
     logger.info(`Conversation ${activeId} closed`);
   }
 

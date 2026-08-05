@@ -34,6 +34,8 @@ export interface MessageState {
   setLoadingMore: (conversationId: string, loadingMore: boolean) => void;
   /** Set hasMore pagination flag for a conversation */
   setHasMore: (conversationId: string, hasMore: boolean) => void;
+  /** Trim messages for inactive conversations to a limit to save memory */
+  trimInactiveConversations: (activeConversationId: string | null, keepLimit?: number) => void;
   /** Reset message store state back to initial state */
   reset: () => void;
 }
@@ -270,6 +272,34 @@ export const useMessageStore = create<MessageState>((set) => ({
             hasMore,
           },
         },
+      };
+    }),
+
+  trimInactiveConversations: (activeConversationId: string | null, keepLimit: number = 50) =>
+    set((state) => {
+      let changed = false;
+      const newMessagesByConversation: Record<string, ConversationMessages> = {};
+
+      for (const [convId, convData] of Object.entries(state.messagesByConversation)) {
+        if (convId !== activeConversationId && convData.messages.length > keepLimit) {
+          changed = true;
+          // Keep only the most recent `keepLimit` messages
+          const trimmedMessages = convData.messages.slice(-keepLimit);
+          newMessagesByConversation[convId] = {
+            ...convData,
+            messages: trimmedMessages,
+            oldestLoadedMessageId: trimmedMessages[0]?.id,
+            hasMore: true,
+          };
+        } else {
+          newMessagesByConversation[convId] = convData;
+        }
+      }
+
+      if (!changed) return state;
+
+      return {
+        messagesByConversation: newMessagesByConversation,
       };
     }),
 
