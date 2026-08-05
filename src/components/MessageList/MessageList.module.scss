@@ -4,19 +4,19 @@
   height: 100%;
   width: 100%;
   position: relative;
-  background-color: var(--chat-bg-color, #ffffff);
+  background-color: var(--chat-bg-color, var(--chat-bg));
 }
 
 .loadingMore {
-  padding: 12px;
+  padding: var(--chat-radius-message);
   text-align: center;
   color: var(--chat-text-muted, #666666);
-  font-size: 14px;
+  font-size: var(--chat-font-size);
 }
 
 .dateSeparator {
   text-align: center;
-  margin: 16px 0;
+  margin: var(--chat-spacing-md) 0;
   position: relative;
   
   &::before {
@@ -31,10 +31,10 @@
   }
   
   span {
-    background-color: var(--chat-bg-color, #ffffff);
-    padding: 0 12px;
+    background-color: var(--chat-bg-color, var(--chat-bg));
+    padding: 0 var(--chat-radius-message);
     color: var(--chat-text-muted, #666666);
-    font-size: 12px;
+    font-size: var(--chat-radius-message);
     position: relative;
     z-index: 2;
   }
@@ -43,7 +43,7 @@
 .defaultMessageWrapper {
   display: flex;
   width: 100%;
-  padding: 4px 16px;
+  padding: var(--chat-spacing-xs) var(--chat-spacing-md);
   box-sizing: border-box;
 
   &.own {
@@ -52,15 +52,15 @@
 }
 
 .fallbackMessage {
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: var(--chat-radius) var(--chat-radius-message);
+  border-radius: var(--chat-radius);
   background-color: var(--chat-msg-bg, #f0f0f0);
   color: var(--chat-text-color, #333333);
   max-width: 70%;
   word-break: break-word;
   
   &.ownMessage {
-    background-color: var(--chat-primary-color, #0078d4);
-    color: #ffffff;
+    background-color: var(--chat-primary-color, var(--chat-primary));
+    color: var(--chat-bg);
   }
 }

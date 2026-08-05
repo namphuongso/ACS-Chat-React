@@ -1,5 +1,5 @@
 .searchContainer {
-  padding: 12px 16px;
+  padding: var(--chat-radius-message) var(--chat-spacing-md);
   position: sticky;
   top: 0;
   background: white;
@@ -7,16 +7,16 @@
 
   .searchInput {
     width: 100%;
-    padding: 8px 12px;
+    padding: var(--chat-radius) var(--chat-radius-message);
     border-radius: 20px;
-    border: 1px solid #e1e4e8;
-    background-color: #f5f6f8;
-    font-size: 14px;
+    border: 1px solid var(--chat-border);
+    background-color: var(--chat-bg-secondary);
+    font-size: var(--chat-font-size);
     outline: none;
 
     &:focus {
       border-color: #0052cc;
-      background-color: #fff;
+      background-color: var(--chat-bg);
     }
   }
 }

@@ -25,6 +25,10 @@ export default defineConfig({
         '@azure/communication-common',
       ],
       output: {
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name === 'style.css') return 'styles.css';
+          return assetInfo.name || 'styles.css';
+        },
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM',

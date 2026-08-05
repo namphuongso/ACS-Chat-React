@@ -13,14 +13,14 @@
   width: 24px;
   height: 24px;
   border: 2px solid rgba(0, 0, 0, 0.1);
-  border-top-color: #0078d4;
+  border-top-color: var(--chat-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
 .message {
-  margin-top: 12px;
-  font-size: 14px;
+  margin-top: var(--chat-radius-message);
+  font-size: var(--chat-font-size);
   color: #605e5c;
   margin-bottom: 0;
 }

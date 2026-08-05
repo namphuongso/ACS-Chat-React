@@ -3,21 +3,21 @@
   flex-direction: column;
   height: 100%;
   background: white;
-  padding: 16px;
+  padding: var(--chat-spacing-md);
 }
 
 .addMembersBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--chat-radius);
   width: 100%;
-  padding: 12px;
+  padding: var(--chat-radius-message);
   background-color: #e6e9f0;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--chat-spacing-xs);
   color: #1c2b41;
-  font-size: 14px;
+  font-size: var(--chat-font-size);
   font-weight: 600;
   cursor: pointer;
   margin-bottom: 24px;
@@ -32,10 +32,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: var(--chat-spacing-md);
 
   h3 {
-    font-size: 14px;
+    font-size: var(--chat-font-size);
     font-weight: 600;
     color: #1c2b41;
     margin: 0;
@@ -47,21 +47,21 @@
   border: none;
   cursor: pointer;
   color: #1c2b41;
-  padding: 4px;
-  border-radius: 4px;
+  padding: var(--chat-spacing-xs);
+  border-radius: var(--chat-spacing-xs);
   display: flex;
   align-items: center;
   justify-content: center;
 
   &:hover {
-    background: #f3f4f6;
+    background: var(--chat-bg-secondary);
   }
 }
 
 .participantList {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--chat-spacing-md);
   overflow-y: auto;
 }
 
@@ -75,7 +75,7 @@
 .participantInfo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--chat-radius-message);
 }
 
 .avatarWrapper {
@@ -92,8 +92,8 @@
   position: absolute;
   bottom: -2px;
   right: -2px;
-  width: 16px;
-  height: 16px;
+  width: var(--chat-spacing-md);
+  height: var(--chat-spacing-md);
   background-color: #4b5563;
   border-radius: 50%;
   display: flex;
@@ -109,14 +109,14 @@
 }
 
 .name {
-  font-size: 14px;
+  font-size: var(--chat-font-size);
   font-weight: 600;
   color: #1c2b41;
 }
 
 .role {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--chat-text-secondary);
   text-transform: capitalize;
 }
 
@@ -129,27 +129,27 @@
   right: 0;
   top: 100%;
   background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--chat-border);
+  border-radius: var(--chat-radius);
+  box-shadow: 0 var(--chat-spacing-xs) 6px -1px rgba(0, 0, 0, 0.1), 0 2px var(--chat-spacing-xs) -1px rgba(0, 0, 0, 0.06);
   z-index: 10;
   min-width: 160px;
-  padding: 4px 0;
-  margin-top: 4px;
+  padding: var(--chat-spacing-xs) 0;
+  margin-top: var(--chat-spacing-xs);
 }
 
 .dropdownItem {
   width: 100%;
-  padding: 10px 16px;
+  padding: 10px var(--chat-spacing-md);
   text-align: left;
   background: transparent;
   border: none;
-  font-size: 14px;
+  font-size: var(--chat-font-size);
   color: #1c2b41;
   cursor: pointer;
   white-space: nowrap;
 
   &:hover {
-    background: #f3f4f6;
+    background: var(--chat-bg-secondary);
   }
 }

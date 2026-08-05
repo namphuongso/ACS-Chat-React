@@ -3,18 +3,18 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 32px 16px;
+  padding: 32px var(--chat-spacing-md);
   width: 100%;
   height: 100%;
   min-height: 150px;
   text-align: center;
   background-color: #fdf5f5; // Very light red background
-  border-radius: 8px;
+  border-radius: var(--chat-radius);
 }
 
 .iconContainer {
   color: #d13438; // Danger color
-  margin-bottom: 12px;
+  margin-bottom: var(--chat-radius-message);
   
   svg {
     width: 32px;
@@ -23,32 +23,32 @@
 }
 
 .title {
-  font-size: 16px;
+  font-size: var(--chat-spacing-md);
   font-weight: 600;
   color: #d13438;
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--chat-radius) 0;
 }
 
 .message {
-  font-size: 14px;
+  font-size: var(--chat-font-size);
   color: #605e5c;
-  margin: 0 0 16px 0;
+  margin: 0 0 var(--chat-spacing-md) 0;
   max-width: 300px;
 }
 
 .retryButton {
-  padding: 6px 16px;
-  font-size: 14px;
+  padding: 6px var(--chat-spacing-md);
+  font-size: var(--chat-font-size);
   font-weight: 500;
   color: white;
-  background-color: #0078d4; // Primary color
+  background-color: var(--chat-primary); // Primary color
   border: none;
-  border-radius: 4px;
+  border-radius: var(--chat-spacing-xs);
   cursor: pointer;
   transition: background-color 0.2s;
   
   &:hover {
-    background-color: #106ebe;
+    background-color: var(--chat-primary-hover);
   }
   
   &:active {

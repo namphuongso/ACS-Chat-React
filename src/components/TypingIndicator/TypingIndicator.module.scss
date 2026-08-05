@@ -1,12 +1,12 @@
 .typingIndicator {
   display: flex;
   align-items: center;
-  padding: 4px 16px;
+  padding: var(--chat-spacing-xs) var(--chat-spacing-md);
   min-height: 24px;
   font-size: 13px;
   color: var(--chat-text-muted, #666666);
   background-color: transparent;
-  gap: 4px;
+  gap: var(--chat-spacing-xs);
 }
 
 .text {
@@ -21,8 +21,8 @@
 }
 
 .dot {
-  width: 4px;
-  height: 4px;
+  width: var(--chat-spacing-xs);
+  height: var(--chat-spacing-xs);
   border-radius: 50%;
   background-color: var(--chat-text-muted, #666666);
   animation: typing-bounce 1.4s infinite ease-in-out both;

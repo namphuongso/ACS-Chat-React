@@ -1,6 +1,6 @@
 .messageItem {
   display: flex;
-  margin-bottom: 12px;
+  margin-bottom: var(--chat-radius-message);
   max-width: 100%;
   position: relative;
 
@@ -23,20 +23,20 @@
 .systemMessage {
   justify-content: center;
   width: 100%;
-  margin: 16px 0;
+  margin: var(--chat-spacing-md) 0;
 }
 
 .systemContent {
-  background-color: #f3f4f6;
-  color: #6b7280;
-  padding: 6px 12px;
-  border-radius: 12px;
-  font-size: 12px;
+  background-color: var(--chat-bg-secondary);
+  color: var(--chat-text-secondary);
+  padding: 6px var(--chat-radius-message);
+  border-radius: var(--chat-radius-message);
+  font-size: var(--chat-radius-message);
   text-align: center;
 }
 
 .avatarWrapper {
-  margin-right: 8px;
+  margin-right: var(--chat-radius);
   align-self: flex-end;
 }
 
@@ -55,44 +55,44 @@
 }
 
 .senderName {
-  font-size: 12px;
-  color: #6b7280;
-  margin-bottom: 4px;
-  margin-left: 4px;
+  font-size: var(--chat-radius-message);
+  color: var(--chat-text-secondary);
+  margin-bottom: var(--chat-spacing-xs);
+  margin-left: var(--chat-spacing-xs);
 }
 
 .bubble {
-  padding: 10px 14px;
-  border-radius: 16px;
-  font-size: 14px;
+  padding: 10px var(--chat-font-size);
+  border-radius: var(--chat-spacing-md);
+  font-size: var(--chat-font-size);
   line-height: 1.4;
   word-break: break-word;
   position: relative;
 }
 
 .ownBubble {
-  background-color: #e5f6ff; /* A lighter blue based on standard UI, or user's style */
-  color: #1f2937;
-  border-bottom-right-radius: 4px;
+  background-color: var(--chat-message-own-bg); /* A lighter blue based on standard UI, or user's style */
+  color: var(--chat-text);
+  border-bottom-right-radius: var(--chat-spacing-xs);
   /* Let's try a softer blue or white for own messages if that's what's in the image. 
      Wait, the image shows a white bubble for other, and the user's bubble in the second image is blue-ish white.
      Let's keep original colors or generic ones. */
 }
 
 .otherBubble {
-  background-color: #ffffff;
-  color: #1f2937;
-  border: 1px solid #e5e7eb;
-  border-bottom-left-radius: 4px;
+  background-color: var(--chat-bg);
+  color: var(--chat-text);
+  border: 1px solid var(--chat-border);
+  border-bottom-left-radius: var(--chat-spacing-xs);
 }
 
 .meta {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: var(--chat-spacing-xs);
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--chat-text-secondary);
 }
 
 .status {
@@ -103,7 +103,7 @@
   font-style: italic;
   font-size: 11px;
   opacity: 0.8;
-  margin-left: 4px;
+  margin-left: var(--chat-spacing-xs);
 }
 
 .actions {
@@ -111,11 +111,11 @@
   top: 50%;
   transform: translateY(-50%);
   display: flex;
-  gap: 4px;
+  gap: var(--chat-spacing-xs);
   background: white;
-  padding: 4px;
+  padding: var(--chat-spacing-xs);
   border-radius: 20px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px var(--chat-spacing-xs) rgba(0, 0, 0, 0.15);
   opacity: 0;
   visibility: hidden;
   transition:
@@ -147,30 +147,30 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6b7280;
+  color: var(--chat-text-secondary);
   border-radius: 50%;
   width: 28px;
   height: 28px;
 
   &:hover {
-    background-color: #f3f4f6;
+    background-color: var(--chat-bg-secondary);
     color: #374151;
   }
 
   svg {
-    width: 16px;
-    height: 16px;
+    width: var(--chat-spacing-md);
+    height: var(--chat-spacing-md);
   }
 }
 
 .dropdownMenu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + var(--chat-spacing-xs));
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border-radius: var(--chat-radius);
+  box-shadow: 0 var(--chat-spacing-xs) 20px rgba(0, 0, 0, 0.15);
   min-width: 220px;
-  padding: 8px 0;
+  padding: var(--chat-radius) 0;
   z-index: 20;
 }
 
@@ -186,14 +186,14 @@
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 10px 16px;
+  padding: 10px var(--chat-spacing-md);
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 14px;
-  color: #1f2937;
+  font-size: var(--chat-font-size);
+  color: var(--chat-text);
   text-align: left;
-  gap: 12px;
+  gap: var(--chat-radius-message);
 
   &:hover {
     background-color: #f9fafb;
@@ -208,8 +208,8 @@
 
 .dropdownDivider {
   height: 1px;
-  background-color: #f3f4f6;
-  margin: 4px 0;
+  background-color: var(--chat-bg-secondary);
+  margin: var(--chat-spacing-xs) 0;
 }
 
 .dangerItem {
@@ -224,5 +224,5 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  color: #6b7280;
+  color: var(--chat-text-secondary);
 }

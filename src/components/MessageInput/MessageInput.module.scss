@@ -1,24 +1,24 @@
 .container {
   display: flex;
   align-items: flex-end;
-  padding: 12px 16px;
-  background-color: #ffffff;
-  border-top: 1px solid #e5e7eb;
-  gap: 12px;
+  padding: var(--chat-radius-message) var(--chat-spacing-md);
+  background-color: var(--chat-bg);
+  border-top: 1px solid var(--chat-border);
+  gap: var(--chat-radius-message);
 }
 
 .inputWrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: #f3f4f6;
+  background-color: var(--chat-bg-secondary);
   border-radius: 20px;
-  padding: 8px 16px;
+  padding: var(--chat-radius) var(--chat-spacing-md);
   border: 1px solid transparent;
   transition: border-color 0.2s, background-color 0.2s;
 
   &:focus-within {
-    background-color: #ffffff;
+    background-color: var(--chat-bg);
     border-color: #3b82f6;
   }
 
@@ -45,7 +45,7 @@
   margin: 0;
 
   &::placeholder {
-    color: #9ca3af;
+    color: var(--chat-text-secondary);
   }
 
   &:disabled {
@@ -57,12 +57,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 4px;
+  margin-top: var(--chat-spacing-xs);
 }
 
 .characterCount {
-  font-size: 12px;
-  color: #9ca3af;
+  font-size: var(--chat-radius-message);
+  color: var(--chat-text-secondary);
 }
 
 .sendButton {
@@ -88,8 +88,8 @@
   }
 
   &:disabled {
-    background-color: #e5e7eb;
-    color: #9ca3af;
+    background-color: var(--chat-border);
+    color: var(--chat-text-secondary);
     cursor: not-allowed;
   }
 
@@ -102,5 +102,5 @@
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--chat-radius);
 }
