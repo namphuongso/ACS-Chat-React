@@ -7,3 +7,4 @@ export * from './useTypingIndicator';
 export * from './useReadReceipt';
 export * from './useConnection';
 export * from './useReadReceipt';
+export * from './useConnection';
