@@ -12,7 +12,7 @@ export interface ParticipantListProps {
   renderItem?: (participant: ConversationParticipant) => ReactNode;
 }
 
-export const ParticipantList: React.FC<ParticipantListProps> = ({
+export const ParticipantList: React.FC<ParticipantListProps> = React.memo(({
   participants,
   currentUserId,
   onAddParticipant,
@@ -52,4 +52,4 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
       </div>
     </div>
   );
-};
+});

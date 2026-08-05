@@ -7,7 +7,7 @@ export interface AvatarProps {
   className?: string;
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ url, name, className = '' }) => {
+export const Avatar: React.FC<AvatarProps> = React.memo(({ url, name, className = '' }) => {
   return (
     <div className={`${styles.avatarWrapper} ${className}`}>
       {url ? (
@@ -17,4 +17,4 @@ export const Avatar: React.FC<AvatarProps> = ({ url, name, className = '' }) => 
       )}
     </div>
   );
-};
+});

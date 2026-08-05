@@ -54,10 +54,10 @@ export const useTypingIndicator = (conversationId: string) => {
     }
   }, [conversationId]);
 
-  return {
+  return useMemo(() => ({
     typingUsers: activeTypingUsers,
     typingDisplayText,
     typingSupported,
     sendTyping,
-  };
+  }), [activeTypingUsers, typingDisplayText, typingSupported, sendTyping]);
 };

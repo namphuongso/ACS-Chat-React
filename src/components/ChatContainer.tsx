@@ -18,7 +18,7 @@ export interface ChatContainerProps {
   renderEmpty?: () => ReactNode;
 }
 
-export const ChatContainer: React.FC<ChatContainerProps> = ({
+export const ChatContainer: React.FC<ChatContainerProps> = React.memo(({
   className,
   style,
   renderConversationList,
@@ -77,4 +77,4 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
       </div>
     </div>
   );
-};
+});

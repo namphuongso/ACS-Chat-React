@@ -26,7 +26,7 @@ const getStateMessage = (state: ConnectionState): string => {
   }
 };
 
-export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
+export const ConnectionStatus: React.FC<ConnectionStatusProps> = React.memo(({
   state,
   onRetry,
   renderBanner,
@@ -55,4 +55,4 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
       )}
     </div>
   );
-};
+});

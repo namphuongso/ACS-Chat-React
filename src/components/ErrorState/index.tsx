@@ -10,7 +10,7 @@ export interface ErrorStateProps {
   className?: string;
 }
 
-export const ErrorState: React.FC<ErrorStateProps> = ({ 
+export const ErrorState: React.FC<ErrorStateProps> = React.memo(({ 
   error,
   onRetry,
   className = ''
@@ -34,4 +34,4 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       )}
     </div>
   );
-};
+});

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useParticipantStore } from '../store/participantStore';
 import { selectParticipantsByConversation } from '../store/selectors';
 import { participantService } from '../services/participantService';
@@ -59,12 +59,12 @@ export const useParticipants = (conversationId: string) => {
     }
   }, [conversationId]);
 
-  return {
+  return useMemo(() => ({
     participants,
     loading,
     error,
     addParticipant,
     removeParticipant,
     loadParticipants,
-  };
+  }), [participants, loading, error, addParticipant, removeParticipant, loadParticipants]);
 };

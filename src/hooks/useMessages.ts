@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import { useMessageStore } from '../store/messageStore';
 import { messageService } from '../services/messageService';
 import type { SendMessageOptions } from '../types/message.types';
@@ -76,7 +76,7 @@ export const useMessages = (conversationId: string) => {
     return result;
   }, [conversationId]);
 
-  return {
+  return useMemo(() => ({
     messages,
     loading,
     loadingMore,
@@ -87,5 +87,5 @@ export const useMessages = (conversationId: string) => {
     deleteMessage,
     retryMessage,
     loadMore,
-  };
+  }), [messages, loading, loadingMore, hasMore, error, sendMessage, editMessage, deleteMessage, retryMessage, loadMore]);
 };

@@ -37,7 +37,7 @@ export interface MessageItemProps {
   renderStatus?: (status: MessageStatus) => ReactNode;
 }
 
-export const MessageItem: React.FC<MessageItemProps> = ({
+export const MessageItem: React.FC<MessageItemProps> = React.memo(({
   message,
   isOwn,
   showSender = false,
@@ -239,4 +239,4 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       </div>
     </div>
   );
-};
+});

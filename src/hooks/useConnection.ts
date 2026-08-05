@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { connectionService } from '../services/connectionService';
 import type { ConnectionState } from '../types/chat.types';
@@ -22,8 +22,8 @@ export const useConnection = (): UseConnectionResult => {
     await connectionService.reconnect();
   }, []);
 
-  return {
+  return useMemo(() => ({
     connectionState,
     reconnect,
-  };
+  }), [connectionState, reconnect]);
 };

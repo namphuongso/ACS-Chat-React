@@ -10,7 +10,7 @@ export interface ParticipantItemProps {
   onRemove?: (userId: string) => void;
 }
 
-export const ParticipantItem: React.FC<ParticipantItemProps> = ({ participant, isCurrentUser, onRemove }) => {
+export const ParticipantItem: React.FC<ParticipantItemProps> = React.memo(({ participant, isCurrentUser, onRemove }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -69,4 +69,4 @@ export const ParticipantItem: React.FC<ParticipantItemProps> = ({ participant, i
       )}
     </div>
   );
-};
+});

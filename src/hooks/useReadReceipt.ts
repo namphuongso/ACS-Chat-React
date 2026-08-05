@@ -80,9 +80,9 @@ export function useReadReceipt(conversationId: string) {
     [conversationId, readReceiptsSupported]
   );
 
-  return {
+  return useMemo(() => ({
     getMessageReadStatus,
     readReceiptsSupported,
     sendReadReceipt,
-  };
+  }), [getMessageReadStatus, readReceiptsSupported, sendReadReceipt]);
 }

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { chatService } from '../services/chatService';
 import { connectionService } from '../services/connectionService';
@@ -30,12 +30,12 @@ export const useChat = () => {
     await chatService.dispose();
   }, []);
 
-  return {
+  return useMemo(() => ({
     connectionState,
     currentUser,
     initializing,
     initError,
     initialize,
     disconnect,
-  };
+  }), [connectionState, currentUser, initializing, initError, initialize, disconnect]);
 };

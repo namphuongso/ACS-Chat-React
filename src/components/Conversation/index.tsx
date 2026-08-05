@@ -10,7 +10,7 @@ export interface ConversationViewProps {
   conversationId?: string;
 }
 
-export const ConversationView: React.FC<ConversationViewProps> = ({ conversationId }) => {
+export const ConversationView: React.FC<ConversationViewProps> = React.memo(({ conversationId }) => {
   const { activeConversation, conversations } = useConversations();
   const { currentUser } = useChat();
 
@@ -75,4 +75,4 @@ export const ConversationView: React.FC<ConversationViewProps> = ({ conversation
       </div>
     </div>
   );
-};
+});

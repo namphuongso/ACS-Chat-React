@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { ChatContext, ChatContextValue } from '../providers/ChatContext';
 import { chatService } from '../services/chatService';
 import { connectionService } from '../services/connectionService';
@@ -14,7 +14,7 @@ export interface ChatProviderProps {
   children?: React.ReactNode;
 }
 
-export const ChatProvider: React.FC<ChatProviderProps> = ({ config, children }) => {
+export const ChatProvider: React.FC<ChatProviderProps> = React.memo(({ config, children }) => {
   const [, setError] = useState<Error | null>(null);
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ config, children }) 
     };
   }, [config]);
 
-  const value: ChatContextValue = {
+  const value: ChatContextValue = useMemo(() => ({
     services: {
       chatService,
       connectionService,
@@ -53,7 +53,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ config, children }) 
       readReceiptService,
       typingService,
     },
-  };
+  }), []);
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
-};
+});

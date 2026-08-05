@@ -6,7 +6,7 @@ export interface LoadingStateProps {
   className?: string;
 }
 
-export const LoadingState: React.FC<LoadingStateProps> = ({ 
+export const LoadingState: React.FC<LoadingStateProps> = React.memo(({ 
   message = 'Đang tải...', 
   className = '' 
 }) => {
@@ -16,4 +16,4 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
       {message && <p className={styles.message}>{message}</p>}
     </div>
   );
-};
+});

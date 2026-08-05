@@ -12,7 +12,7 @@ export interface MessageInputProps {
   renderToolbar?: () => ReactNode;
 }
 
-export const MessageInput: React.FC<MessageInputProps> = ({
+export const MessageInput: React.FC<MessageInputProps> = React.memo(({
   onSend,
   onTyping,
   placeholder = 'Type a message...',
@@ -99,4 +99,4 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       )}
     </div>
   );
-};
+});

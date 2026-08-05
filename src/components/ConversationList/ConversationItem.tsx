@@ -11,7 +11,7 @@ export interface ConversationItemProps {
   onClick: () => void;
 }
 
-export const ConversationItem: React.FC<ConversationItemProps> = ({
+export const ConversationItem: React.FC<ConversationItemProps> = React.memo(({
   conversation,
   isActive,
   onClick,
@@ -80,4 +80,4 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
       </div>
     </div>
   );
-};
+});

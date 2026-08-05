@@ -20,7 +20,7 @@ export interface MessageListProps {
 type ListItem =
   { type: 'message'; data: ChatMessage } | { type: 'date-separator'; id: string; date: Date };
 
-export const MessageList: React.FC<MessageListProps> = ({
+export const MessageList: React.FC<MessageListProps> = React.memo(({
   messages,
   currentUserId,
   loading,
@@ -142,4 +142,4 @@ export const MessageList: React.FC<MessageListProps> = ({
       />
     </div>
   );
-};
+});

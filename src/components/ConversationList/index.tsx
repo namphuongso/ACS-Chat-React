@@ -18,7 +18,7 @@ export interface ConversationListProps {
   renderSearch?: () => ReactNode;
 }
 
-export const ConversationList: React.FC<ConversationListProps> = (props) => {
+export const ConversationList: React.FC<ConversationListProps> = React.memo((props) => {
   // Use hook to get default values if props are not provided
   const store = useConversations();
 
@@ -99,6 +99,6 @@ export const ConversationList: React.FC<ConversationListProps> = (props) => {
       )}
     </div>
   );
-};
+});
 
 export * from './ConversationItem';

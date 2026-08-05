@@ -8,7 +8,7 @@ export interface EmptyStateProps {
   className?: string;
 }
 
-export const EmptyState: React.FC<EmptyStateProps> = ({ 
+export const EmptyState: React.FC<EmptyStateProps> = React.memo(({ 
   type,
   message,
   className = ''
@@ -46,4 +46,4 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <p className={styles.message}>{message || getDefaultMessage()}</p>
     </div>
   );
-};
+});

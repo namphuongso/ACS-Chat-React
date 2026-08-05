@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useConversationStore } from '../store/conversationStore';
 import { selectAllConversations, selectActiveConversation } from '../store/selectors';
 import { conversationService } from '../services/conversationService';
@@ -64,7 +64,7 @@ export const useConversations = () => {
     return await conversationService.leaveConversation(conversationId);
   }, []);
 
-  return {
+  return useMemo(() => ({
     conversations,
     activeConversation,
     loading,
@@ -79,5 +79,5 @@ export const useConversations = () => {
     createGroupConversation,
     deleteConversation,
     leaveConversation,
-  };
+  }), [conversations, activeConversation, loading, loadingMore, hasMore, error, loadConversations, loadMore, openConversation, closeConversation, createDirectConversation, createGroupConversation, deleteConversation, leaveConversation]);
 };

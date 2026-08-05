@@ -7,7 +7,7 @@ export interface TypingIndicatorProps {
   renderText?: (typingUsers: ChatUser[]) => ReactNode;
 }
 
-export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
+export const TypingIndicator: React.FC<TypingIndicatorProps> = React.memo(({
   typingUsers,
   renderText,
 }) => {
@@ -48,4 +48,4 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
       </span>
     </div>
   );
-};
+});
