@@ -57,7 +57,26 @@ export class ChatService {
       let credential: AzureCommunicationTokenCredential;
       if (typeof config.tokenRefresher === 'function') {
         credential = new AzureCommunicationTokenCredential({
-          tokenRefresher: async () => config.tokenRefresher(),
+          tokenRefresher: async () => {
+            try {
+              const newToken = await config.tokenRefresher();
+              this.handleDomainEvent({
+                type: 'token:refreshed',
+                conversationId: '',
+                timestamp: new Date(),
+                payload: { token: newToken },
+              });
+              return newToken;
+            } catch (error) {
+              this.handleDomainEvent({
+                type: 'token:refreshFailed',
+                conversationId: '',
+                timestamp: new Date(),
+                payload: { error },
+              });
+              throw error;
+            }
+          },
           refreshProactively: true,
           token: config.token,
         });

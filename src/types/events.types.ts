@@ -13,7 +13,9 @@ export type ChatEventType =
   | 'participant:added'
   | 'participant:removed'
   | 'connection:connected'
-  | 'connection:disconnected';
+  | 'connection:disconnected'
+  | 'token:refreshed'
+  | 'token:refreshFailed';
 
 /**
  * Normalized domain event payload structure
