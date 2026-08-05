@@ -2,23 +2,46 @@
 
 React + TypeScript Azure Communication Services (ACS) Chat Library for Nam Phuong.
 
-This library provides a set of UI components and React hooks for building chat applications powered by Azure Communication Services. It supports two main approaches for integration: **Approach A (Pre-built UI Components)** and **Approach B (Headless Hooks)**.
+This library provides a comprehensive set of UI components and React hooks for building chat applications powered by Azure Communication Services. It supports two main approaches for integration: **Approach A (Pre-built UI Components)** and **Approach B (Headless Hooks)**.
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+  - [Approach A: Pre-built UI Components](#approach-a-pre-built-ui-components)
+  - [Approach B: Headless Hooks (Custom UI)](#approach-b-headless-hooks-custom-ui)
+- [Configuration](#configuration)
+  - [ChatConfig Object](#chatconfig-object)
+- [Available Hooks](#available-hooks)
+- [Customizing Default Styles](#customizing-default-styles)
+
+---
 
 ## Installation
 
+You can install the library via npm or yarn:
+
 ```bash
 npm install @namphuong/acs-chat-react
+# or
+yarn add @namphuong/acs-chat-react
 ```
 
-## Setup
+### Peer Dependencies
+Make sure you have React and React DOM installed in your project:
+```bash
+npm install react react-dom
+```
 
-First, import the library styles in your application entry point if you plan to use the pre-built UI components or if you want to leverage the default CSS variables:
+---
+
+## Quick Start
+
+Before using the library, ensure you import the library styles in your application's entry point if you plan to use the pre-built UI components or if you want to leverage the default CSS variables:
 
 ```tsx
 import '@namphuong/acs-chat-react/dist/index.css';
 ```
-
-## Integration Approaches
 
 ### Approach A: Pre-built UI Components
 
@@ -27,13 +50,18 @@ This is the fastest way to get a chat interface up and running. You wrap your ap
 ```tsx
 import React from 'react';
 import { ChatProvider, ChatContainer, ChatConfig } from '@namphuong/acs-chat-react';
-import { AzureCommunicationTokenCredential } from '@azure/communication-common';
 
 const chatConfig: ChatConfig = {
-  endpointUrl: 'https://<your-acs-resource>.communication.azure.com/',
-  credential: new AzureCommunicationTokenCredential('<your-access-token>'),
+  endpoint: 'https://<your-acs-resource>.communication.azure.com/',
   userId: '8:acs:123456',
-  displayName: 'Current User'
+  displayName: 'Current User',
+  token: '<your-access-token>',
+  tokenRefresher: async () => {
+    // Fetch a new token from your backend
+    const response = await fetch('/api/get-token');
+    const data = await response.json();
+    return data.token;
+  }
 };
 
 const App = () => {
@@ -59,17 +87,15 @@ import {
   ChatProvider, 
   useChat, 
   useConversations, 
-  useMessages, 
   ChatConfig 
 } from '@namphuong/acs-chat-react';
-import { AzureCommunicationTokenCredential } from '@azure/communication-common';
 
 const CustomConversationList = () => {
-  const { conversations, isLoading, loadConversations } = useConversations();
+  const { conversations, isLoading, fetchConversations } = useConversations();
   
   useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+    fetchConversations();
+  }, [fetchConversations]);
 
   if (isLoading) return <div>Loading conversations...</div>;
 
@@ -97,10 +123,14 @@ const CustomChatApp = () => {
 };
 
 const chatConfig: ChatConfig = {
-  endpointUrl: 'https://<your-acs-resource>.communication.azure.com/',
-  credential: new AzureCommunicationTokenCredential('<your-access-token>'),
+  endpoint: 'https://<your-acs-resource>.communication.azure.com/',
   userId: '8:acs:123456',
-  displayName: 'Current User'
+  displayName: 'Current User',
+  token: '<your-access-token>',
+  tokenRefresher: async () => {
+    // Refresh token logic
+    return 'new-token';
+  }
 };
 
 const App = () => {
@@ -114,26 +144,70 @@ const App = () => {
 export default App;
 ```
 
+---
+
+## Configuration
+
+### `ChatConfig` Object
+
+The `ChatProvider` requires a `config` object of type `ChatConfig` to initialize the connection to Azure Communication Services.
+
+| Property | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| **`endpoint`** | `string` | **Yes** | Your ACS resource endpoint URL (e.g., `https://<resource>.communication.azure.com/`). |
+| **`userId`** | `string` | **Yes** | The current user's ACS Communication User ID (e.g., `8:acs:123456`). |
+| **`displayName`** | `string` | **Yes** | The display name of the current user. |
+| **`token`** | `string` | **Yes** | The initial ACS access token. |
+| **`tokenRefresher`** | `() => Promise<string>` | **Yes** | An async callback function that fetches and returns a new access token when the current one expires. |
+| **`backendUrl`** | `string` | No | Optional backend API base URL for custom integrations. |
+| **`backendHeaders`** | `Record<string, string>` | No | Optional custom headers to include with requests to the `backendUrl`. |
+| **`reconnectPolicy`** | `ReconnectPolicy` | No | Configuration for reconnecting to ACS. Includes `maxRetries`, `initialDelayMs`, `maxDelayMs`, and `backoffMultiplier`. |
+| **`logger`** | `ChatLogger` | No | Optional custom logger implementation (`debug`, `info`, `warn`, `error`). |
+| **`onFileUpload`** | `(file: File) => Promise<FileAttachment>` | No | Optional callback to handle file uploads, returning metadata for attachment. |
+
+#### Reconnect Policy (`ReconnectPolicy`)
+- **`maxRetries`**: Maximum number of reconnection attempts (default: `10`).
+- **`initialDelayMs`**: Initial delay before first reconnection attempt (default: `1000`).
+- **`maxDelayMs`**: Maximum delay between reconnection attempts (default: `30000`).
+- **`backoffMultiplier`**: Multiplier for exponential backoff (default: `2`).
+
+---
+
 ## Available Hooks
 
-- `useChat()`: Core chat initialization state and error handling.
-- `useConnection()`: Connection status and reconnection logic.
-- `useConversations()`: CRUD operations and state for conversations.
-- `useMessages(threadId)`: Message history, sending, editing, deleting for a specific thread.
-- `useParticipants(threadId)`: Manage participants in a thread.
-- `useTypingIndicator(threadId)`: Send and receive typing indicators.
-- `useReadReceipt(threadId)`: Send and track read receipts.
+The library exposes several hooks for headless UI implementations:
+
+- **`useChat()`**: Core chat initialization state and error handling.
+- **`useConnection()`**: Connection status and manual reconnection logic.
+- **`useConversations()`**: CRUD operations and state for conversations.
+- **`useMessages(threadId)`**: Message history, sending, editing, and deleting for a specific thread.
+- **`useParticipants(threadId)`**: Manage participants (add/remove) in a thread.
+- **`useTypingIndicator(threadId)`**: Send and receive typing indicators.
+- **`useReadReceipt(threadId)`**: Send and track read receipts for messages.
+
+---
 
 ## Customizing Default Styles
 
-If using the pre-built components, you can customize the appearance by overriding CSS variables in your own stylesheet:
+If you are using the pre-built UI components, you can easily customize the appearance by overriding the default CSS variables in your own stylesheet:
 
 ```css
 :root {
+  /* Colors */
   --acs-color-primary: #0078d4;
   --acs-color-primary-hover: #106ebe;
   --acs-color-background: #ffffff;
+  --acs-color-background-muted: #f3f2f1;
+  
+  /* Text */
   --acs-color-text: #323130;
+  --acs-color-text-muted: #605e5c;
+  
+  /* Borders */
+  --acs-border-color: #edebe9;
   --acs-border-radius-md: 8px;
+  
+  /* Typography */
+  --acs-font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 ```
