@@ -17,6 +17,7 @@ const DEFAULT_RECONNECT_POLICY: ReconnectPolicy = {
 export class ConnectionService {
   private networkListenersBound = false;
   private reconnecting = false;
+  private chatServiceUnsubscribe?: () => void;
 
   private handleOnline = () => {
     // Attempt reconnect when network is restored
@@ -32,18 +33,39 @@ export class ConnectionService {
   };
 
   public setupNetworkListeners(): void {
-    if (this.networkListenersBound || typeof window === 'undefined') return;
+    if (this.networkListenersBound) return;
     
-    window.addEventListener('online', this.handleOnline);
-    window.addEventListener('offline', this.handleOffline);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', this.handleOnline);
+      window.addEventListener('offline', this.handleOffline);
+    }
+
+    this.chatServiceUnsubscribe = chatService.subscribe((event) => {
+      if (event.type === 'connection:disconnected' && !this.reconnecting) {
+        const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+        if (isOnline) {
+          const config = chatService.getConfig();
+          this.reconnect(config?.reconnectPolicy).catch(console.error);
+        }
+      }
+    });
+
     this.networkListenersBound = true;
   }
 
   public teardownNetworkListeners(): void {
-    if (!this.networkListenersBound || typeof window === 'undefined') return;
+    if (!this.networkListenersBound) return;
 
-    window.removeEventListener('online', this.handleOnline);
-    window.removeEventListener('offline', this.handleOffline);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', this.handleOnline);
+      window.removeEventListener('offline', this.handleOffline);
+    }
+
+    if (this.chatServiceUnsubscribe) {
+      this.chatServiceUnsubscribe();
+      this.chatServiceUnsubscribe = undefined;
+    }
+
     this.networkListenersBound = false;
   }
 
