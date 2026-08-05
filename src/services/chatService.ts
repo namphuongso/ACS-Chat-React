@@ -14,6 +14,7 @@ import type { GroupConversation } from '../types/conversation.types';
 import type { ReadReceipt } from '../models/ReadReceipt';
 import type { ChatUser } from '../types/chat.types';
 import { AcsChatError } from '../types/errors.types';
+import { unstable_batchedUpdates } from 'react-dom';
 
 export type EventListenerFn = (event: ChatDomainEvent) => void;
 
@@ -239,6 +240,12 @@ export class ChatService {
    * Handle incoming domain event and route it to the appropriate Zustand store actions.
    */
   public handleDomainEvent(event: ChatDomainEvent): void {
+    unstable_batchedUpdates(() => {
+      this.processDomainEvent(event);
+    });
+  }
+
+  private processDomainEvent(event: ChatDomainEvent): void {
     const chatStore = useChatStore.getState();
     const convStore = useConversationStore.getState();
     const msgStore = useMessageStore.getState();
