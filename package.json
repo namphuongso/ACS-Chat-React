@@ -14,11 +14,29 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md",
+    "README.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/namphuongso/ACS-Chat-React.git"
+  },
+  "keywords": [
+    "react",
+    "chat",
+    "acs",
+    "azure-communication-services"
+  ],
+  "author": "Nam Phuong Technology",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "prepublishOnly": "npm run build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "test": "vitest run",
