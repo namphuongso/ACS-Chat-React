@@ -1,1 +1,1 @@
-export const debounce = <T extends (...args: unknown[]) => unknown>(fn: T): T => fn;
+export const debounce = <T extends (...args: never[]) => unknown>(fn: T): T => fn;

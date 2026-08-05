@@ -232,6 +232,7 @@ describe('messageStore', () => {
       setLoadingMore: expect.any(Function),
       setHasMore: expect.any(Function),
       reset: expect.any(Function),
+      trimInactiveConversations: expect.any(Function),
     });
   });
 
