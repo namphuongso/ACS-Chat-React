@@ -176,8 +176,24 @@ export function mapAcsReadReceiptToReadReceipt(receipt: ChatMessageReadReceipt):
 /**
  * Map ACS Error / RestError / Unknown Error to Library AcsChatError.
  */
-export function mapAcsErrorToChatError(error: unknown, operation?: string): AcsChatError {
+export function mapAcsErrorToChatError(
+  error: unknown,
+  operation?: string,
+  options?: { messageId?: string; conversationId?: string }
+): AcsChatError {
   if (error instanceof AcsChatError) {
+    if (
+      (options?.messageId && error.messageId !== options.messageId) ||
+      (options?.conversationId && error.conversationId !== options.conversationId)
+    ) {
+      return new AcsChatError(error.code, error.message, {
+        cause: error.cause,
+        operation: operation || error.operation,
+        conversationId: options.conversationId || error.conversationId,
+        messageId: options.messageId || error.messageId,
+        retryable: error.retryable,
+      });
+    }
     return error;
   }
 
@@ -221,5 +237,7 @@ export function mapAcsErrorToChatError(error: unknown, operation?: string): AcsC
     cause: error,
     operation,
     retryable,
+    conversationId: options?.conversationId,
+    messageId: options?.messageId,
   });
 }

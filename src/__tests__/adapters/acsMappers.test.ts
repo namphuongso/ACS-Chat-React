@@ -219,5 +219,47 @@ describe('ACS Model Mappers', () => {
       expect(mapped.code).toBe('NETWORK_ERROR');
       expect(mapped.retryable).toBe(true);
     });
+
+    it('should attach messageId and conversationId from options when mapping a new error', () => {
+      const error = { statusCode: 400, message: 'Bad Request' };
+      const mapped = mapAcsErrorToChatError(error, 'someOperation', {
+        messageId: 'msg-123',
+        conversationId: 'conv-456',
+      });
+      expect(mapped.code).toBe('INVALID_INPUT');
+      expect(mapped.operation).toBe('someOperation');
+      expect(mapped.messageId).toBe('msg-123');
+      expect(mapped.conversationId).toBe('conv-456');
+    });
+
+    it('should return a new error with messageId/conversationId if already an AcsChatError but those properties differ', () => {
+      const existingError = new AcsChatError('INVALID_INPUT', 'Test message', {
+        operation: 'oldOp',
+        conversationId: 'oldConv',
+        messageId: 'oldMsg',
+      });
+      const mapped = mapAcsErrorToChatError(existingError, 'newOp', {
+        messageId: 'newMsg',
+        conversationId: 'newConv',
+      });
+      expect(mapped).not.toBe(existingError);
+      expect(mapped.code).toBe('INVALID_INPUT');
+      expect(mapped.operation).toBe('newOp');
+      expect(mapped.messageId).toBe('newMsg');
+      expect(mapped.conversationId).toBe('newConv');
+    });
+
+    it('should return the same error if it is already an AcsChatError and options match or are not provided', () => {
+      const existingError = new AcsChatError('INVALID_INPUT', 'Test message', {
+        operation: 'oldOp',
+        conversationId: 'oldConv',
+        messageId: 'oldMsg',
+      });
+      const mapped = mapAcsErrorToChatError(existingError, 'oldOp', {
+        messageId: 'oldMsg',
+        conversationId: 'oldConv',
+      });
+      expect(mapped).toBe(existingError);
+    });
   });
 });
