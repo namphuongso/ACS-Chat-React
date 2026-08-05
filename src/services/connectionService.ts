@@ -3,6 +3,7 @@ import { useConversationStore } from '../store/conversationStore';
 import { chatService } from './chatService';
 import { conversationService } from './conversationService';
 import { messageService } from './messageService';
+import { readReceiptService } from './readReceiptService';
 import type { ReconnectPolicy } from '../types/config.types';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -104,10 +105,37 @@ export class ConnectionService {
         await conversationService.loadConversations();
         
         // Resync active conversation if we have one
-        const activeConversationId = useConversationStore.getState().activeConversationId;
+        const convStore = useConversationStore.getState();
+        const activeConversationId = convStore.activeConversationId;
         if (activeConversationId) {
           await messageService.loadMessages(activeConversationId);
         }
+
+        // Background resync for inactive conversations
+        const conversations = convStore.conversations;
+        const resyncPromises = Object.keys(conversations).map(async (convId) => {
+          // Sync read receipts for all conversations
+          try {
+            await readReceiptService.loadReadReceipts(convId);
+          } catch (err) {
+            console.warn(`[ConnectionService] Failed to load read receipts for ${convId}:`, err);
+          }
+
+          // Sync latest message only for inactive conversations (active already loaded all msgs)
+          if (convId !== activeConversationId) {
+            try {
+              const res = await messageService.loadLatestMessage(convId);
+              if (res.message) {
+                useConversationStore.getState().updateLastMessage(convId, res.message);
+              }
+            } catch (err) {
+              console.warn(`[ConnectionService] Failed to load latest message for ${convId}:`, err);
+            }
+          }
+        });
+
+        // Fire and forget to not block the connected state
+        Promise.allSettled(resyncPromises).catch(console.error);
 
         chatStore.setConnectionState('connected');
         this.reconnecting = false;

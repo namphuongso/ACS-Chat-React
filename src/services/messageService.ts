@@ -108,6 +108,52 @@ export class MessageService {
   }
 
   /**
+   * Fetch only the latest message for a conversation, primarily used for state resync.
+   * Does not replace the entire message list in the store, just adds/updates the latest.
+   */
+  public async loadLatestMessage(conversationId: string): Promise<MessageResult> {
+    if (!conversationId || conversationId.trim() === '') {
+      throw new AcsChatError('INVALID_INPUT', 'conversationId is required.', {
+        operation: 'loadLatestMessage',
+      });
+    }
+
+    try {
+      const threadClient = this.getThreadClient(conversationId);
+      const currentUserId = useChatStore.getState().currentUser?.id;
+
+      if (!currentUserId) {
+        throw new AcsChatError('AUTH_UNAUTHORIZED', 'Current user is not set.', {
+          operation: 'loadLatestMessage',
+        });
+      }
+
+      // Fetch just the last 1 message
+      const iterable = threadClient.listMessages({ maxPageSize: 1 });
+      let latestMessage: ChatMessage | undefined;
+
+      for await (const page of iterable.byPage()) {
+        if (page.length > 0) {
+          const { mapAcsMessageToMessage } = await import('../adapters/acs/acsMappers');
+          latestMessage = mapAcsMessageToMessage(page[0], conversationId, currentUserId);
+        }
+        break; // Only need the very first message returned (which is the latest)
+      }
+
+      if (latestMessage) {
+        // Add to message store
+        const msgStore = useMessageStore.getState();
+        msgStore.addMessage(conversationId, latestMessage);
+      }
+
+      return { message: latestMessage };
+    } catch (error) {
+      const chatError = mapAcsErrorToChatError(error, 'loadLatestMessage');
+      throw chatError;
+    }
+  }
+
+  /**
    * Load older messages for pagination (prepend before the oldest loaded message).
    */
   public async loadMore(

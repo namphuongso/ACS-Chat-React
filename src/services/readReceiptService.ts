@@ -117,5 +117,34 @@ export class ReadReceiptService {
 
     this.debounceTimers.set(conversationId, timer);
   }
+
+  /**
+   * Load the latest read receipts for a conversation and update the store.
+   * Useful for state resync after reconnecting.
+   */
+  public async loadReadReceipts(conversationId: string): Promise<void> {
+    if (!conversationId || conversationId.trim() === '') {
+      throw new AcsChatError('INVALID_INPUT', 'conversationId is required.', {
+        operation: 'loadReadReceipts',
+      });
+    }
+
+    try {
+      const threadClient = this.getThreadClient(conversationId);
+      const iterable = threadClient.listReadReceipts();
+      const partStore = useParticipantStore.getState();
+
+      for await (const page of iterable.byPage()) {
+        for (const acsReceipt of page) {
+          const { mapAcsReadReceiptToReadReceipt } = await import('../adapters/acs/acsMappers');
+          const receipt = mapAcsReadReceiptToReadReceipt(acsReceipt);
+          partStore.addReadReceipt(conversationId, receipt);
+        }
+        break; // Typically the first page has the latest receipts
+      }
+    } catch (error) {
+      console.warn(`[ReadReceiptService] Failed to load read receipts for ${conversationId}:`, error);
+    }
+  }
 }
 export const readReceiptService = new ReadReceiptService();
