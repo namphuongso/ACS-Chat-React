@@ -20,6 +20,7 @@ import type { CreateDirectConversationOptions, CreateGroupConversationOptions } 
  * @property {Function} closeConversation - Method to clear the active conversation
  * @property {Function} createDirectConversation - Method to create a 1:1 conversation
  * @property {Function} createGroupConversation - Method to create a group conversation
+ * @property {Function} updateTopic - Method to update the topic of a group conversation
  * @property {Function} deleteConversation - Method to delete a conversation
  * @property {Function} leaveConversation - Method to leave a conversation
  */
@@ -37,8 +38,23 @@ export const useConversations = () => {
   }, []);
 
   const loadMore = useCallback(async () => {
-    // To be implemented: pagination logic
-  }, []);
+    if (loadingMore || !hasMore) return;
+    
+    // Read the current state to figure out how many pages we have
+    // Assuming each page is maxPageSize (50 by default), we can calculate the next page
+    // Or we could track a separate page state. Let's use conversation counts as an estimate.
+    const currentCount = useConversationStore.getState().conversationIds.length;
+    const nextPage = Math.floor(currentCount / 50) + 1;
+    
+    useConversationStore.getState().setLoadingMore(true);
+    try {
+      await conversationService.loadConversations({ page: nextPage, maxPageSize: 50 });
+    } catch (e) {
+      console.error('Failed to load more conversations', e);
+    } finally {
+      useConversationStore.getState().setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore]);
 
   const openConversation = useCallback((conversationId: string) => {
     conversationService.openConversation(conversationId);
@@ -54,6 +70,10 @@ export const useConversations = () => {
 
   const createGroupConversation = useCallback(async (options: CreateGroupConversationOptions) => {
     return await conversationService.createGroupConversation(options);
+  }, []);
+
+  const updateTopic = useCallback(async (conversationId: string, topic: string) => {
+    return await conversationService.updateGroupTopic(conversationId, topic);
   }, []);
 
   const deleteConversation = useCallback(async (conversationId: string) => {
@@ -77,7 +97,8 @@ export const useConversations = () => {
     closeConversation,
     createDirectConversation,
     createGroupConversation,
+    updateTopic,
     deleteConversation,
     leaveConversation,
-  }), [conversations, activeConversation, loading, loadingMore, hasMore, error, loadConversations, loadMore, openConversation, closeConversation, createDirectConversation, createGroupConversation, deleteConversation, leaveConversation]);
+  }), [conversations, activeConversation, loading, loadingMore, hasMore, error, loadConversations, loadMore, openConversation, closeConversation, createDirectConversation, createGroupConversation, updateTopic, deleteConversation, leaveConversation]);
 };

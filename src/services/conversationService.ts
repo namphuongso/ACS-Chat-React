@@ -8,6 +8,7 @@ import { useChatStore } from '../store/chatStore';
 import { useConversationStore } from '../store/conversationStore';
 import { useParticipantStore } from '../store/participantStore';
 import { useMessageStore } from '../store/messageStore';
+import { fetchBackend } from '../utils/apiClient';
 import type {
   BaseConversation,
   Conversation,
@@ -21,12 +22,23 @@ import { AcsChatError } from '../types/errors.types';
 import { logger } from '../utils/logger';
 import type { ChatService } from './chatService';
 
+export interface BackendConversationItem {
+  id: string;
+  type: string;
+  topic?: string;
+  createdAt?: string | Date | number;
+  updatedAt?: string | Date | number;
+  participants?: ConversationParticipant[];
+}
+
 /**
  * Options for listing conversations with pagination support.
  */
 export interface ListConversationsOptions {
   /** Maximum number of conversations per page (default: 50) */
   maxPageSize?: number;
+  /** Page number for backend pagination (default: 1) */
+  page?: number;
 }
 
 /**
@@ -89,76 +101,126 @@ export class ConversationService {
       }
 
       const conversations: Conversation[] = [];
-      const threads = chatClient.listChatThreads({ maxPageSize });
+      const config = this.chatServiceRef?.getConfig();
 
-      for await (const page of threads.byPage()) {
-        for (const thread of page) {
-          const partialConv = mapAcsThreadItemToConversation(thread);
-          const convId = partialConv.id!;
-
-          // Fetch participants for this thread to determine conversation type
-          try {
-            const threadClient = chatClient.getChatThreadClient(convId);
-            const participants: ConversationParticipant[] = [];
-            const participantIterator = threadClient.listParticipants();
-            for await (const partPage of participantIterator.byPage()) {
-              for (const acsPart of partPage) {
-                participants.push(mapAcsParticipantToParticipant(acsPart));
-              }
-            }
-
-            const isDirect = participants.length === 2;
-            const otherParticipant = participants.find((p) => p.id !== currentUserId);
-
-            if (isDirect && otherParticipant) {
-              const directConv = {
-                id: convId,
-                type: 'direct' as const,
-                createdAt: partialConv.createdAt || new Date(),
-                updatedAt: partialConv.updatedAt,
-                unreadCount: 0,
-                participants,
-                otherParticipant,
-              };
-              conversations.push(directConv);
-            } else {
-              const groupConv: GroupConversation = {
-                id: convId,
-                type: 'group',
-                name: (partialConv as GroupConversation).name || 'Group',
-                createdAt: partialConv.createdAt || new Date(),
-                updatedAt: partialConv.updatedAt,
-                unreadCount: 0,
-                participants,
-              };
-              conversations.push(groupConv);
-            }
-
-            // Set participants in store
-            if (participants.length > 0) {
-              useParticipantStore.getState().setParticipants(convId, participants);
-            }
-          } catch (error) {
-            // If fetching participants fails, still add as a basic conversation
-            const basicConv: BaseConversation = {
-              id: convId,
-              type: 'group',
-              createdAt: partialConv.createdAt || new Date(),
-              updatedAt: partialConv.updatedAt,
+      if (config?.backendUrl) {
+        // Backend pagination
+        const page = options?.page || 1;
+        const limit = maxPageSize;
+        const res = await fetchBackend<BackendConversationItem[]>(config, `/api/conversations?page=${page}&limit=${limit}`, {
+          method: 'GET',
+        });
+        
+        const data = res.data || [];
+        for (const item of data) {
+          if (item.type === 'direct') {
+            conversations.push({
+              id: item.id,
+              type: 'direct',
+              createdAt: new Date(item.createdAt || Date.now()),
+              updatedAt: item.updatedAt ? new Date(item.updatedAt) : undefined,
               unreadCount: 0,
               participants: [],
-            };
-            conversations.push(basicConv as Conversation);
-            logger.warn(`Failed to fetch participants for thread ${convId}`, error);
+              otherParticipant: { id: 'unknown', displayName: 'Unknown' },
+            });
+          } else {
+            conversations.push({
+              id: item.id,
+              type: 'group',
+              name: item.topic || 'Group',
+              createdAt: new Date(item.createdAt || Date.now()),
+              updatedAt: item.updatedAt ? new Date(item.updatedAt) : undefined,
+              unreadCount: 0,
+              participants: [],
+            });
           }
         }
-        // Break after first page for initial load; pagination handled separately
-        break;
-      }
+        
+        if (page === 1) {
+          store.setConversations(conversations);
+        } else {
+          store.appendConversations(conversations);
+        }
+        store.setLoading(false);
+        store.setHasMore(data.length === limit);
+      } else {
+        // ACS native fetch
+        const threads = chatClient.listChatThreads({ maxPageSize });
 
-      store.setConversations(conversations);
-      store.setLoading(false);
-      store.setHasMore(false);
+        for await (const page of threads.byPage()) {
+          for (const thread of page) {
+            const partialConv = mapAcsThreadItemToConversation(thread);
+            const convId = partialConv.id!;
+
+            // Fetch participants for this thread to determine conversation type
+            try {
+              const threadClient = chatClient.getChatThreadClient(convId);
+              const participants: ConversationParticipant[] = [];
+              const participantIterator = threadClient.listParticipants();
+              for await (const partPage of participantIterator.byPage()) {
+                for (const acsPart of partPage) {
+                  participants.push(mapAcsParticipantToParticipant(acsPart));
+                }
+              }
+
+              const isDirect = participants.length === 2;
+              const otherParticipant = participants.find((p) => p.id !== currentUserId);
+
+              if (isDirect && otherParticipant) {
+                const directConv = {
+                  id: convId,
+                  type: 'direct' as const,
+                  createdAt: partialConv.createdAt || new Date(),
+                  updatedAt: partialConv.updatedAt,
+                  unreadCount: 0,
+                  participants,
+                  otherParticipant,
+                };
+                conversations.push(directConv);
+              } else {
+                const groupConv: GroupConversation = {
+                  id: convId,
+                  type: 'group',
+                  name: (partialConv as GroupConversation).name || 'Group',
+                  createdAt: partialConv.createdAt || new Date(),
+                  updatedAt: partialConv.updatedAt,
+                  unreadCount: 0,
+                  participants,
+                };
+                conversations.push(groupConv);
+              }
+
+              // Set participants in store
+              if (participants.length > 0) {
+                useParticipantStore.getState().setParticipants(convId, participants);
+              }
+            } catch (error) {
+              // If fetching participants fails, still add as a basic conversation
+              const basicConv: BaseConversation = {
+                id: convId,
+                type: 'group',
+                createdAt: partialConv.createdAt || new Date(),
+                updatedAt: partialConv.updatedAt,
+                unreadCount: 0,
+                participants: [],
+              };
+              conversations.push(basicConv as Conversation);
+              logger.warn(`Failed to fetch participants for thread ${convId}`, error);
+            }
+          }
+          // Break after first page for initial load; pagination handled separately
+          break;
+        }
+
+        const page = options?.page || 1;
+        if (page === 1) {
+          store.setConversations(conversations);
+        } else {
+          store.appendConversations(conversations);
+        }
+        store.setLoading(false);
+        store.setHasMore(false);
+      }
 
       return conversations.map((conv) => ({ conversation: conv }));
     } catch (error) {
@@ -198,37 +260,55 @@ export class ConversationService {
         });
       }
 
-      const topic = `Direct chat with ${options.displayName || options.targetUserId}`;
-
-      // ACS SDK automatically adds the current user; only add the target user
-      const result = await chatClient.createChatThread(
-        { topic },
-        {
-          participants: [
-            {
-              id: { communicationUserId: options.targetUserId },
-              displayName: options.displayName,
-            },
-          ],
-        }
-      );
-
-      const threadId = result.chatThread?.id;
-      if (!threadId) {
-        throw new AcsChatError('UNKNOWN_ERROR', 'Failed to get thread ID from created thread.', {
-          operation: 'createDirectConversation',
-        });
-      }
-
+      const config = this.chatServiceRef?.getConfig();
+      let threadId: string;
+      
       const participants: ConversationParticipant[] = [
         { id: currentUserId, displayName: currentDisplayName || undefined, role: 'owner' },
         { id: options.targetUserId, displayName: options.displayName, role: 'member' },
       ];
-
       const otherParticipant: ConversationParticipant = {
         id: options.targetUserId,
         displayName: options.displayName,
       };
+
+      if (config?.backendUrl) {
+        // Backend creates 1-1 to prevent duplicates
+        const res = await fetchBackend<BackendConversationItem>(config, '/api/conversations/direct', {
+          method: 'POST',
+          body: JSON.stringify({ participantId: options.targetUserId })
+        });
+        
+        threadId = res.data.id;
+        
+        // Use returned participants if any, otherwise default
+        if (res.data.participants && res.data.participants.length > 0) {
+           // Mapping would happen here if we cared to override
+        }
+      } else {
+        // Direct ACS creation
+        const topic = `Direct chat with ${options.displayName || options.targetUserId}`;
+
+        // ACS SDK automatically adds the current user; only add the target user
+        const result = await chatClient.createChatThread(
+          { topic },
+          {
+            participants: [
+              {
+                id: { communicationUserId: options.targetUserId },
+                displayName: options.displayName,
+              },
+            ],
+          }
+        );
+
+        threadId = result.chatThread?.id as string;
+        if (!threadId) {
+          throw new AcsChatError('UNKNOWN_ERROR', 'Failed to get thread ID from created thread.', {
+            operation: 'createDirectConversation',
+          });
+        }
+      }
 
       const directConv = {
         id: threadId,
@@ -514,6 +594,43 @@ export class ConversationService {
     } catch (error) {
       const chatError = mapAcsErrorToChatError(error, 'leaveConversation');
       store.setError(chatError);
+      return { error: chatError };
+    }
+  }
+
+  /**
+   * Update a group conversation topic
+   */
+  public async updateGroupTopic(
+    conversationId: string,
+    topic: string
+  ): Promise<{ error?: ChatError }> {
+    const store = useConversationStore.getState();
+
+    if (!conversationId || !topic) {
+      throw new AcsChatError('INVALID_INPUT', 'conversationId and topic are required.', {
+        operation: 'updateGroupTopic',
+      });
+    }
+
+    try {
+      const config = this.chatServiceRef?.getConfig();
+
+      if (config?.backendUrl) {
+        await fetchBackend(config, `/api/conversations/group/${conversationId}/topic`, {
+          method: 'PATCH',
+          body: JSON.stringify({ topic }),
+        });
+      } else {
+        const chatClient = this.getChatClient();
+        const threadClient = chatClient.getChatThreadClient(conversationId);
+        await threadClient.updateTopic(topic);
+      }
+
+      store.updateConversation(conversationId, { name: topic });
+      return {};
+    } catch (error) {
+      const chatError = mapAcsErrorToChatError(error, 'updateGroupTopic');
       return { error: chatError };
     }
   }

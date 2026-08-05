@@ -37,6 +37,7 @@ describe('ChatContainer Component', () => {
       closeConversation: vi.fn(),
       createDirectConversation: vi.fn(),
       createGroupConversation: vi.fn(),
+      updateTopic: vi.fn(),
       deleteConversation: vi.fn(),
       leaveConversation: vi.fn(),
     });
@@ -115,6 +116,7 @@ describe('ChatContainer Component', () => {
       closeConversation: vi.fn(),
       createDirectConversation: vi.fn(),
       createGroupConversation: vi.fn(),
+      updateTopic: vi.fn(),
       deleteConversation: vi.fn(),
       leaveConversation: vi.fn(),
     });

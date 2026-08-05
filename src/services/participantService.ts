@@ -1,6 +1,7 @@
 import { chatService } from './chatService';
 import { useParticipantStore } from '../store/participantStore';
 import { mapAcsParticipantToParticipant, mapAcsErrorToChatError } from '../adapters/acs/acsMappers';
+import { fetchBackend } from '../utils/apiClient';
 import type { ConversationParticipant, AddParticipantOptions } from '../types/participant.types';
 
 export class ParticipantService {
@@ -32,17 +33,25 @@ export class ParticipantService {
    */
   public async addParticipant(conversationId: string, options: AddParticipantOptions): Promise<void> {
     try {
-      const client = chatService.getChatClient().getChatThreadClient(conversationId);
-      
-      const acsParticipant = {
-        id: { communicationUserId: options.userId },
-        displayName: options.displayName,
-        shareHistoryTime: options.shareHistoryTime
-      };
+      const config = chatService.getConfig();
+      if (config?.backendUrl) {
+        await fetchBackend(config, `/api/conversations/group/${conversationId}/participants`, {
+          method: 'POST',
+          body: JSON.stringify({ participantIds: [options.userId] }),
+        });
+      } else {
+        const client = chatService.getChatClient().getChatThreadClient(conversationId);
+        
+        const acsParticipant = {
+          id: { communicationUserId: options.userId },
+          displayName: options.displayName,
+          shareHistoryTime: options.shareHistoryTime
+        };
 
-      await client.addParticipants({
-        participants: [acsParticipant]
-      });
+        await client.addParticipants({
+          participants: [acsParticipant]
+        });
+      }
     } catch (error) {
       throw mapAcsErrorToChatError(error, 'addParticipant', { conversationId });
     }
@@ -53,9 +62,16 @@ export class ParticipantService {
    */
   public async removeParticipant(conversationId: string, userId: string): Promise<void> {
     try {
-      const client = chatService.getChatClient().getChatThreadClient(conversationId);
-      
-      await client.removeParticipant({ communicationUserId: userId });
+      const config = chatService.getConfig();
+      if (config?.backendUrl) {
+        await fetchBackend(config, `/api/conversations/group/${conversationId}/participants`, {
+          method: 'DELETE',
+          body: JSON.stringify({ participantIds: [userId] }),
+        });
+      } else {
+        const client = chatService.getChatClient().getChatThreadClient(conversationId);
+        await client.removeParticipant({ communicationUserId: userId });
+      }
     } catch (error) {
       throw mapAcsErrorToChatError(error, 'removeParticipant', { conversationId });
     }

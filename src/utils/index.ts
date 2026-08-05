@@ -4,3 +4,4 @@ export * from './throttle';
 export * from './id';
 export * from './date';
 export * from './logger';
+export * from './apiClient';
