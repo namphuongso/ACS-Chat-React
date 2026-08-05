@@ -20,6 +20,7 @@ import type {
 } from '../../types';
 import type { ReadReceipt } from '../../models/ReadReceipt';
 import { AcsChatError } from '../../types/errors.types';
+import { CHAT_ERRORS } from '../../constants/errors';
 
 /**
  * Extract raw communication user ID string from ACS CommunicationIdentifier.
@@ -205,7 +206,6 @@ export function mapAcsErrorToChatError(
     name?: string;
   };
   const statusCode = err?.statusCode || err?.status;
-  const message = err?.message || 'An ACS service error occurred.';
 
   let errorCode: ChatErrorCode = 'ACS_SERVICE_ERROR';
   let retryable = false;
@@ -226,12 +226,14 @@ export function mapAcsErrorToChatError(
     retryable = true;
   } else if (
     err?.name === 'TypeError' ||
-    message.toLowerCase().includes('fetch') ||
-    message.toLowerCase().includes('network')
+    err?.message?.toLowerCase().includes('fetch') ||
+    err?.message?.toLowerCase().includes('network')
   ) {
     errorCode = 'NETWORK_ERROR';
     retryable = true;
   }
+
+  const message = err?.message || CHAT_ERRORS.MESSAGES[errorCode] || 'An ACS service error occurred.';
 
   return new AcsChatError(errorCode, message, {
     cause: error,
