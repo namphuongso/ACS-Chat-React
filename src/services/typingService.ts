@@ -93,3 +93,5 @@ export class TypingService {
     }
   }
 }
+
+export const typingService = new TypingService();
