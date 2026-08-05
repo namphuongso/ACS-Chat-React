@@ -1,0 +1,48 @@
+.typingIndicator {
+  display: flex;
+  align-items: center;
+  padding: 4px 16px;
+  min-height: 24px;
+  font-size: 13px;
+  color: var(--chat-text-muted, #666666);
+  background-color: transparent;
+  gap: 4px;
+}
+
+.text {
+  font-style: italic;
+}
+
+.dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: var(--chat-text-muted, #666666);
+  animation: typing-bounce 1.4s infinite ease-in-out both;
+
+  &:nth-child(1) {
+    animation-delay: -0.32s;
+  }
+  
+  &:nth-child(2) {
+    animation-delay: -0.16s;
+  }
+}
+
+@keyframes typing-bounce {
+  0%, 80%, 100% { 
+    transform: scale(0);
+    opacity: 0.3;
+  } 
+  40% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+}
