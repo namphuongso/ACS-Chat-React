@@ -118,3 +118,4 @@ export class ReadReceiptService {
     this.debounceTimers.set(conversationId, timer);
   }
 }
+export const readReceiptService = new ReadReceiptService();
