@@ -1,0 +1,28 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: var(--acs-chat-bg-color, #ffffff);
+}
+
+.header {
+  padding: 16px;
+  border-bottom: 1px solid var(--acs-chat-border-color, #e1e4e8);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--acs-chat-text-color, #242424);
+  background-color: var(--acs-chat-header-bg, #f8f9fa);
+}
+
+.messageListWrapper {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.inputWrapper {
+  border-top: 1px solid var(--acs-chat-border-color, #e1e4e8);
+  padding: 16px;
+  background-color: var(--acs-chat-bg-color, #ffffff);
+}
