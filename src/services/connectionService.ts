@@ -1,1 +1,105 @@
-export {};
+import { useChatStore } from '../store/chatStore';
+import { useConversationStore } from '../store/conversationStore';
+import { chatService } from './chatService';
+import { conversationService } from './conversationService';
+import { messageService } from './messageService';
+import type { ReconnectPolicy } from '../types/config.types';
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const DEFAULT_RECONNECT_POLICY: ReconnectPolicy = {
+  maxRetries: 10,
+  initialDelayMs: 1000,
+  maxDelayMs: 30000,
+  backoffMultiplier: 2,
+};
+
+export class ConnectionService {
+  private networkListenersBound = false;
+  private reconnecting = false;
+
+  private handleOnline = () => {
+    // Attempt reconnect when network is restored
+    if (!this.reconnecting && useChatStore.getState().connectionState !== 'connected') {
+      const config = chatService.getConfig();
+      this.reconnect(config?.reconnectPolicy);
+    }
+  };
+
+  private handleOffline = () => {
+    useChatStore.getState().setConnectionState('disconnected');
+    // We don't attempt reconnect while offline
+  };
+
+  public setupNetworkListeners(): void {
+    if (this.networkListenersBound || typeof window === 'undefined') return;
+    
+    window.addEventListener('online', this.handleOnline);
+    window.addEventListener('offline', this.handleOffline);
+    this.networkListenersBound = true;
+  }
+
+  public teardownNetworkListeners(): void {
+    if (!this.networkListenersBound || typeof window === 'undefined') return;
+
+    window.removeEventListener('online', this.handleOnline);
+    window.removeEventListener('offline', this.handleOffline);
+    this.networkListenersBound = false;
+  }
+
+  public async reconnect(policy?: ReconnectPolicy): Promise<void> {
+    if (this.reconnecting) return;
+
+    const chatStore = useChatStore.getState();
+    const chatConfig = chatService.getConfig();
+    
+    if (!chatConfig) {
+      chatStore.setConnectionState('error');
+      return;
+    }
+
+    const activePolicy = policy || chatConfig.reconnectPolicy || DEFAULT_RECONNECT_POLICY;
+    
+    let attempt = 0;
+    let delay = activePolicy.initialDelayMs;
+    
+    this.reconnecting = true;
+
+    while (attempt < activePolicy.maxRetries) {
+      chatStore.setConnectionState('reconnecting');
+      attempt++;
+      
+      try {
+        // Attempt to restart realtime notifications
+        const clientAdapter = chatService.getClientAdapter();
+        await clientAdapter.startRealtimeNotifications();
+
+        // Ensure subscriptions are active
+        const eventAdapter = chatService.getEventAdapter();
+        eventAdapter.subscribeAll();
+
+        // Refresh conversation list to catch any new conversations while disconnected
+        await conversationService.loadConversations();
+        
+        // Resync active conversation if we have one
+        const activeConversationId = useConversationStore.getState().activeConversationId;
+        if (activeConversationId) {
+          await messageService.loadMessages(activeConversationId);
+        }
+
+        chatStore.setConnectionState('connected');
+        this.reconnecting = false;
+        return;
+      } catch (error) {
+        console.error(`Reconnect attempt ${attempt} failed:`, error);
+        delay = Math.min(delay * activePolicy.backoffMultiplier, activePolicy.maxDelayMs);
+        await sleep(delay);
+      }
+    }
+    
+    chatStore.setConnectionState('error');
+    this.reconnecting = false;
+  }
+}
+
+export const connectionService = new ConnectionService();
