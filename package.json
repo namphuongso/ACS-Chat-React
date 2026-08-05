@@ -38,6 +38,7 @@
   "devDependencies": {
     "@azure/communication-chat": "^1.6.0",
     "@azure/communication-common": "^2.0.0",
+    "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^14.0.0",
     "@types/dompurify": "^3.0.0",
     "@types/node": "^20.0.0",
