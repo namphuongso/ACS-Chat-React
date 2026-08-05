@@ -1,0 +1,66 @@
+.messageListContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  background-color: var(--chat-bg-color, #ffffff);
+}
+
+.loadingMore {
+  padding: 12px;
+  text-align: center;
+  color: var(--chat-text-muted, #666666);
+  font-size: 14px;
+}
+
+.dateSeparator {
+  text-align: center;
+  margin: 16px 0;
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: var(--chat-border-color, #eeeeee);
+    z-index: 1;
+  }
+  
+  span {
+    background-color: var(--chat-bg-color, #ffffff);
+    padding: 0 12px;
+    color: var(--chat-text-muted, #666666);
+    font-size: 12px;
+    position: relative;
+    z-index: 2;
+  }
+}
+
+.defaultMessageWrapper {
+  display: flex;
+  width: 100%;
+  padding: 4px 16px;
+  box-sizing: border-box;
+
+  &.own {
+    justify-content: flex-end;
+  }
+}
+
+.fallbackMessage {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background-color: var(--chat-msg-bg, #f0f0f0);
+  color: var(--chat-text-color, #333333);
+  max-width: 70%;
+  word-break: break-word;
+  
+  &.ownMessage {
+    background-color: var(--chat-primary-color, #0078d4);
+    color: #ffffff;
+  }
+}
