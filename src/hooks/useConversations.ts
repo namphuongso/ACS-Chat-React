@@ -5,6 +5,24 @@ import { conversationService } from '../services/conversationService';
 import type { ListConversationsOptions } from '../services/conversationService';
 import type { CreateDirectConversationOptions, CreateGroupConversationOptions } from '../types/conversation.types';
 
+/**
+ * Hook to manage the list of conversations and conversation-level operations.
+ * @returns {Object} Conversation state and methods
+ * @property {Conversation[]} conversations - The list of loaded conversations
+ * @property {Conversation | null} activeConversation - The currently active conversation
+ * @property {boolean} loading - True if conversations are currently loading
+ * @property {boolean} loadingMore - True if fetching the next page of conversations
+ * @property {boolean} hasMore - True if there are more conversations to load
+ * @property {AcsChatError | null} error - Any error that occurred during operations
+ * @property {Function} loadConversations - Method to load the initial list of conversations
+ * @property {Function} loadMore - Method to load the next page of conversations
+ * @property {Function} openConversation - Method to set a conversation as active
+ * @property {Function} closeConversation - Method to clear the active conversation
+ * @property {Function} createDirectConversation - Method to create a 1:1 conversation
+ * @property {Function} createGroupConversation - Method to create a group conversation
+ * @property {Function} deleteConversation - Method to delete a conversation
+ * @property {Function} leaveConversation - Method to leave a conversation
+ */
 export const useConversations = () => {
   const loading = useConversationStore((state) => state.loading);
   const loadingMore = useConversationStore((state) => state.loadingMore);

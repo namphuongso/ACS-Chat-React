@@ -9,6 +9,14 @@ export interface MessageReadStatus {
   readByAll: boolean;
 }
 
+/**
+ * Hook to manage read receipts for a specific conversation.
+ * @param {string} conversationId - The ID of the conversation
+ * @returns {Object} Read receipt state and methods
+ * @property {Function} getMessageReadStatus - Method to get the read status for a specific message
+ * @property {boolean} readReceiptsSupported - Whether read receipts are supported (requires <= 20 participants)
+ * @property {Function} sendReadReceipt - Method to send a read receipt for a specific message
+ */
 export function useReadReceipt(conversationId: string) {
   const currentUser = useChatStore((state) => state.currentUser);
   

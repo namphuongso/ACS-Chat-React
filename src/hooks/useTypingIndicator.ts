@@ -4,6 +4,15 @@ import { selectTypingUsersByConversation } from '../store/selectors';
 import { typingService } from '../services/typingService';
 import { useChatStore } from '../store/chatStore';
 
+/**
+ * Hook to manage typing indicators for a specific conversation.
+ * @param {string} conversationId - The ID of the conversation
+ * @returns {Object} Typing indicator state and methods
+ * @property {ChatParticipant[]} typingUsers - The list of users currently typing (excluding current user)
+ * @property {string} typingDisplayText - A formatted string representing who is typing (e.g. "John is typing...")
+ * @property {boolean} typingSupported - Whether typing indicators are supported for this conversation
+ * @property {Function} sendTyping - Method to send a typing notification from the current user
+ */
 export const useTypingIndicator = (conversationId: string) => {
   const typingUsers = useParticipantStore((state) => 
     selectTypingUsersByConversation(state, conversationId)
