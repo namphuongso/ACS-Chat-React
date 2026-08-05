@@ -72,7 +72,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
             <ConversationView /> // Assuming it reads from store internally
           )
         ) : (
-          renderEmpty ? renderEmpty() : <EmptyState />
+          renderEmpty ? renderEmpty() : <EmptyState type="no-conversations" />
         )}
       </div>
     </div>

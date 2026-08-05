@@ -61,7 +61,7 @@ export const ConversationList: React.FC<ConversationListProps> = (props) => {
     />
   );
 
-  const defaultRenderEmpty = () => <EmptyState message="No conversations found" className={styles.emptyState} />;
+  const defaultRenderEmpty = () => <EmptyState type="no-conversations" message="No conversations found" className={styles.emptyState} />;
 
   return (
     <div className={styles.conversationList} onScroll={handleScroll}>
