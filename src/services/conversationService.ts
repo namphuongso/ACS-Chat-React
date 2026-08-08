@@ -15,8 +15,10 @@ import type {
   CreateDirectConversationOptions,
   CreateGroupConversationOptions,
   GroupConversation,
+  DirectConversation,
 } from '../types/conversation.types';
 import type { ConversationParticipant } from '../types/participant.types';
+import type { Contact } from '../types/contact.types';
 import type { ChatError } from '../types/errors.types';
 import { AcsChatError } from '../types/errors.types';
 import { logger } from '../utils/logger';
@@ -29,6 +31,15 @@ export interface BackendConversationItem {
   createdAt?: string | Date | number;
   updatedAt?: string | Date | number;
   participants?: ConversationParticipant[];
+}
+
+export interface CreateRoomResponse {
+  threadId: string;
+  members?: Array<{
+    cui: string;
+    contactName?: string;
+    isAdmin?: boolean;
+  }>;
 }
 
 /**
@@ -111,7 +122,7 @@ export class ConversationService {
           method: 'GET',
         });
         
-        const data = res.data || [];
+        const data = Array.isArray(res?.data) ? res.data : [];
         for (const item of data) {
           if (item.type === 'direct') {
             conversations.push({
@@ -279,10 +290,15 @@ export class ConversationService {
           body: JSON.stringify({ participantId: options.targetUserId })
         });
         
-        threadId = res.data.id;
+        threadId = res?.data?.id as string;
+        if (!threadId) {
+          throw new AcsChatError('UNKNOWN_ERROR', 'Failed to get thread ID from created thread.', {
+            operation: 'createDirectConversation',
+          });
+        }
         
         // Use returned participants if any, otherwise default
-        if (res.data.participants && res.data.participants.length > 0) {
+        if (Array.isArray(res?.data?.participants) && res.data.participants.length > 0) {
            // Mapping would happen here if we cared to override
         }
       } else {
@@ -437,7 +453,7 @@ export class ConversationService {
    * Open a conversation by setting it as the active conversation.
    * Resets unread count for the conversation.
    */
-  public openConversation(conversationId: string): void {
+  public async openConversation(conversationId: string, contact?: Contact): Promise<void> {
     const store = useConversationStore.getState();
 
     if (!conversationId || conversationId.trim() === '') {
@@ -446,24 +462,70 @@ export class ConversationService {
       });
     }
 
-    if (!store.conversations[conversationId]) {
-      throw new AcsChatError(
-        'CONVERSATION_NOT_FOUND',
-        `Conversation ${conversationId} not found.`,
-        {
-          operation: 'openConversation',
-          conversationId,
-        }
-      );
+    if (store.conversations[conversationId]) {
+      store.setActiveConversation(conversationId);
+      store.resetUnreadCount(conversationId);
+      useMessageStore.getState().trimInactiveConversations(conversationId, 50);
+      logger.info(`Conversation ${conversationId} opened`);
+      return;
     }
 
-    store.setActiveConversation(conversationId);
-    store.resetUnreadCount(conversationId);
+    try {
+      const config = this.chatServiceRef?.getConfig();
+      if (!config) {
+        throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
+          operation: 'openConversation',
+        });
+      }
+      
+      const payload = {
+        pid: conversationId,
+        roomName: contact?.fullName || "New Conversation",
+        roomType: "U"
+      };
 
-    // Memory optimization: trim cached messages for inactive conversations
-    useMessageStore.getState().trimInactiveConversations(conversationId, 50);
-
-    logger.info(`Conversation ${conversationId} opened`);
+      const res = await fetchBackend<CreateRoomResponse>(config, '/api/chat/create-room', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      
+      const threadId = res?.data?.threadId;
+      if (!threadId) {
+        throw new AcsChatError('UNKNOWN_ERROR', 'Failed to get thread ID from backend.', {
+          operation: 'openConversation',
+        });
+      }
+         
+      const members = Array.isArray(res?.data?.members) ? res.data.members : [];
+      
+      const directConv: DirectConversation = {
+        id: threadId,
+        type: 'direct',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        unreadCount: 0,
+        participants: members.map((m) => ({
+            id: m.cui,
+            displayName: m.contactName,
+            role: m.isAdmin ? 'owner' : 'member'
+        })),
+        otherParticipant: {
+            id: conversationId,
+            displayName: payload.roomName
+        }
+      };
+      
+      store.addConversation(directConv);
+      store.setActiveConversation(threadId);
+      store.resetUnreadCount(threadId);
+      
+      useMessageStore.getState().trimInactiveConversations(threadId, 50);
+      logger.info(`Conversation ${threadId} created and opened for contact ${conversationId}`);
+    } catch (e) {
+      const chatError = mapAcsErrorToChatError(e, 'openConversation', { conversationId });
+      store.setError(chatError);
+      throw chatError;
+    }
   }
 
   /**
@@ -613,6 +675,8 @@ export class ConversationService {
       });
     }
 
+    store.setError(null);
+
     try {
       const config = this.chatServiceRef?.getConfig();
 
@@ -631,6 +695,7 @@ export class ConversationService {
       return {};
     } catch (error) {
       const chatError = mapAcsErrorToChatError(error, 'updateGroupTopic');
+      store.setError(chatError);
       return { error: chatError };
     }
   }

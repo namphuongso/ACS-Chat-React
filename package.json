@@ -11,7 +11,9 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    }
+    },
+    "./dist/styles.css": "./dist/styles.css",
+    "./dist/index.css": "./dist/styles.css"
   },
   "files": [
     "dist",
@@ -49,6 +51,7 @@
     "react-dom": ">=18.0.0"
   },
   "dependencies": {
+    "lucide-react": "^1.28.0",
     "react-virtuoso": "^4.0.0",
     "uuid": "^9.0.0",
     "zustand": "^4.5.0"

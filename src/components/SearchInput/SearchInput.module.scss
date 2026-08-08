@@ -1,22 +1,51 @@
 .searchContainer {
-  padding: var(--chat-radius-message) var(--chat-spacing-md);
-  position: sticky;
-  top: 0;
-  background: white;
-  z-index: 10;
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+
+  .searchIcon {
+    position: absolute;
+    left: 12px;
+    width: 20px;
+    height: 20px;
+    color: var(--chat-text-secondary, #65676b);
+    pointer-events: none;
+  }
 
   .searchInput {
     width: 100%;
-    padding: var(--chat-radius) var(--chat-radius-message);
+    padding: 8px 36px;
     border-radius: 20px;
-    border: 1px solid var(--chat-border);
-    background-color: var(--chat-bg-secondary);
-    font-size: var(--chat-font-size);
+    border: none;
+    background-color: var(--chat-bg-secondary, #f0f2f5);
+    font-size: var(--chat-font-size, 15px);
     outline: none;
 
-    &:focus {
-      border-color: #0052cc;
-      background-color: var(--chat-bg);
+    &::placeholder {
+      color: var(--chat-text-secondary, #65676b);
+    }
+  }
+
+  .clearBtn {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--chat-text-secondary, #65676b);
+
+    &:hover {
+      color: var(--chat-text, #050505);
+    }
+
+    .clearIcon {
+      width: 16px;
+      height: 16px;
     }
   }
 }

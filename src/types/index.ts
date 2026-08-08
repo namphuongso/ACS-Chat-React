@@ -5,3 +5,4 @@ export * from './participant.types';
 export * from './events.types';
 export * from './errors.types';
 export * from './config.types';
+export * from './contact.types';

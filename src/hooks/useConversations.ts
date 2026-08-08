@@ -4,6 +4,7 @@ import { selectAllConversations, selectActiveConversation } from '../store/selec
 import { conversationService } from '../services/conversationService';
 import type { ListConversationsOptions } from '../services/conversationService';
 import type { CreateDirectConversationOptions, CreateGroupConversationOptions } from '../types/conversation.types';
+import type { Contact } from '../types/contact.types';
 
 /**
  * Hook to manage the list of conversations and conversation-level operations.
@@ -56,8 +57,8 @@ export const useConversations = () => {
     }
   }, [loadingMore, hasMore]);
 
-  const openConversation = useCallback((conversationId: string) => {
-    conversationService.openConversation(conversationId);
+  const openConversation = useCallback((conversationId: string, contact?: Contact) => {
+    conversationService.openConversation(conversationId, contact);
   }, []);
 
   const closeConversation = useCallback(() => {

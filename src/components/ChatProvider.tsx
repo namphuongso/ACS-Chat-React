@@ -22,6 +22,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = React.memo(({ config, c
 
     const init = async () => {
       try {
+        conversationService.setChatService(chatService);
+        messageService.setChatService(chatService);
+        readReceiptService.setChatService(chatService);
+        typingService.setChatService(chatService);
+        
         await chatService.initialize(config);
         if (mounted) {
           connectionService.setupNetworkListeners();
