@@ -2,6 +2,7 @@ export * from './ChatProvider';
 export * from './ChatContainer';
 export * from './ConversationList';
 export * from './Conversation';
+export * from './ConversationHeader';
 export * from './MessageList';
 export * from './MessageItem';
 export * from './MessageInput';

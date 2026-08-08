@@ -1,4 +1,4 @@
-import React, { CSSProperties, ReactNode, useEffect } from 'react';
+import React, { CSSProperties, ReactNode } from 'react';
 import { useConversations } from '../hooks/useConversations';
 import { ConversationList } from './ConversationList';
 import { ConversationView } from './Conversation';
@@ -25,13 +25,9 @@ export const ChatContainer: React.FC<ChatContainerProps> = React.memo(({
   renderConversation,
   renderEmpty,
 }) => {
-  const { conversations, activeConversation, openConversation, loading } = useConversations();
+  const { activeConversation } = useConversations();
 
-  useEffect(() => {
-    if (!activeConversation && conversations.length > 0 && !loading) {
-      openConversation(conversations[0].id);
-    }
-  }, [activeConversation, conversations, openConversation, loading]);
+
 
   const defaultStyle: CSSProperties = {
     display: 'flex',

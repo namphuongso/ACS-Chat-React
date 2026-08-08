@@ -31,6 +31,22 @@ export interface BackendConversationItem {
   createdAt?: string | Date | number;
   updatedAt?: string | Date | number;
   participants?: ConversationParticipant[];
+  pid?: string;
+  hostId?: string;
+  roomName?: string;
+  description?: string;
+  threadId?: string;
+  avatarUrl?: string;
+  created?: string;
+  modified?: string | null;
+  creator?: string;
+  modifier?: string;
+  pin?: boolean;
+  isMuted?: boolean;
+  lastMessage?: string;
+  lastMessageTime?: string | null;
+  lastViewedDate?: string | null;
+  isRead?: boolean;
 }
 
 export interface CreateRoomResponse {
@@ -117,31 +133,31 @@ export class ConversationService {
       if (config?.backendUrl) {
         // Backend pagination
         const page = options?.page || 1;
-        const limit = maxPageSize;
-        const res = await fetchBackend<BackendConversationItem[]>(config, `/api/conversations?page=${page}&limit=${limit}`, {
+        const pageIndex = Math.max(0, page - 1);
+        const res = await fetchBackend<BackendConversationItem[]>(config, `/api/chat/get-room-chats?keyword=&pageIndex=${pageIndex}`, {
           method: 'GET',
         });
         
         const data = Array.isArray(res?.data) ? res.data : [];
         for (const item of data) {
-          if (item.type === 'direct') {
+          if (item.type === 'U' || item.type === 'direct') {
             conversations.push({
-              id: item.id,
+              id: item.threadId || item.id,
               type: 'direct',
-              createdAt: new Date(item.createdAt || Date.now()),
-              updatedAt: item.updatedAt ? new Date(item.updatedAt) : undefined,
-              unreadCount: 0,
+              createdAt: new Date(item.created || item.createdAt || Date.now()),
+              updatedAt: (item.modified || item.updatedAt) ? new Date((item.modified || item.updatedAt) as string | number | Date) : undefined,
+              unreadCount: item.isRead === false ? 1 : 0,
               participants: [],
-              otherParticipant: { id: 'unknown', displayName: 'Unknown' },
+              otherParticipant: { id: item.pid || 'unknown', displayName: item.roomName || 'Unknown' },
             });
           } else {
             conversations.push({
-              id: item.id,
+              id: item.threadId || item.id,
               type: 'group',
-              name: item.topic || 'Group',
-              createdAt: new Date(item.createdAt || Date.now()),
-              updatedAt: item.updatedAt ? new Date(item.updatedAt) : undefined,
-              unreadCount: 0,
+              name: item.roomName || item.topic || 'Group',
+              createdAt: new Date(item.created || item.createdAt || Date.now()),
+              updatedAt: (item.modified || item.updatedAt) ? new Date((item.modified || item.updatedAt) as string | number | Date) : undefined,
+              unreadCount: item.isRead === false ? 1 : 0,
               participants: [],
             });
           }
@@ -153,7 +169,7 @@ export class ConversationService {
           store.appendConversations(conversations);
         }
         store.setLoading(false);
-        store.setHasMore(data.length === limit);
+        store.setHasMore(data.length > 0);
       } else {
         // ACS native fetch
         const threads = chatClient.listChatThreads({ maxPageSize });

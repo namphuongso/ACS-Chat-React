@@ -64,7 +64,7 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({
   return (
     <div className={styles.container}>
       {renderToolbar && <div className={styles.toolbar}>{renderToolbar()}</div>}
-      <div className={`${styles.inputWrapper} ${disabled ? styles.disabled : ''}`}>
+      <div className={`${styles.inputRow} ${disabled ? styles.disabled : ''}`}>
         <textarea
           ref={textareaRef}
           className={styles.textarea}
@@ -76,26 +76,28 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(({
           maxLength={maxLength}
           rows={1}
         />
-        {(maxLength || renderToolbar) && (
-          <div className={styles.footer}>
-            <div className={styles.characterCount}>
-              {maxLength ? `${content.length}/${maxLength}` : ''}
-            </div>
-          </div>
-        )}
+        <div className={styles.actions}>
+          {renderSendButton ? (
+            renderSendButton({ onClick: handleSend, disabled: isSendDisabled })
+          ) : (
+            <button
+              type="button"
+              className={content.trim() ? styles.sendButtonFilled : styles.sendButton}
+              onClick={handleSend}
+              disabled={isSendDisabled}
+              aria-label="Send message"
+            >
+              <SendIcon />
+            </button>
+          )}
+        </div>
       </div>
-      {renderSendButton ? (
-        renderSendButton({ onClick: handleSend, disabled: isSendDisabled })
-      ) : (
-        <button
-          type="button"
-          className={styles.sendButton}
-          onClick={handleSend}
-          disabled={isSendDisabled}
-          aria-label="Send message"
-        >
-          <SendIcon />
-        </button>
+      {maxLength && (
+        <div className={styles.footer}>
+          <div className={styles.characterCount}>
+            {`${content.length}/${maxLength}`}
+          </div>
+        </div>
       )}
     </div>
   );

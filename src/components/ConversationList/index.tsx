@@ -3,7 +3,8 @@ import { useContactSearch } from '../../hooks/useContactSearch';
 import { useConversations } from '../../hooks/useConversations';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useVirtualScroll } from '../../hooks/useVirtualScroll';
-import { chatService } from '../../services';
+import { useChatStore } from '../../store/chatStore';
+
 import type { Contact, Conversation } from '../../types';
 import { EmptyState } from '../EmptyState';
 import { ConversationListHeader, TabType } from './ConversationListHeader';
@@ -29,19 +30,6 @@ export interface ConversationListProps {
 }
 
 export const ConversationList: React.FC<ConversationListProps> = React.memo((props) => {
-  useEffect(() => {
-    const config = chatService.getConfig();
-    const logger = config?.logger;
-
-    if (!config) {
-      console.error(
-        'ConversationList: chat config is missing (chatService might not be fully initialized yet).'
-      );
-    } else if (!logger) {
-      console.error('ConversationList: logger is missing from chat configuration.');
-    }
-  }, []);
-
   // Use hook to get default values if props are not provided
   const store = useConversations();
 
@@ -51,6 +39,27 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
   const onLoadMore = props.onLoadMore ?? store.loadMore;
   const hasMore = props.hasMore ?? store.hasMore;
   const loading = props.loading ?? store.loading;
+  const connectionState = useChatStore((state) => state.connectionState);
+
+  useEffect(() => {
+    if (
+      connectionState === 'connected' &&
+      !props.conversations &&
+      store.conversations.length === 0 &&
+      !store.loading &&
+      store.hasMore
+    ) {
+      store.loadConversations();
+    }
+  }, [
+    connectionState,
+    props.conversations,
+    store.conversations.length,
+    store.loading,
+    store.hasMore,
+    store.loadConversations,
+    store,
+  ]);
 
   const [searchTerm, setSearchTerm] = useState('');
 

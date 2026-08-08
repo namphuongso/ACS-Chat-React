@@ -3,7 +3,8 @@ import { useConversations } from '../../hooks/useConversations';
 import { useMessages } from '../../hooks/useMessages';
 import { useChat } from '../../hooks/useChat';
 import { MessageList } from '../MessageList';
-import { MessageInput } from '../MessageInput';
+import { ConversationFooter } from './ConversationFooter';
+import { ConversationHeader } from '../ConversationHeader';
 import styles from './ConversationView.module.scss';
 
 export interface ConversationViewProps {
@@ -49,11 +50,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(({ c
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        {conversation.type === 'group' 
-          ? conversation.name 
-          : conversation.otherParticipant?.displayName || 'Direct Conversation'}
-      </div>
+      <ConversationHeader conversation={conversation} />
       
       <div className={styles.messageListWrapper}>
         <MessageList
@@ -66,13 +63,11 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(({ c
         />
       </div>
 
-      <div className={styles.inputWrapper}>
-        <MessageInput 
+        <ConversationFooter 
           onSend={handleSend} 
           onTyping={handleTyping} 
           disabled={loading}
         />
-      </div>
     </div>
   );
 });
