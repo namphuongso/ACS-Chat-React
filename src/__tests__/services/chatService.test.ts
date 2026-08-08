@@ -144,6 +144,7 @@ describe('ChatService', () => {
         unreadCount: 2,
         participants: [],
         otherParticipant: { id: 'user-2', displayName: 'Alice' },
+        name: 'Alice',
       });
       useMessageStore.getState().addMessage('thread-1', {
         id: 'msg-1',
@@ -184,6 +185,7 @@ describe('ChatService', () => {
         unreadCount: 0,
         participants: [],
         otherParticipant: { id: 'user-2', displayName: 'Alice' },
+        name: 'Alice',
       });
 
       useParticipantStore.getState().setTypingUser('thread-1', { id: 'user-2' });
@@ -230,6 +232,7 @@ describe('ChatService', () => {
         unreadCount: 0,
         participants: [],
         otherParticipant: { id: 'user-2' },
+        name: 'user-2',
       });
       useConversationStore.getState().setActiveConversation('thread-active');
 

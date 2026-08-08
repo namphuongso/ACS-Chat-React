@@ -13,11 +13,8 @@ export interface ConversationItemProps {
 
 export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
   ({ conversation, isActive, onClick }) => {
-    const isGroup = conversation.type === 'group';
-    const name = isGroup
-      ? conversation.name
-      : conversation.otherParticipant.displayName || conversation.otherParticipant.id;
-    const avatarUrl = isGroup ? conversation.avatarUrl : undefined;
+    const name = conversation.name;
+    const avatarUrl = conversation.avatarUrl;
 
     const lastMessage = conversation.lastMessage;
     let previewText = '';

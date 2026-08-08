@@ -58,6 +58,24 @@ export interface CreateRoomResponse {
   }>;
 }
 
+export interface JoinRoomResponse {
+  roomId?: string;
+  roomType?: string;
+  roomName?: string;
+  avatarUrl?: string;
+  threadId?: string;
+  cui?: string;
+  token?: string;
+  tokenUtcExp?: string;
+  members?: Array<{
+    userId?: string;
+    contactName?: string;
+    avatarUrl?: string;
+    cui?: string;
+    isAdmin?: boolean;
+  }>;
+}
+
 /**
  * Options for listing conversations with pagination support.
  */
@@ -134,35 +152,53 @@ export class ConversationService {
         // Backend pagination
         const page = options?.page || 1;
         const pageIndex = Math.max(0, page - 1);
-        const res = await fetchBackend<BackendConversationItem[]>(config, `/api/chat/get-room-chats?keyword=&pageIndex=${pageIndex}`, {
-          method: 'GET',
-        });
-        
+        const res = await fetchBackend<BackendConversationItem[]>(
+          config,
+          `/api/chat/get-room-chats?keyword=&pageIndex=${pageIndex}`,
+          {
+            method: 'GET',
+          }
+        );
+
         const data = Array.isArray(res?.data) ? res.data : [];
         for (const item of data) {
           if (item.type === 'U' || item.type === 'direct') {
             conversations.push({
               id: item.threadId || item.id,
+              conversationId: item.id,
               type: 'direct',
               createdAt: new Date(item.created || item.createdAt || Date.now()),
-              updatedAt: (item.modified || item.updatedAt) ? new Date((item.modified || item.updatedAt) as string | number | Date) : undefined,
+              updatedAt:
+                item.modified || item.updatedAt
+                  ? new Date((item.modified || item.updatedAt) as string | number | Date)
+                  : undefined,
               unreadCount: item.isRead === false ? 1 : 0,
               participants: [],
-              otherParticipant: { id: item.pid || 'unknown', displayName: item.roomName || 'Unknown' },
+              otherParticipant: {
+                id: item.pid || 'unknown',
+                displayName: item.roomName || 'Unknown',
+              },
+              avatarUrl: item.avatarUrl || undefined,
+              name: item.roomName || 'Unknown',
             });
           } else {
             conversations.push({
               id: item.threadId || item.id,
+              conversationId: item.id,
               type: 'group',
               name: item.roomName || item.topic || 'Group',
               createdAt: new Date(item.created || item.createdAt || Date.now()),
-              updatedAt: (item.modified || item.updatedAt) ? new Date((item.modified || item.updatedAt) as string | number | Date) : undefined,
+              updatedAt:
+                item.modified || item.updatedAt
+                  ? new Date((item.modified || item.updatedAt) as string | number | Date)
+                  : undefined,
               unreadCount: item.isRead === false ? 1 : 0,
               participants: [],
+              avatarUrl: item.avatarUrl || undefined,
             });
           }
         }
-        
+
         if (page === 1) {
           store.setConversations(conversations);
         } else {
@@ -202,6 +238,7 @@ export class ConversationService {
                   unreadCount: 0,
                   participants,
                   otherParticipant,
+                  name: otherParticipant.displayName || 'Unknown',
                 };
                 conversations.push(directConv);
               } else {
@@ -230,6 +267,8 @@ export class ConversationService {
                 updatedAt: partialConv.updatedAt,
                 unreadCount: 0,
                 participants: [],
+                name: (partialConv as GroupConversation).name || 'Group',
+                avatarUrl: (partialConv as GroupConversation).avatarUrl,
               };
               conversations.push(basicConv as Conversation);
               logger.warn(`Failed to fetch participants for thread ${convId}`, error);
@@ -289,7 +328,7 @@ export class ConversationService {
 
       const config = this.chatServiceRef?.getConfig();
       let threadId: string;
-      
+
       const participants: ConversationParticipant[] = [
         { id: currentUserId, displayName: currentDisplayName || undefined, role: 'owner' },
         { id: options.targetUserId, displayName: options.displayName, role: 'member' },
@@ -301,21 +340,25 @@ export class ConversationService {
 
       if (config?.backendUrl) {
         // Backend creates 1-1 to prevent duplicates
-        const res = await fetchBackend<BackendConversationItem>(config, '/api/conversations/direct', {
-          method: 'POST',
-          body: JSON.stringify({ participantId: options.targetUserId })
-        });
-        
+        const res = await fetchBackend<BackendConversationItem>(
+          config,
+          '/api/conversations/direct',
+          {
+            method: 'POST',
+            body: JSON.stringify({ participantId: options.targetUserId }),
+          }
+        );
+
         threadId = res?.data?.id as string;
         if (!threadId) {
           throw new AcsChatError('UNKNOWN_ERROR', 'Failed to get thread ID from created thread.', {
             operation: 'createDirectConversation',
           });
         }
-        
+
         // Use returned participants if any, otherwise default
         if (Array.isArray(res?.data?.participants) && res.data.participants.length > 0) {
-           // Mapping would happen here if we cared to override
+          // Mapping would happen here if we cared to override
         }
       } else {
         // Direct ACS creation
@@ -350,6 +393,7 @@ export class ConversationService {
         unreadCount: 0,
         participants,
         otherParticipant,
+        name: options.displayName || 'Unknown',
       };
 
       store.addConversation(directConv);
@@ -437,7 +481,7 @@ export class ConversationService {
               id: p.userId,
               displayName: p.displayName,
               role: 'member',
-            } as ConversationParticipant)
+            }) as ConversationParticipant
         ),
       ];
 
@@ -493,27 +537,27 @@ export class ConversationService {
           operation: 'openConversation',
         });
       }
-      
+
       const payload = {
         pid: conversationId,
-        roomName: contact?.fullName || "New Conversation",
-        roomType: "U"
+        roomName: contact?.fullName || 'New Conversation',
+        roomType: 'U',
       };
 
       const res = await fetchBackend<CreateRoomResponse>(config, '/api/chat/create-room', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
-      
+
       const threadId = res?.data?.threadId;
       if (!threadId) {
         throw new AcsChatError('UNKNOWN_ERROR', 'Failed to get thread ID from backend.', {
           operation: 'openConversation',
         });
       }
-         
+
       const members = Array.isArray(res?.data?.members) ? res.data.members : [];
-      
+
       const directConv: DirectConversation = {
         id: threadId,
         type: 'direct',
@@ -521,20 +565,22 @@ export class ConversationService {
         updatedAt: new Date(),
         unreadCount: 0,
         participants: members.map((m) => ({
-            id: m.cui,
-            displayName: m.contactName,
-            role: m.isAdmin ? 'owner' : 'member'
+          id: m.cui,
+          displayName: m.contactName,
+          role: m.isAdmin ? 'owner' : 'member',
         })),
         otherParticipant: {
-            id: conversationId,
-            displayName: payload.roomName
-        }
+          id: conversationId,
+          displayName: payload.roomName,
+        },
+        name: payload.roomName,
+        avatarUrl: contact?.avatarUrl,
       };
-      
+
       store.addConversation(directConv);
       store.setActiveConversation(threadId);
       store.resetUnreadCount(threadId);
-      
+
       useMessageStore.getState().trimInactiveConversations(threadId, 50);
       logger.info(`Conversation ${threadId} created and opened for contact ${conversationId}`);
     } catch (e) {
@@ -568,9 +614,7 @@ export class ConversationService {
    * Delete a conversation entirely (ACS thread deletion).
    * This deletes the thread for ALL participants.
    */
-  public async deleteConversation(
-    conversationId: string
-  ): Promise<{ error?: ChatError }> {
+  public async deleteConversation(conversationId: string): Promise<{ error?: ChatError }> {
     const store = useConversationStore.getState();
 
     if (!conversationId || conversationId.trim() === '') {
@@ -618,9 +662,7 @@ export class ConversationService {
   /**
    * Leave a conversation by removing the current user from the thread.
    */
-  public async leaveConversation(
-    conversationId: string
-  ): Promise<{ error?: ChatError }> {
+  public async leaveConversation(conversationId: string): Promise<{ error?: ChatError }> {
     const store = useConversationStore.getState();
 
     if (!conversationId || conversationId.trim() === '') {
@@ -713,6 +755,29 @@ export class ConversationService {
       const chatError = mapAcsErrorToChatError(error, 'updateGroupTopic');
       store.setError(chatError);
       return { error: chatError };
+    }
+  }
+
+  /**
+   * Join an existing room to get threadId and other details.
+   */
+  public async joinRoom(conversationId: string): Promise<JoinRoomResponse | undefined> {
+    const config = this.chatServiceRef?.getConfig();
+    if (!config) {
+      throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
+        operation: 'joinRoom',
+      });
+    }
+
+    try {
+      const res = await fetchBackend<JoinRoomResponse>(config, `/api/chat/join-room/${conversationId}`, {
+        method: 'POST',
+        body: '',
+      });
+      return res?.data;
+    } catch (e) {
+      const chatError = mapAcsErrorToChatError(e, 'joinRoom', { conversationId });
+      throw chatError;
     }
   }
 }

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect } from 'react';
 import { useConversations } from '../../hooks/useConversations';
 import { useMessages } from '../../hooks/useMessages';
 import { useChat } from '../../hooks/useChat';
@@ -12,7 +12,7 @@ export interface ConversationViewProps {
 }
 
 export const ConversationView: React.FC<ConversationViewProps> = React.memo(({ conversationId }) => {
-  const { activeConversation, conversations } = useConversations();
+  const { activeConversation, conversations, joinRoom } = useConversations();
   const { currentUser } = useChat();
 
   const idToUse = conversationId || activeConversation?.id;
@@ -20,6 +20,15 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(({ c
   const conversation = useMemo(() => {
     return conversations.find((c) => c.id === idToUse);
   }, [conversations, idToUse]);
+
+  useEffect(() => {
+    const joinId = conversation?.conversationId || idToUse;
+    if (joinId) {
+      joinRoom(joinId).catch((err) => {
+        console.warn('Failed to join room', err);
+      });
+    }
+  }, [idToUse, joinRoom, conversation?.conversationId]);
 
   // Call hooks unconditionally
   const {

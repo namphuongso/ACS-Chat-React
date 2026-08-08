@@ -24,6 +24,7 @@ import type { Contact } from '../types/contact.types';
  * @property {Function} updateTopic - Method to update the topic of a group conversation
  * @property {Function} deleteConversation - Method to delete a conversation
  * @property {Function} leaveConversation - Method to leave a conversation
+ * @property {Function} joinRoom - Method to join a room by id
  */
 export const useConversations = () => {
   const loading = useConversationStore((state) => state.loading);
@@ -85,6 +86,10 @@ export const useConversations = () => {
     return await conversationService.leaveConversation(conversationId);
   }, []);
 
+  const joinRoom = useCallback(async (conversationId: string) => {
+    return await conversationService.joinRoom(conversationId);
+  }, []);
+
   return useMemo(() => ({
     conversations,
     activeConversation,
@@ -101,5 +106,6 @@ export const useConversations = () => {
     updateTopic,
     deleteConversation,
     leaveConversation,
-  }), [conversations, activeConversation, loading, loadingMore, hasMore, error, loadConversations, loadMore, openConversation, closeConversation, createDirectConversation, createGroupConversation, updateTopic, deleteConversation, leaveConversation]);
+    joinRoom,
+  }), [conversations, activeConversation, loading, loadingMore, hasMore, error, loadConversations, loadMore, openConversation, closeConversation, createDirectConversation, createGroupConversation, updateTopic, deleteConversation, leaveConversation, joinRoom]);
 };

@@ -12,12 +12,8 @@ export interface ConversationHeaderProps {
 
 export const ConversationHeader: React.FC<ConversationHeaderProps> = React.memo(
   ({ conversation, onToggleSidebar, isSidebarOpen = false }) => {
-    const name =
-      conversation.type === 'group'
-        ? conversation.name
-        : conversation.otherParticipant?.displayName || 'Direct Conversation';
-
-    const avatarUrl = conversation.type === 'group' ? conversation.avatarUrl : undefined;
+    const name = conversation.name;
+    const avatarUrl = conversation.avatarUrl;
 
     return (
       <div className={styles.header}>

@@ -16,7 +16,9 @@ vi.mock('../Conversation', () => ({
 }));
 
 vi.mock('../EmptyState', () => ({
-  EmptyState: ({ type }: { type: string }) => <div data-testid={`mock-empty-state-${type}`}>Empty State</div>,
+  EmptyState: ({ type }: { type: string }) => (
+    <div data-testid={`mock-empty-state-${type}`}>Empty State</div>
+  ),
 }));
 
 describe('ChatContainer Component', () => {
@@ -40,6 +42,7 @@ describe('ChatContainer Component', () => {
       updateTopic: vi.fn(),
       deleteConversation: vi.fn(),
       leaveConversation: vi.fn(),
+      joinRoom: vi.fn(),
     });
   });
 
@@ -60,7 +63,7 @@ describe('ChatContainer Component', () => {
       ...vi.mocked(useConversations)(),
       activeConversation: { id: 'conv-1' } as unknown as Conversation,
     });
-    
+
     render(<ChatContainer />);
     expect(screen.getByTestId('mock-conversation-view')).toBeInTheDocument();
     expect(screen.queryByTestId('mock-empty-state-no-conversations')).not.toBeInTheDocument();
@@ -73,9 +76,9 @@ describe('ChatContainer Component', () => {
       activeConversation: null,
       loading: false,
     });
-    
+
     render(<ChatContainer />);
-    
+
     expect(mockOpenConversation).toHaveBeenCalledWith('conv-1');
   });
 
@@ -119,6 +122,7 @@ describe('ChatContainer Component', () => {
       updateTopic: vi.fn(),
       deleteConversation: vi.fn(),
       leaveConversation: vi.fn(),
+      joinRoom: vi.fn(),
     });
 
     render(

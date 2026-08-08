@@ -19,6 +19,7 @@ describe('conversationStore', () => {
     createdAt: new Date('2026-01-01'),
     unreadCount: 2,
     participants: [{ id: 'user-1', displayName: 'Alice' }],
+    name: 'Alice',
     otherParticipant: { id: 'user-2', displayName: 'Bob' },
   };
 

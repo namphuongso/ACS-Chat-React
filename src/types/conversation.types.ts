@@ -12,6 +12,8 @@ export type ConversationType = 'direct' | 'group';
 export interface BaseConversation {
   /** Unique conversation / thread ID */
   id: string;
+  /** Original backend conversation ID */
+  conversationId?: string;
   /** Type of conversation ('direct' or 'group') */
   type: ConversationType;
   /** Timestamp when conversation was created */
@@ -22,6 +24,10 @@ export interface BaseConversation {
   lastMessage?: ChatMessage;
   /** Number of unread messages for the current user */
   unreadCount: number;
+  /** Display title/name of the group */
+  name: string;
+  /** Optional avatar URL for the group */
+  avatarUrl?: string;
   /** List of participants in the conversation */
   participants: ConversationParticipant[];
   /** Custom key-value metadata */
@@ -42,12 +48,8 @@ export interface DirectConversation extends BaseConversation {
  */
 export interface GroupConversation extends BaseConversation {
   type: 'group';
-  /** Display title/name of the group */
-  name: string;
   /** Optional topic/description of the group */
   description?: string;
-  /** Optional avatar URL for the group */
-  avatarUrl?: string;
 }
 
 /**
