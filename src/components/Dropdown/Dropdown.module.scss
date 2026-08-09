@@ -1,0 +1,56 @@
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: white;
+  border-radius: var(--chat-radius, 8px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  min-width: 220px;
+  padding: 8px 0;
+  z-index: 20;
+}
+
+.dropdownMenuUp {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--chat-text, #050505);
+  text-align: left;
+  gap: 12px;
+
+  &:hover {
+    background-color: var(--chat-bg-hover, #f9fafb);
+  }
+}
+
+.dropdownDivider {
+  height: 1px;
+  background-color: var(--chat-bg-secondary, #f0f2f5);
+  margin: 4px 0;
+}
+
+.dangerItem {
+  color: var(--chat-error, #ef4444);
+}
+
+.rightContent {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  color: var(--chat-text-secondary, #65676b);
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}

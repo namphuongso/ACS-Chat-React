@@ -177,6 +177,8 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
     [handleScroll, handleConversationEndReached]
   );
 
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
   return (
     <div className={styles.conversationList}>
       {props.renderSearch ? (
@@ -224,6 +226,7 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
                       width: '100%',
                       height: virtualItem.size,
                       transform: `translateY(${virtualItem.start}px)`,
+                      zIndex: openDropdownId === conv.id ? 20 : 1,
                     }}
                   >
                     {props.renderItem ? (
@@ -235,6 +238,8 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
                         onClick={() => {
                           if (onSelect) onSelect(conv.id);
                         }}
+                        isDropdownOpen={openDropdownId === conv.id}
+                        onDropdownOpenChange={(isOpen) => setOpenDropdownId(isOpen ? conv.id : null)}
                       />
                     )}
                   </div>

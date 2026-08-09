@@ -185,13 +185,19 @@
   cursor: pointer;
   transition: background-color 0.2s;
   align-items: center;
+  position: relative;
 
   &:hover {
     background-color: var(--chat-bg-secondary);
+    z-index: 10;
   }
 
   &.active {
     background-color: #e6f0ff;
+  }
+
+  &.hasDropdownOpen {
+    z-index: 20;
   }
 
   .avatarContainer {
@@ -339,4 +345,48 @@
       }
     }
   }
+
+  .actions {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    background: var(--chat-bg-secondary);
+    border-radius: 50%;
+    box-shadow: -4px 0 8px var(--chat-bg-secondary);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    z-index: 10;
+  }
+
+  &:hover .actions,
+  .actions.dropdownOpen {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .actionIconBtn {
+    background: var(--chat-bg-secondary);
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--chat-text-secondary);
+    border-radius: 50%;
+    
+    &:hover {
+      background-color: var(--chat-border, #e4e6eb);
+      color: var(--chat-text);
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
 }
