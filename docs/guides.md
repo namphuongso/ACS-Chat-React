@@ -224,3 +224,33 @@ function ConnectionStatusBanner() {
 ```
 
 Common error codes you might encounter include authentication failures (e.g., token expired and refresh failed) or network issues. Always ensure your token refresher logic is robust and can handle backend outages.
+
+---
+
+## 6. Internationalization (i18n)
+
+The `np-acs-library` supports internationalization out-of-the-box using `react-i18next`.
+
+### Changing Languages
+You can use the `useChatLanguage` hook to switch languages dynamically across all built-in UI components.
+
+```tsx
+import { useChatLanguage } from 'np-acs-library';
+
+function LanguageSwitcher() {
+  const { currentLanguage, changeLanguage, supportedLanguages } = useChatLanguage();
+
+  return (
+    <select 
+      value={currentLanguage} 
+      onChange={(e) => changeLanguage(e.target.value)}
+    >
+      {supportedLanguages.map(lang => (
+        <option key={lang.code} value={lang.code}>
+          {lang.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+```

@@ -251,11 +251,14 @@ export function MyMessageArea({ conversationId }: { conversationId: string }) {
 | Hook | Purpose |
 |------|---------|
 | `useChat()` | Returns global `ChatContext` state (config, client instance, global connection state). |
+| `useChatLanguage()` | Manages i18n chat locale state and language switching. |
 | `useConversations()` | Manages the list of chat threads, active thread, and creating new threads. |
 | `useMessages(conversationId)` | Manages message history, sending, editing, and deleting messages for a specific thread. |
 | `useParticipants(conversationId)` | Provides a list of participants in a specific thread and methods to add/remove them. |
+| `useRoomMembers(conversationId)` | Manage membership operations (join/leave) for ACS rooms. |
 | `useTypingIndicator(conversationId)` | Returns currently typing users and a method to broadcast typing events. |
 | `useReadReceipt(conversationId)` | Provides methods to send read receipts and read receipt history. |
 | `useConnection()` | Dedicated hook for connection lifecycle, status, and manual reconnects. |
+| `useContactSearch()` | Search for contacts across chat providers with debounced fetching. |
 
 By utilizing these hooks, you isolate the complex Azure Communication Services logic from your UI, leading to clean, testable, and highly customizable React applications.

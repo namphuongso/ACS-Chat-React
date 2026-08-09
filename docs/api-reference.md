@@ -28,6 +28,19 @@ Displays a list of available conversations for the current user, complete with u
 - `onSelectConversation?` (`(conversationId: string) => void`): Event handler for selecting a conversation.
 - `selectedId?` (`string`): The currently selected conversation ID.
 
+### `<ConversationHeader />`
+Displays the header for a conversation, including the title, avatar, and back button (if applicable).
+
+**Props:**
+- `conversationId` (`string`): The ID of the conversation. **(Required)**
+- `onBackClick?` (`() => void`): Callback when the back button is clicked.
+
+### `<ConversationFooter />`
+Displays the footer for a conversation, typically housing the message input and typing indicators.
+
+**Props:**
+- `conversationId` (`string`): The ID of the conversation. **(Required)**
+
 ### `<MessageList />`
 Renders a scrollable list of messages for a specific conversation, utilizing virtualization for high performance with long histories.
 
@@ -102,7 +115,8 @@ Access messages and messaging actions for a specific conversation.
 - `loadMore()` (`() => Promise<void>`): Loads the next page of older messages.
 - `sendMessage(options: SendMessageOptions)`: Sends a new text message (or attachment).
 - `deleteMessage(messageId: string)`: Deletes an existing message.
-- `updateMessage(messageId: string, content: string)`: Edits an existing message.
+- `editMessage(messageId: string, content: string)`: Edits an existing message.
+- `retryMessage(messageId: string)`: Retries sending a failed message.
 
 ### `useParticipants(conversationId: string)`
 Manage participants for a specific group conversation.
@@ -125,6 +139,32 @@ Manage read receipts for a conversation.
 **Returns:**
 - `readReceipts` (`MessageReadStatus[]`): Read receipt status information.
 - `sendReadReceipt(messageId: string)`: Marks a specific message as read.
+
+### `useChatLanguage()`
+Manage internationalization (i18n) and locale state.
+
+**Returns:**
+- `currentLanguage` (`string`): The currently active language code.
+- `supportedLanguages` (`{ code: string, label: string }[]`): List of available languages.
+- `changeLanguage(code: string)`: Switches the active language.
+
+### `useContactSearch()`
+Search for contacts across providers with debounced fetching.
+
+**Returns:**
+- `results` (`Contact[]`): Array of search results.
+- `isSearching` (`boolean`): True if a search request is currently pending.
+- `search(query: string)`: Triggers a search with the given query.
+- `clearSearch()`: Clears current results and search state.
+
+### `useRoomMembers(conversationId: string)`
+Manage membership operations (join/leave) for ACS rooms.
+
+**Returns:**
+- `members` (`RoomMember[]`): Array of current room members.
+- `isJoining` (`boolean`): True if currently attempting to join.
+- `joinRoom()`: Attempts to join the room.
+- `leaveRoom()`: Leaves the room.
 
 ---
 
