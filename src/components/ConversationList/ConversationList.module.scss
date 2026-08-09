@@ -325,8 +325,10 @@
 
         .pinIcon {
           color: var(--chat-text-secondary);
-          width: var(--chat-font-size);
-          height: var(--chat-font-size);
+          width: 14px;
+          height: 14px;
+          transform: rotate(45deg);
+          fill: currentColor;
         }
 
         .unreadBadge {

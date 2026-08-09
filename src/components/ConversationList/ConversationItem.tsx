@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { DropdownItem, DropdownDivider } from '../Dropdown';
 import dropdownStyles from '../Dropdown/Dropdown.module.scss';
 import styles from './ConversationList.module.scss';
+import { conversationService } from '../../services/conversationService';
 
 
 export interface ConversationItemProps {
@@ -75,6 +76,19 @@ export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
       setIsDropdownOpen(false);
     };
 
+    // Extract metadata (mocking the features from the image like pin and verified)
+    const isPinned = conversation.pin ?? conversation.metadata?.pinned === 'true';
+
+    const handlePinClick = async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setIsDropdownOpen(false);
+      try {
+        await conversationService.pinConversation(conversation.id, !isPinned);
+      } catch (err) {
+        console.error('Failed to pin conversation', err);
+      }
+    };
+
     const displayName =
       conversation.name ||
       (conversation.type === 'direct'
@@ -101,7 +115,6 @@ export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
     }
 
     // Extract metadata (mocking the features from the image like pin and verified)
-    const isPinned = conversation.metadata?.pinned === 'true';
     const isVerified = conversation.metadata?.verified === 'true';
     const timestamp = conversation.updatedAt || conversation.createdAt;
 
@@ -132,7 +145,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
               </div>
             </div>
             <div className={styles.previewRight}>
-              {isPinned && <PinIcon />}
+              {isPinned && <PinIcon className={styles.pinIcon} />}
               {conversation.unreadCount > 0 && (
                 <div className={styles.unreadBadge}>
                   {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
@@ -158,8 +171,10 @@ export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
             <div
               className={`${dropdownStyles.dropdownMenu} ${dropdownPosition === 'up' ? dropdownStyles.dropdownMenuUp : ''}`}
             >
-              <DropdownItem onClick={handleActionClick}>
-                {t('chat.pinConversation', 'Pin this conversation')}
+              <DropdownItem onClick={handlePinClick}>
+                {isPinned
+                  ? t('chat.unpinConversation', 'Unpin this conversation')
+                  : t('chat.pinConversation', 'Pin this conversation')}
               </DropdownItem>
               <DropdownDivider />
 

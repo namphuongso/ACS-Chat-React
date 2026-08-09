@@ -32,6 +32,8 @@ export interface BaseConversation {
   participants: ConversationParticipant[];
   /** Custom key-value metadata */
   metadata?: Record<string, string>;
+  /** Whether the conversation is pinned */
+  pin?: boolean;
 }
 
 /**

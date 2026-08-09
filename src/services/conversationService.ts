@@ -181,6 +181,7 @@ export class ConversationService {
               },
               avatarUrl: item.avatarUrl || undefined,
               name: item.roomName || 'Unknown',
+              pin: item.pin || false,
             });
           } else {
             conversations.push({
@@ -196,6 +197,7 @@ export class ConversationService {
               unreadCount: item.isRead === false ? 1 : 0,
               participants: [],
               avatarUrl: item.avatarUrl || undefined,
+              pin: item.pin || false,
             });
           }
         }
@@ -785,6 +787,43 @@ export class ConversationService {
     } catch (e) {
       const chatError = mapAcsErrorToChatError(e, 'joinRoom', { conversationId });
       throw chatError;
+    }
+  }
+
+  /**
+   * Pin or unpin a conversation
+   */
+  public async pinConversation(id: string, pin: boolean): Promise<{ error?: ChatError }> {
+    const store = useConversationStore.getState();
+
+    if (!id || id.trim() === '') {
+      throw new AcsChatError('INVALID_INPUT', 'id is required.', {
+        operation: 'pinConversation',
+      });
+    }
+
+    try {
+      const config = this.chatServiceRef?.getConfig();
+      if (!config) {
+        throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
+          operation: 'pinConversation',
+        });
+      }
+
+      const conversation = store.conversations[id];
+      const roomId = conversation?.conversationId || id;
+
+      await fetchBackend(config, `/api/chat/pin-room?roomId=${roomId}&pin=${pin}`, {
+        method: 'POST',
+        body: '',
+      });
+
+      store.updateConversation(id, { pin });
+      return {};
+    } catch (e) {
+      const chatError = mapAcsErrorToChatError(e, 'pinConversation', { conversationId: id });
+      store.setError(chatError);
+      return { error: chatError };
     }
   }
 }
