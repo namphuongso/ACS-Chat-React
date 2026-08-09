@@ -1,10 +1,12 @@
 import type { ChatMessage, SendMessageOptions } from '../types/message.types';
 import { useMessageStore } from '../store/messageStore';
 import { useChatStore } from '../store/chatStore';
+import { useConversationStore } from '../store/conversationStore';
 import { mapAcsErrorToChatError, mapAcsMessageToMessage } from '../adapters/acs/acsMappers';
 import { AcsChatError } from '../types/errors.types';
 import { logger } from '../utils/logger';
 import { generateId } from '../utils/id';
+import { fetchBackend } from '../utils/apiClient';
 import type { ChatService } from './chatService';
 
 /**
@@ -285,17 +287,34 @@ export class MessageService {
     msgStore.addMessage(conversationId, optimisticMessage);
 
     try {
-      const threadClient = this.getThreadClient(conversationId);
+      const config = this.getChatService().getConfig();
+      if (!config) {
+        throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
+          operation: 'sendMessage',
+        });
+      }
+      
+      if (!config.backendUrl) {
+        throw new AcsChatError('INVALID_INPUT', 'Backend URL is not configured.', {
+          operation: 'sendMessage',
+        });
+      }
 
-      const response = await threadClient.sendMessage(
-        { content },
+      const roomId = useConversationStore.getState().conversations[conversationId]?.conversationId || conversationId;
+
+      const responseData = await fetchBackend<string>(
+        config,
+        '/api/chat/send-message',
         {
-          type: options?.type,
-          metadata: options?.metadata,
+          method: 'POST',
+          body: JSON.stringify({
+            roomId,
+            content
+          })
         }
       );
 
-      const serverMessageId = response.id;
+      const serverMessageId = responseData.data;
 
       // Replace optimistic message with server-confirmed message
       const confirmedMessage: ChatMessage = {
@@ -372,8 +391,33 @@ export class MessageService {
     });
 
     try {
-      const threadClient = this.getThreadClient(conversationId);
-      await threadClient.updateMessage(messageId, { content: newContent });
+      const config = this.getChatService().getConfig();
+      if (!config) {
+        throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
+          operation: 'editMessage',
+        });
+      }
+      
+      if (!config.backendUrl) {
+        throw new AcsChatError('INVALID_INPUT', 'Backend URL is not configured.', {
+          operation: 'editMessage',
+        });
+      }
+
+      const roomId = useConversationStore.getState().conversations[conversationId]?.conversationId || conversationId;
+
+      await fetchBackend<boolean>(
+        config,
+        '/api/chat/update-message',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            roomId,
+            content: newContent,
+            messageId
+          })
+        }
+      );
 
       logger.info(`Message ${messageId} edited in conversation ${conversationId}`);
       return {
@@ -440,8 +484,32 @@ export class MessageService {
     });
 
     try {
-      const threadClient = this.getThreadClient(conversationId);
-      await threadClient.deleteMessage(messageId);
+      const config = this.getChatService().getConfig();
+      if (!config) {
+        throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
+          operation: 'deleteMessage',
+        });
+      }
+      
+      if (!config.backendUrl) {
+        throw new AcsChatError('INVALID_INPUT', 'Backend URL is not configured.', {
+          operation: 'deleteMessage',
+        });
+      }
+
+      const roomId = useConversationStore.getState().conversations[conversationId]?.conversationId || conversationId;
+
+      await fetchBackend<boolean>(
+        config,
+        '/api/chat/delete-message',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            roomId,
+            messageId
+          })
+        }
+      );
 
       logger.info(`Message ${messageId} deleted from conversation ${conversationId}`);
       return {};
