@@ -1,4 +1,4 @@
-import { UserPlus, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import React from 'react';
 import { SearchInput } from '../SearchInput';
 import styles from './ConversationList.module.scss';
@@ -38,9 +38,6 @@ export const ConversationListHeader: React.FC<ConversationListHeaderProps> = ({
         />
         {!isSearching ? (
           <div className={styles.headerActions}>
-            <button className={styles.actionBtn}>
-              <UserPlus />
-            </button>
             <button className={styles.actionBtn}>
               <Users />
             </button>

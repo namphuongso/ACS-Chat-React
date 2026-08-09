@@ -278,8 +278,10 @@ export class ChatService {
       }
 
       case 'message:deleted': {
-        const payload = event.payload as { id: string };
-        msgStore.removeMessage(event.conversationId, payload.id);
+        const payload = event.payload as { id: string; deletedAt: Date };
+        msgStore.updateMessage(event.conversationId, payload.id, {
+          deletedAt: payload.deletedAt,
+        });
         break;
       }
 

@@ -194,6 +194,7 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
         {!isSearching &&
           filteredConversations.length === 0 &&
           !loading &&
+          !hasMore &&
           (props.renderEmpty ? props.renderEmpty() : defaultRenderEmpty())}
 
         {!isSearching && filteredConversations.length > 0 && (
@@ -270,7 +271,7 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
           />
         )}
 
-        {loading && (
+        {(loading || (!isSearching && filteredConversations.length === 0 && hasMore)) && (
           <div style={{ padding: 16, textAlign: 'center', color: '#667781', fontSize: 13 }}>
             Loading...
           </div>

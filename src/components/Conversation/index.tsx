@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useEffect } from 'react';
+import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import { useConversations } from '../../hooks/useConversations';
 import { useMessages } from '../../hooks/useMessages';
 import { useChat } from '../../hooks/useChat';
@@ -8,6 +8,8 @@ import { ConversationFooter } from './ConversationFooter';
 import { ConversationHeader } from '../ConversationHeader';
 import { EmptyState } from '../EmptyState';
 import { LoadingState } from '../LoadingState';
+import { EditMessageDialog } from './EditMessageDialog';
+import { ConfirmDialog } from './ConfirmDialog';
 import styles from './ConversationView.module.scss';
 
 export interface ConversationViewProps {
@@ -28,7 +30,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
     const { roomMembers, roomType } = useRoomMembers(conversation);
 
     // Call hooks unconditionally
-    const { messages, loading, loadingMore, hasMore, loadMore, loadMessages, sendMessage } =
+    const { messages, loading, loadingMore, hasMore, loadMore, loadMessages, sendMessage, editMessage, deleteMessage } =
       useMessages(idToUse || '');
 
     useEffect(() => {
@@ -50,6 +52,65 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
 
     const handleTyping = useCallback(() => {
       // Integration point for typing indicators
+    }, []);
+
+    const [editDialog, setEditDialog] = useState({
+      isOpen: false,
+      messageId: '',
+      initialContent: '',
+    });
+
+    const handleEditMessage = useCallback(
+      (messageId: string) => {
+        const message = messages.find((m) => m.id === messageId);
+        if (!message) return;
+        
+        // Strip HTML if message is HTML type before prompting
+        const contentToEdit = message.type === 'html' 
+          ? message.content.replace(/<[^>]*>?/gm, '') 
+          : message.content;
+
+        setEditDialog({
+          isOpen: true,
+          messageId,
+          initialContent: contentToEdit,
+        });
+      },
+      [messages]
+    );
+
+    const handleSaveEdit = useCallback((newContent: string) => {
+      if (editDialog.messageId) {
+        editMessage(editDialog.messageId, newContent);
+      }
+      setEditDialog({ isOpen: false, messageId: '', initialContent: '' });
+    }, [editDialog.messageId, editMessage]);
+
+    const handleCancelEdit = useCallback(() => {
+      setEditDialog({ isOpen: false, messageId: '', initialContent: '' });
+    }, []);
+
+    const [deleteDialog, setDeleteDialog] = useState({
+      isOpen: false,
+      messageId: '',
+    });
+
+    const handleDeleteMessage = useCallback(
+      (messageId: string) => {
+        setDeleteDialog({ isOpen: true, messageId });
+      },
+      []
+    );
+
+    const handleConfirmDelete = useCallback(() => {
+      if (deleteDialog.messageId) {
+        deleteMessage(deleteDialog.messageId);
+      }
+      setDeleteDialog({ isOpen: false, messageId: '' });
+    }, [deleteDialog.messageId, deleteMessage]);
+
+    const handleCancelDelete = useCallback(() => {
+      setDeleteDialog({ isOpen: false, messageId: '' });
     }, []);
 
     if (!idToUse || !conversation) {
@@ -76,6 +137,8 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
             onLoadMore={loadMore}
             roomMembers={roomMembers}
             roomType={roomType || conversation.type}
+            onEditMessage={handleEditMessage}
+            onDeleteMessage={handleDeleteMessage}
           />
         </div>
 
@@ -83,6 +146,22 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
           onSend={handleSend}
           onTyping={handleTyping}
           disabled={loading || connectionState !== 'connected'}
+        />
+
+        <EditMessageDialog
+          isOpen={editDialog.isOpen}
+          initialContent={editDialog.initialContent}
+          onSave={handleSaveEdit}
+          onCancel={handleCancelEdit}
+        />
+
+        <ConfirmDialog
+          isOpen={deleteDialog.isOpen}
+          title="Xoá tin nhắn"
+          message="Bạn có chắc chắn muốn xoá tin nhắn này không? Hành động này không thể hoàn tác."
+          confirmText="Xoá"
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
         />
       </div>
     );

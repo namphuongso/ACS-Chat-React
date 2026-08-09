@@ -18,6 +18,8 @@ export interface MessageListProps {
   renderLoadingMore?: () => ReactNode;
   roomMembers?: Array<{ userId?: string; contactName?: string; avatarUrl?: string; cui?: string }>;
   roomType?: string;
+  onEditMessage?: (messageId: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
 }
 
 type ListItem =
@@ -38,6 +40,8 @@ export const MessageList: React.FC<MessageListProps> = React.memo(
     renderLoadingMore,
     roomMembers,
     roomType,
+    onEditMessage,
+    onDeleteMessage,
   }) => {
     const items: ListItem[] = useMemo(() => {
       const result: ListItem[] = [];
@@ -181,6 +185,8 @@ export const MessageList: React.FC<MessageListProps> = React.memo(
           isOwn={isOwn}
           showSender={isFirstInGroup}
           isLastInGroup={isLastInGroup}
+          onEdit={onEditMessage}
+          onDelete={onDeleteMessage}
         />
       );
     };

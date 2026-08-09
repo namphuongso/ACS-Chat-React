@@ -432,10 +432,12 @@ export class MessageService {
     }
 
     // Store backup for rollback
-    const backupMessages = [...(convData?.messages || [])];
+    const backupDeletedAt = existingMessage.deletedAt;
 
-    // Optimistic removal
-    msgStore.removeMessage(conversationId, messageId);
+    // Optimistic update to deleted state
+    msgStore.updateMessage(conversationId, messageId, {
+      deletedAt: new Date(),
+    });
 
     try {
       const threadClient = this.getThreadClient(conversationId);
@@ -444,8 +446,10 @@ export class MessageService {
       logger.info(`Message ${messageId} deleted from conversation ${conversationId}`);
       return {};
     } catch (error) {
-      // Rollback: restore the message
-      msgStore.setMessages(conversationId, backupMessages, convData?.hasMore);
+      // Rollback: restore the original deletedAt state
+      msgStore.updateMessage(conversationId, messageId, {
+        deletedAt: backupDeletedAt,
+      });
 
       const chatError = mapAcsErrorToChatError(error, 'deleteMessage', { messageId });
       logger.error(`Failed to delete message ${messageId}`, error);

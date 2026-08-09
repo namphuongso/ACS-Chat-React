@@ -15,6 +15,7 @@ import {
   ChevronRightIcon,
   UndoIcon,
   TrashIcon,
+  EditIcon,
 } from '../Icons';
 
 export interface MessageItemProps {
@@ -44,6 +45,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
     isOwn,
     showSender = false,
     isLastInGroup = true,
+    onEdit,
     onDelete,
     onReply,
     onForward,
@@ -58,6 +60,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
     renderStatus,
   }) => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [dropdownPosition, setDropdownPosition] = useState<'down' | 'up'>('down');
     const actionsRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -108,6 +111,13 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
       message.senderDisplayName || message.sender?.displayName || message.sender?.id || 'Unknown';
 
     const defaultRenderContent = () => {
+      if (message.deletedAt) {
+        return (
+          <div className={styles.deletedMessage}>
+            <i>Tin nhắn đã bị xoá</i>
+          </div>
+        );
+      }
       if (message.type === 'html') {
         return <div dangerouslySetInnerHTML={{ __html: message.content }} />;
       }
@@ -139,7 +149,9 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
             {!isOwn && showSender && <div className={styles.senderName}>{senderName}</div>}
 
             {renderContent ? renderContent(message) : defaultRenderContent()}
-            {message.editedAt && <span className={styles.edited}>(edited)</span>}
+            {message.editedAt && !message.deletedAt && (
+              <span className={styles.edited}>(đã chỉnh sửa)</span>
+            )}
 
             {/* Message Meta: Time & Status */}
             {isLastInGroup && (
@@ -157,102 +169,120 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
           </div>
 
           {/* Actions container (hover to reveal) */}
-          <div
-            ref={actionsRef}
-            className={`${styles.actions} ${isDropdownOpen ? styles.dropdownOpen : ''}`}
-          >
-            {renderActions ? (
-              renderActions(message)
-            ) : (
-              <>
-                <button
-                  className={styles.actionIconBtn}
-                  onClick={() => handleActionClick(onReply)}
-                  title="Reply"
-                >
-                  <QuoteIcon />
-                </button>
-                <button
-                  className={styles.actionIconBtn}
-                  onClick={() => handleActionClick(onForward)}
-                  title="Forward"
-                >
-                  <ForwardIcon />
-                </button>
-                <div style={{ position: 'relative' }}>
+          {!message.deletedAt && (
+            <div
+              ref={actionsRef}
+              className={`${styles.actions} ${isDropdownOpen ? styles.dropdownOpen : ''}`}
+            >
+              {renderActions ? (
+                renderActions(message)
+              ) : (
+                <>
                   <button
                     className={styles.actionIconBtn}
-                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    title="More Options"
+                    onClick={() => handleActionClick(onReply)}
+                    title="Reply"
                   >
-                    <MoreHorizontalIcon />
+                    <QuoteIcon />
                   </button>
+                  <button
+                    className={styles.actionIconBtn}
+                    onClick={() => handleActionClick(onForward)}
+                    title="Forward"
+                  >
+                    <ForwardIcon />
+                  </button>
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      className={styles.actionIconBtn}
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        if (window.innerHeight - rect.bottom < 350) {
+                          setDropdownPosition('up');
+                        } else {
+                          setDropdownPosition('down');
+                        }
+                        setIsDropdownOpen(!isDropdownOpen);
+                      }}
+                      title="More Options"
+                    >
+                      <MoreHorizontalIcon />
+                    </button>
 
-                  {isDropdownOpen && (
-                    <div className={styles.dropdownMenu}>
-                      <button
-                        className={styles.dropdownItem}
-                        onClick={() => handleActionClick(onCopy)}
-                      >
-                        <CopyIcon /> Copy text
-                      </button>
-                      <div className={styles.dropdownDivider} />
+                    {isDropdownOpen && (
+                      <div className={`${styles.dropdownMenu} ${dropdownPosition === 'up' ? styles.dropdownMenuUp : ''}`}>
+                        <button
+                          className={styles.dropdownItem}
+                          onClick={() => handleActionClick(onCopy)}
+                        >
+                          <CopyIcon /> Copy text
+                        </button>
+                        <div className={styles.dropdownDivider} />
 
-                      <button
-                        className={styles.dropdownItem}
-                        onClick={() => handleActionClick(onPin)}
-                      >
-                        <PinIcon /> Pin message
-                      </button>
-                      <button
-                        className={styles.dropdownItem}
-                        onClick={() => handleActionClick(onStar)}
-                      >
-                        <StarIcon /> Star this message
-                      </button>
-                      <button
-                        className={styles.dropdownItem}
-                        onClick={() => handleActionClick(onSelect)}
-                      >
-                        <ListChecksIcon /> Select messages
-                      </button>
-                      <button
-                        className={styles.dropdownItem}
-                        onClick={() => handleActionClick(onViewDetails)}
-                      >
-                        <InfoIcon /> View details
-                      </button>
+                        <button
+                          className={styles.dropdownItem}
+                          onClick={() => handleActionClick(onPin)}
+                        >
+                          <PinIcon /> Pin message
+                        </button>
+                        <button
+                          className={styles.dropdownItem}
+                          onClick={() => handleActionClick(onStar)}
+                        >
+                          <StarIcon /> Star this message
+                        </button>
+                        <button
+                          className={styles.dropdownItem}
+                          onClick={() => handleActionClick(onSelect)}
+                        >
+                          <ListChecksIcon /> Select messages
+                        </button>
+                        <button
+                          className={styles.dropdownItem}
+                          onClick={() => handleActionClick(onViewDetails)}
+                        >
+                          <InfoIcon /> View details
+                        </button>
 
-                      <div className={styles.dropdownDivider} />
-                      <button className={styles.dropdownItem}>
-                        Other options
-                        <div className={styles.rightContent}>
-                          <ChevronRightIcon />
-                        </div>
-                      </button>
-                      <div className={styles.dropdownDivider} />
+                        <div className={styles.dropdownDivider} />
+                        <button className={styles.dropdownItem}>
+                          Other options
+                          <div className={styles.rightContent}>
+                            <ChevronRightIcon />
+                          </div>
+                        </button>
+                        <div className={styles.dropdownDivider} />
 
-                      {isOwn && (
+                        {isOwn && (
+                          <>
+                            <button
+                              className={styles.dropdownItem}
+                              onClick={() => handleActionClick(onEdit)}
+                            >
+                              <EditIcon /> Sửa tin nhắn
+                            </button>
+                            <button
+                              className={`${styles.dropdownItem} ${styles.dangerItem}`}
+                              onClick={() => handleActionClick(onRecall)}
+                            >
+                              <UndoIcon /> Recall
+                            </button>
+                          </>
+                        )}
+
                         <button
                           className={`${styles.dropdownItem} ${styles.dangerItem}`}
-                          onClick={() => handleActionClick(onRecall)}
+                          onClick={() => handleActionClick(onDelete)}
                         >
-                          <UndoIcon /> Recall
+                          <TrashIcon /> Xoá tin nhắn
                         </button>
-                      )}
-
-                      <button
-                        className={`${styles.dropdownItem} ${styles.dangerItem}`}
-                        onClick={() => handleActionClick(onDelete)}
-                      >
-                        <TrashIcon /> Delete for me only
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
