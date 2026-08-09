@@ -157,7 +157,7 @@ export const MessageList: React.FC<MessageListProps> = React.memo(
       let isFirstInGroup = true;
       if (index > 0) {
         const prevItem = allItems[index - 1];
-        if (prevItem.type === 'message' && prevItem.data.sender.id === message.sender.id) {
+        if (prevItem?.type === 'message' && prevItem?.data?.sender?.id === message.sender.id) {
           isFirstInGroup = false;
         }
       }
@@ -166,7 +166,7 @@ export const MessageList: React.FC<MessageListProps> = React.memo(
       let isLastInGroup = true;
       if (index < allItems.length - 1) {
         const nextItem = allItems[index + 1];
-        if (nextItem.type === 'message' && nextItem.data.sender.id === message.sender.id) {
+        if (nextItem?.type === 'message' && nextItem?.data?.sender?.id === message.sender.id) {
           isLastInGroup = false;
         }
       }

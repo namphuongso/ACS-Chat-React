@@ -5,13 +5,13 @@ import { LoadingState } from '../index';
 describe('LoadingState Component', () => {
   it('should render default loading message', () => {
     render(<LoadingState />);
-    expect(screen.getByText('Đang tải...')).toBeInTheDocument();
+    expect(screen.getByText('chat.loading')).toBeInTheDocument();
   });
 
   it('should render custom loading message', () => {
     render(<LoadingState message="Vui lòng chờ..." />);
     expect(screen.getByText('Vui lòng chờ...')).toBeInTheDocument();
-    expect(screen.queryByText('Đang tải...')).not.toBeInTheDocument();
+    expect(screen.queryByText('chat.loading')).not.toBeInTheDocument();
   });
 
   it('should apply custom className', () => {

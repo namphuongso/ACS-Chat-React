@@ -11,6 +11,7 @@ import {
   ThumbsUp,
   Send as SendIcon
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { MessageInput } from '../MessageInput';
 import styles from './ConversationFooter.module.scss';
 
@@ -25,6 +26,8 @@ export const ConversationFooter: React.FC<ConversationFooterProps> = React.memo(
   onTyping,
   disabled
 }) => {
+  const { t } = useTranslation();
+
   const renderToolbar = useCallback(() => {
     return (
       <>
@@ -73,7 +76,7 @@ export const ConversationFooter: React.FC<ConversationFooterProps> = React.memo(
             type="button"
             className={styles.thumbsUpButton}
             onClick={() => onSend('👍')}
-            aria-label="Send Thumbs Up"
+            aria-label={t('chat.sendThumbsUp')}
           >
             <ThumbsUp size={24} color="#f59e0b" fill="#f59e0b" />
           </button>
@@ -82,7 +85,7 @@ export const ConversationFooter: React.FC<ConversationFooterProps> = React.memo(
             type="button"
             className={styles.sendButton}
             onClick={onClick}
-            aria-label="Send Message"
+            aria-label={t('chat.sendMessage')}
           >
             <SendIcon size={20} />
           </button>
@@ -99,7 +102,7 @@ export const ConversationFooter: React.FC<ConversationFooterProps> = React.memo(
         disabled={disabled}
         renderToolbar={renderToolbar}
         renderSendButton={renderSendButton}
-        placeholder="Type a message..."
+        placeholder={t('chat.typeMessage')}
       />
     </div>
   );

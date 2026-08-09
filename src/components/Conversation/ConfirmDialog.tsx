@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './ConfirmDialog.module.scss';
 
 export interface ConfirmDialogProps {
@@ -20,6 +21,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   return (
@@ -29,10 +31,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         <p className={styles.dialogBody}>{message}</p>
         <div className={styles.dialogFooter}>
           <button className={styles.cancelBtn} onClick={onCancel}>
-            {cancelText}
+            {cancelText || t('chat.cancel')}
           </button>
           <button className={styles.confirmBtn} onClick={onConfirm}>
-            {confirmText}
+            {confirmText || t('chat.confirm')}
           </button>
         </div>
       </div>

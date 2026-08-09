@@ -5,14 +5,14 @@ import { MessageInput } from '../index';
 describe('MessageInput Component', () => {
   it('should render correctly with default placeholder', () => {
     render(<MessageInput onSend={vi.fn()} onTyping={vi.fn()} />);
-    expect(screen.getByPlaceholderText('Type a message...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('chat.typeMessage')).toBeInTheDocument();
   });
 
   it('should call onTyping when typing in textarea', () => {
     const mockTyping = vi.fn();
     render(<MessageInput onSend={vi.fn()} onTyping={mockTyping} />);
     
-    const textarea = screen.getByPlaceholderText('Type a message...');
+    const textarea = screen.getByPlaceholderText('chat.typeMessage');
     fireEvent.change(textarea, { target: { value: 'a' } });
     
     expect(mockTyping).toHaveBeenCalledTimes(1);
@@ -22,7 +22,7 @@ describe('MessageInput Component', () => {
     const mockSend = vi.fn();
     render(<MessageInput onSend={mockSend} onTyping={vi.fn()} />);
     
-    const textarea = screen.getByPlaceholderText('Type a message...');
+    const textarea = screen.getByPlaceholderText('chat.typeMessage');
     fireEvent.change(textarea, { target: { value: 'test message' } });
     
     const sendBtn = screen.getByRole('button', { name: 'Send message' });
@@ -39,7 +39,7 @@ describe('MessageInput Component', () => {
     const sendBtn = screen.getByRole('button', { name: 'Send message' });
     fireEvent.click(sendBtn);
     
-    const textarea = screen.getByPlaceholderText('Type a message...');
+    const textarea = screen.getByPlaceholderText('chat.typeMessage');
     fireEvent.change(textarea, { target: { value: '   ' } });
     fireEvent.click(sendBtn);
     
@@ -50,7 +50,7 @@ describe('MessageInput Component', () => {
     const mockSend = vi.fn();
     render(<MessageInput onSend={mockSend} onTyping={vi.fn()} />);
     
-    const textarea = screen.getByPlaceholderText('Type a message...');
+    const textarea = screen.getByPlaceholderText('chat.typeMessage');
     fireEvent.change(textarea, { target: { value: 'enter text' } });
     fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: false });
     
@@ -61,7 +61,7 @@ describe('MessageInput Component', () => {
     const mockSend = vi.fn();
     render(<MessageInput onSend={mockSend} onTyping={vi.fn()} />);
     
-    const textarea = screen.getByPlaceholderText('Type a message...');
+    const textarea = screen.getByPlaceholderText('chat.typeMessage');
     fireEvent.change(textarea, { target: { value: 'shift enter text' } });
     fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: true });
     
@@ -70,14 +70,14 @@ describe('MessageInput Component', () => {
 
   it('should show character count if maxLength is provided', () => {
     render(<MessageInput onSend={vi.fn()} onTyping={vi.fn()} maxLength={100} />);
-    const textarea = screen.getByPlaceholderText('Type a message...');
+    const textarea = screen.getByPlaceholderText('chat.typeMessage');
     fireEvent.change(textarea, { target: { value: 'abc' } });
     expect(screen.getByText('3/100')).toBeInTheDocument();
   });
 
   it('should disable input and send button when disabled prop is true', () => {
     render(<MessageInput onSend={vi.fn()} onTyping={vi.fn()} disabled={true} />);
-    const textarea = screen.getByPlaceholderText('Type a message...');
+    const textarea = screen.getByPlaceholderText('chat.typeMessage');
     const sendBtn = screen.getByRole('button', { name: 'Send message' });
     
     expect(textarea).toBeDisabled();

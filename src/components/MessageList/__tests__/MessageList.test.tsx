@@ -69,7 +69,7 @@ describe('MessageList Component', () => {
         onLoadMore={mockLoadMore} 
       />
     );
-    expect(screen.getByText('Đang tải...')).toBeInTheDocument();
+    expect(screen.getByText('chat.loading')).toBeInTheDocument();
   });
 
   it('should render messages and date separators', () => {
@@ -89,8 +89,8 @@ describe('MessageList Component', () => {
     expect(screen.getByText('Hi')).toBeInTheDocument();
     
     // Check date separators
-    expect(screen.getByText('Jan 1, 2023')).toBeInTheDocument();
-    expect(screen.getByText('Jan 2, 2023')).toBeInTheDocument();
+    expect(screen.getByText('01/01/2023')).toBeInTheDocument();
+    expect(screen.getByText('02/01/2023')).toBeInTheDocument();
   });
 
   it('should trigger onLoadMore when start is reached and hasMore is true', () => {

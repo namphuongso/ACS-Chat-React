@@ -1,6 +1,7 @@
 import { Users } from 'lucide-react';
 import React from 'react';
 import { SearchInput } from '../SearchInput';
+import { useTranslation } from 'react-i18next';
 import styles from './ConversationList.module.scss';
 
 export type TabType = 'All' | 'Contacts' | 'Messages' | 'Files';
@@ -24,6 +25,7 @@ export const ConversationListHeader: React.FC<ConversationListHeaderProps> = ({
   activeTab,
   onTabChange,
 }) => {
+  const { t } = useTranslation();
   const TABS: TabType[] = ['All', 'Contacts', 'Messages', 'Files'];
 
   return (
@@ -33,7 +35,7 @@ export const ConversationListHeader: React.FC<ConversationListHeaderProps> = ({
           value={searchTerm}
           onChange={onSearchChange}
           onClear={() => onSearchChange('')}
-          placeholder="Search"
+          placeholder={t('chat.search')}
           onFocus={onSearchFocus}
         />
         {!isSearching ? (
@@ -44,7 +46,7 @@ export const ConversationListHeader: React.FC<ConversationListHeaderProps> = ({
           </div>
         ) : (
           <button className={styles.closeSearchBtn} onClick={onSearchClose}>
-            Close
+            {t('chat.close')}
           </button>
         )}
       </div>
@@ -56,7 +58,7 @@ export const ConversationListHeader: React.FC<ConversationListHeaderProps> = ({
               className={`${styles.tab} ${activeTab === tab ? styles.active : ''}`}
               onClick={() => onTabChange(tab)}
             >
-              {tab}
+              {t(`chat.tabs.${tab.toLowerCase()}`)}
             </button>
           ))}
         </div>

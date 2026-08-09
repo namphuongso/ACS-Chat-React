@@ -21,6 +21,7 @@
 | **Vitest** | ^1.3 | Unit testing (jsdom environment) |
 | **SCSS Modules** | sass ^1.102 | Scoped component styling |
 | **Azure ACS SDK** | chat ^1.6, common ^2.0 | ACS Chat backend (peer dependency) |
+| **i18next / react-i18next** | ^23.0 / ^15.0 | Internationalization (i18n) |
 | **ESLint** | ^8.56 | Linting |
 | **Prettier** | ^3.2 | Code formatting |
 
@@ -128,6 +129,9 @@ src/
 │   ├── useTypingIndicator.ts # Typing notification management
 │   ├── __tests__/
 │   └── index.ts
+├── i18n/                   # Internationalization (i18next)
+│   ├── locales/            # Translation dictionaries (en.ts, vi.ts)
+│   └── index.ts            # Scoped chatI18n instance
 ├── models/                 # Internal domain models (type aliases)
 │   ├── Conversation.ts
 │   ├── Message.ts
@@ -185,6 +189,7 @@ src/
 | `constants/` | Giá trị cố định, config mặc định | Khi có magic number/string cần tái sử dụng | Logic code, types |
 | `domain/` | Domain logic thuần (hiện đang placeholder) | Khi cần validation/transformation phức tạp | UI code, API calls |
 | `hooks/` | React hooks - public API cho consumer | Khi tạo hook mới expose cho consumer | Direct store manipulation phức tạp |
+| `i18n/` | Cấu hình và từ điển đa ngôn ngữ | Khi thêm key/ngôn ngữ mới | Business logic |
 | `models/` | Internal domain model type aliases | Khi cần model nội bộ khác với API types | Implementation logic |
 | `providers/` | React Context providers | Khi cần context mới cho dependency injection | Business logic |
 | `services/` | Business logic, orchestration | Khi thêm feature mới cần xử lý nghiệp vụ | UI code, store definition |
@@ -778,6 +783,22 @@ export interface ConversationListProps {
 3. **Component nhỏ, rõ trách nhiệm** — tách sub-component khi component quá lớn
 4. **Support customization** — dùng render props cho phần có thể custom
 5. **Unread badge** giới hạn hiển thị: `{count > 99 ? '99+' : count}`
+
+### 9.6. Đa ngôn ngữ (i18n)
+
+Dự án sử dụng `react-i18next` với một instance độc lập (`chatI18n`) để không xung đột với ứng dụng sử dụng library:
+- Tất cả text trong UI **phải** được lấy qua hook `useTranslation()`
+- Không hard-code strings trực tiếp trong components
+- Consumer app có thể truyền `locale` ("en", "vi",...) qua `<ChatProvider locale="vi">`
+
+```tsx
+import { useTranslation } from 'react-i18next';
+
+export const MyComponent = () => {
+  const { t } = useTranslation();
+  return <div>{t('chat.loading')}</div>;
+}
+```
 
 ---
 

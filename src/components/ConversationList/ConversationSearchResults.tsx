@@ -3,6 +3,7 @@ import { useVirtualScroll } from '../../hooks/useVirtualScroll';
 import type { Contact } from '../../types';
 import { ContactItem } from './ContactItem';
 import { SectionHeader } from './SectionHeader';
+import { useTranslation } from 'react-i18next';
 import styles from './ConversationList.module.scss';
 
 const MAX_CONTACTS_ALL_TAB = 7;
@@ -26,6 +27,7 @@ export const ConversationSearchResults: React.FC<ConversationSearchResultsProps>
   onContactSelect,
   onSeeAllContacts,
 }) => {
+  const { t } = useTranslation();
   const isContactsOnlyTab = activeTab === 'Contacts';
 
   const { virtualItems, totalHeight, scrollElementRef, handleScroll } = useVirtualScroll({
@@ -46,8 +48,8 @@ export const ConversationSearchResults: React.FC<ConversationSearchResultsProps>
         <>
           {isSearching && (
             <SectionHeader>
-              Contacts ({contacts.length}){' '}
-              {contactsLoading && <span className={styles.loadingText}>Loading...</span>}
+              {t('chat.tabs.contacts')} ({contacts.length}){' '}
+              {contactsLoading && <span className={styles.loadingText}>{t('chat.loading')}</span>}
             </SectionHeader>
           )}
           {contacts.length > 0 ? (
@@ -99,12 +101,12 @@ export const ConversationSearchResults: React.FC<ConversationSearchResultsProps>
             )
           ) : (
             isSearching &&
-            !contactsLoading && <div className={styles.emptyState}>No contacts found</div>
+            !contactsLoading && <div className={styles.emptyState}>{t('chat.noContactsFound')}</div>
           )}
           {isSearching && activeTab === 'All' && contacts.length > MAX_CONTACTS_ALL_TAB && (
             <div className={styles.seeAllContainer}>
               <button className={styles.seeAllBtn} onClick={onSeeAllContacts}>
-                See all contacts
+                {t('chat.seeAllContacts')}
               </button>
             </div>
           )}
@@ -114,16 +116,16 @@ export const ConversationSearchResults: React.FC<ConversationSearchResultsProps>
       {/* Messages Section */}
       {(activeTab === 'All' || activeTab === 'Messages') && isSearching && (
         <>
-          <SectionHeader>Messages (0)</SectionHeader>
-          <div className={styles.emptyState}>No messages found</div>
+          <SectionHeader>{t('chat.tabs.messages')} (0)</SectionHeader>
+          <div className={styles.emptyState}>{t('chat.noMessagesFound')}</div>
         </>
       )}
 
       {/* Files Section */}
       {(activeTab === 'All' || activeTab === 'Files') && isSearching && (
         <>
-          <SectionHeader>Files (0)</SectionHeader>
-          <div className={styles.emptyState}>No files found</div>
+          <SectionHeader>{t('chat.tabs.files')} (0)</SectionHeader>
+          <div className={styles.emptyState}>{t('chat.noFilesFound')}</div>
         </>
       )}
     </div>

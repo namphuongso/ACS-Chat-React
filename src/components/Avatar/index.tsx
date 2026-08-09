@@ -13,7 +13,7 @@ export const Avatar: React.FC<AvatarProps> = React.memo(({ url, name, className 
       {url ? (
         <img src={url} alt={name} className={styles.avatarImage} loading="lazy" />
       ) : (
-        <div className={styles.avatarFallback}>{name.charAt(0).toUpperCase()}</div>
+        <div className={styles.avatarFallback}>{(name || '?').charAt(0).toUpperCase()}</div>
       )}
     </div>
   );

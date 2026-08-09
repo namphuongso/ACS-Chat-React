@@ -305,11 +305,12 @@ describe('ChatService', () => {
         type: 'message:deleted',
         conversationId: 'thread-1',
         timestamp: new Date(),
-        payload: { id: 'msg-to-delete' },
+        payload: { id: 'msg-to-delete', deletedAt: new Date() },
       });
 
       const messages = useMessageStore.getState().messagesByConversation['thread-1']?.messages;
-      expect(messages).toHaveLength(0);
+      expect(messages).toHaveLength(1);
+      expect(messages![0].deletedAt).toBeDefined();
     });
 
     it('should route typing:started event and ignore self typing', () => {

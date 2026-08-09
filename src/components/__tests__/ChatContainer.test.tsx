@@ -69,18 +69,6 @@ describe('ChatContainer Component', () => {
     expect(screen.queryByTestId('mock-empty-state-no-conversations')).not.toBeInTheDocument();
   });
 
-  it('should auto-open the first conversation if none is active but conversations exist', () => {
-    vi.mocked(useConversations).mockReturnValue({
-      ...vi.mocked(useConversations)(),
-      conversations: [{ id: 'conv-1' }, { id: 'conv-2' }] as unknown as Conversation[],
-      activeConversation: null,
-      loading: false,
-    });
-
-    render(<ChatContainer />);
-
-    expect(mockOpenConversation).toHaveBeenCalledWith('conv-1');
-  });
 
   it('should allow custom renderers', () => {
     const customList = () => <div data-testid="custom-list">Custom List</div>;

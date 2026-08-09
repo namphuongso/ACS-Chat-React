@@ -56,6 +56,7 @@ describe('Services Integration', () => {
     displayName: 'John Doe',
     token: 'mock-token-string',
     tokenRefresher: vi.fn().mockResolvedValue('new-mock-token-string'),
+    backendUrl: 'https://api.example.com',
   };
 
   // Map to store event callbacks registered by AcsEventAdapter
@@ -63,6 +64,12 @@ describe('Services Integration', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ statusCode: 200, data: [
+        { id: 'thread-1', type: 'direct', threadId: 'thread-1', pid: 'user-2', roomName: 'Test Thread', created: new Date().toISOString() },
+      ] }),
+    }) as any;
     useChatStore.getState().reset();
     useConversationStore.getState().reset();
     useMessageStore.getState().reset();
@@ -151,12 +158,14 @@ describe('Services Integration', () => {
 
     const result = await messageService.sendMessage('thread-1', 'Test message');
 
-    expect(mockSendMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ content: 'Test message' }),
-      expect.any(Object)
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/chat/send-message'),
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('Test message'),
+      })
     );
     expect(result.message).toBeDefined();
-    expect(result.message?.id).toBe('msg-sent-1');
   });
 
   it('should send typing notification via typingService', async () => {

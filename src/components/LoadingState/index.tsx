@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './LoadingState.module.scss';
 
 export interface LoadingStateProps {
@@ -7,13 +8,16 @@ export interface LoadingStateProps {
 }
 
 export const LoadingState: React.FC<LoadingStateProps> = React.memo(({ 
-  message = 'Đang tải...', 
+  message, 
   className = '' 
 }) => {
+  const { t } = useTranslation();
+  const displayMessage = message !== undefined ? message : t('chat.loading');
+
   return (
     <div className={`${styles.loadingState} ${className}`}>
       <div className={styles.spinner} />
-      {message && <p className={styles.message}>{message}</p>}
+      {displayMessage && <p className={styles.message}>{displayMessage}</p>}
     </div>
   );
 });

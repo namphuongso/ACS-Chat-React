@@ -5,24 +5,24 @@ import { EmptyState } from '../index';
 describe('EmptyState Component', () => {
   it('should render default message for no-conversations', () => {
     render(<EmptyState type="no-conversations" />);
-    expect(screen.getByText('Không có cuộc hội thoại nào')).toBeInTheDocument();
+    expect(screen.getByText('chat.noConversationsFound')).toBeInTheDocument();
   });
 
   it('should render default message for no-messages', () => {
     render(<EmptyState type="no-messages" />);
-    expect(screen.getByText('Chưa có tin nhắn nào')).toBeInTheDocument();
+    expect(screen.getByText('chat.noMessages')).toBeInTheDocument();
   });
 
   it('should render default message for no-participants', () => {
     render(<EmptyState type="no-participants" />);
-    expect(screen.getByText('Không có thành viên nào')).toBeInTheDocument();
+    expect(screen.getByText('chat.noParticipants')).toBeInTheDocument();
   });
 
   it('should render custom message when provided', () => {
     const customMessage = 'Custom Empty Message';
     render(<EmptyState type="no-conversations" message={customMessage} />);
     expect(screen.getByText(customMessage)).toBeInTheDocument();
-    expect(screen.queryByText('Không có cuộc hội thoại nào')).not.toBeInTheDocument();
+    expect(screen.queryByText('chat.noConversationsFound')).not.toBeInTheDocument();
   });
 
   it('should apply custom className', () => {

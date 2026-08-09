@@ -10,7 +10,7 @@ vi.mock('../ParticipantItem', () => ({
     <div data-testid="mock-participant-item">
       <span>{participant.displayName}</span>
       {isCurrentUser && <span data-testid="current-user-badge">You</span>}
-      {onRemove && <button onClick={() => onRemove(participant.id)}>Remove</button>}
+      {onRemove && <button onClick={() => onRemove(participant.id)}>chat.remove</button>}
     </div>
   )
 }));
@@ -56,7 +56,7 @@ describe('ParticipantList Component', () => {
     const mockRemove = vi.fn();
     render(<ParticipantList participants={mockParticipants} currentUserId="u3" onRemoveParticipant={mockRemove} />);
     
-    const removeBtns = screen.getAllByRole('button', { name: 'Remove' });
+    const removeBtns = screen.getAllByRole('button', { name: 'chat.remove' });
     fireEvent.click(removeBtns[0]);
     
     expect(mockRemove).toHaveBeenCalledWith('u1');

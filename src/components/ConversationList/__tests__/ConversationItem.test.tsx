@@ -40,7 +40,7 @@ describe('ConversationItem Component', () => {
       <ConversationItem conversation={directConversation} isActive={false} onClick={vi.fn()} />
     );
     expect(screen.getByText('Alice')).toBeInTheDocument();
-    expect(screen.getByText('You: Hello there')).toBeInTheDocument();
+    expect(screen.getByText('chat.you: Hello there')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument(); // Unread count badge
   });
 
@@ -54,6 +54,7 @@ describe('ConversationItem Component', () => {
   it('should handle missing display name for direct conversation', () => {
     const unnamedDirect: Conversation = {
       ...directConversation,
+      name: '',
       otherParticipant: { id: 'u2' },
     };
     render(<ConversationItem conversation={unnamedDirect} isActive={false} onClick={vi.fn()} />);

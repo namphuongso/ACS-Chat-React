@@ -1,6 +1,7 @@
 import React from 'react';
 import styles from './SearchInput.module.scss';
 import { Search, CircleX } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface SearchInputProps {
   value: string;
@@ -16,20 +17,21 @@ export interface SearchInputProps {
 export const SearchInput: React.FC<SearchInputProps> = React.memo(({
   value,
   onChange,
-  placeholder = 'Search...',
+  placeholder,
   className = '',
   onClear,
   autoFocus,
   onFocus,
   onBlur,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className={`${styles.searchContainer} ${className}`}>
       <Search className={styles.searchIcon} />
       <input
         type="text"
         className={styles.searchInput}
-        placeholder={placeholder}
+        placeholder={placeholder || t('chat.search')}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoFocus={autoFocus}

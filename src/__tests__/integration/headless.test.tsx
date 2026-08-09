@@ -25,9 +25,22 @@ vi.mock('../../services/connectionService', () => ({
   },
 }));
 
+vi.mock('../../services/typingService', () => ({
+  typingService: {
+    setChatService: vi.fn(),
+  },
+}));
+
+vi.mock('../../services/readReceiptService', () => ({
+  readReceiptService: {
+    setChatService: vi.fn(),
+  },
+}));
+
 vi.mock('../../services/conversationService', () => ({
   conversationService: {
     loadConversations: vi.fn().mockResolvedValue(undefined),
+    setChatService: vi.fn(),
   },
 }));
 
@@ -35,6 +48,7 @@ vi.mock('../../services/messageService', () => ({
   messageService: {
     loadMore: vi.fn().mockResolvedValue(undefined),
     sendMessage: vi.fn().mockResolvedValue({ id: 'msg-1' }),
+    setChatService: vi.fn(),
   },
 }));
 
@@ -45,6 +59,7 @@ describe('Headless API Integration', () => {
     tokenRefresher: async () => 'fake-token',
     userId: 'user-1',
     displayName: 'Test User',
+    backendUrl: 'https://api.example.com',
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (

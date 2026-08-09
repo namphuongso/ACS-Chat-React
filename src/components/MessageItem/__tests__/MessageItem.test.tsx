@@ -21,12 +21,12 @@ describe('MessageItem Component', () => {
       type: 'system',
       systemEvent: {
         type: 'topicUpdated',
-        initiator: { id: 'u1', displayName: 'System' },
+        initiator: { id: 'u1', displayName: 'chat.system' },
         newTopic: 'General',
       },
     };
     render(<MessageItem message={sysMessage} isOwn={false} />);
-    expect(screen.getByText('System changed topic to "General"')).toBeInTheDocument();
+    expect(screen.getByText('chat.system changed topic to "General"')).toBeInTheDocument();
   });
 
   it('should render own message correctly', () => {
@@ -69,7 +69,7 @@ describe('MessageItem Component', () => {
       editedAt: new Date('2023-01-01T10:05:00Z'),
     };
     render(<MessageItem message={editedMessage} isOwn={true} />);
-    expect(screen.getByText('(edited)')).toBeInTheDocument();
+    expect(screen.getByText('chat.edited')).toBeInTheDocument();
   });
 
   it('should handle dropdown actions', () => {
@@ -79,21 +79,21 @@ describe('MessageItem Component', () => {
     render(<MessageItem message={baseMessage} isOwn={true} onReply={onReply} onCopy={onCopy} />);
 
     // Directly visible actions
-    const replyBtn = screen.getByTitle('Reply');
+    const replyBtn = screen.getByTitle('chat.reply');
     fireEvent.click(replyBtn);
     expect(onReply).toHaveBeenCalledWith('m1');
 
     // Open dropdown
-    const moreBtn = screen.getByTitle('More Options');
+    const moreBtn = screen.getByTitle('chat.moreOptions');
     fireEvent.click(moreBtn);
 
     // Click dropdown item
-    const copyBtn = screen.getByText(/Copy text/i);
+    const copyBtn = screen.getByText('chat.copyText');
     fireEvent.click(copyBtn);
     expect(onCopy).toHaveBeenCalledWith('m1');
 
     // Dropdown should be closed now (checking if copyBtn is removed)
-    expect(screen.queryByText(/Copy text/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('chat.copyText')).not.toBeInTheDocument();
   });
 
   it('should allow custom renderers', () => {

@@ -13,7 +13,7 @@ describe('ErrorState Component', () => {
 
   it('should render error message', () => {
     render(<ErrorState error={mockError} />);
-    expect(screen.getByText('Đã xảy ra lỗi')).toBeInTheDocument();
+    expect(screen.getByText('chat.anErrorOccurred')).toBeInTheDocument();
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
   });
 
@@ -28,7 +28,7 @@ describe('ErrorState Component', () => {
     
     render(<ErrorState error={retryableError} onRetry={mockOnRetry} />);
     
-    const retryBtn = screen.getByRole('button', { name: 'Thử lại' });
+    const retryBtn = screen.getByRole('button', { name: 'chat.retry' });
     expect(retryBtn).toBeInTheDocument();
     
     fireEvent.click(retryBtn);

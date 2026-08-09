@@ -8,6 +8,14 @@ import { useChat } from '../../../hooks/useChat';
 vi.mock('../../../hooks/useConversations');
 vi.mock('../../../hooks/useMessages');
 vi.mock('../../../hooks/useChat');
+vi.mock('../../../hooks/useRoomMembers', () => ({
+  useRoomMembers: () => ({
+    members: [],
+    loading: false,
+    error: null,
+    joinRoom: vi.fn().mockResolvedValue({}),
+  })
+}));
 
 vi.mock('../../MessageList', () => ({
   MessageList: (props: { messages?: unknown[]; onLoadMore?: () => void }) => (
@@ -21,7 +29,7 @@ vi.mock('../../MessageList', () => ({
 vi.mock('../../MessageInput', () => ({
   MessageInput: ({ onSend, disabled }: { onSend: (msg: string) => void; disabled?: boolean }) => (
     <div data-testid="mock-message-input">
-      <button disabled={disabled} onClick={() => onSend('test msg')}>Send</button>
+      <button disabled={disabled} onClick={() => onSend('test msg')}>chat.send</button>
     </div>
   ),
 }));
@@ -35,6 +43,7 @@ describe('ConversationView Component', () => {
     
     vi.mocked(useChat).mockReturnValue({
       currentUser: { id: 'u1' } as never,
+      connectionState: 'connected',
     } as unknown as ReturnType<typeof useChat>);
 
     vi.mocked(useConversations).mockReturnValue({
@@ -55,14 +64,14 @@ describe('ConversationView Component', () => {
     } as unknown as ReturnType<typeof useMessages>);
   });
 
-  it('should return null if no conversation is active or found', () => {
+  it('should render select conversation message if no conversation is active or found', () => {
     vi.mocked(useConversations).mockReturnValue({
       activeConversation: null,
       conversations: [],
     } as unknown as ReturnType<typeof useConversations>);
     
-    const { container } = render(<ConversationView />);
-    expect(container).toBeEmptyDOMElement();
+    render(<ConversationView />);
+    expect(screen.getByText('chat.selectConversation')).toBeInTheDocument();
   });
 
   it('should render header with other participant name for direct conversation', () => {
@@ -84,7 +93,7 @@ describe('ConversationView Component', () => {
 
   it('should call sendMessage when MessageInput triggers onSend', () => {
     render(<ConversationView />);
-    fireEvent.click(screen.getByText('Send'));
+    fireEvent.click(screen.getByText('chat.send'));
     expect(mockSendMessage).toHaveBeenCalledWith('test msg');
   });
 
@@ -95,6 +104,6 @@ describe('ConversationView Component', () => {
     } as unknown as ReturnType<typeof useMessages>);
     
     render(<ConversationView />);
-    expect(screen.getByText('Send')).toBeDisabled();
+    expect(screen.getByText('chat.send')).toBeDisabled();
   });
 });

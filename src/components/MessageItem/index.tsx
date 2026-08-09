@@ -2,6 +2,7 @@ import React, { ReactNode, useState, useRef, useEffect } from 'react';
 import type { ChatMessage, MessageStatus } from '../../types/message.types';
 import { Avatar } from '../Avatar';
 import { formatTime } from '../../utils/date';
+import { useTranslation } from 'react-i18next';
 import styles from './MessageItem.module.scss';
 import {
   QuoteIcon,
@@ -59,6 +60,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
     renderActions,
     renderStatus,
   }) => {
+    const { t } = useTranslation();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [dropdownPosition, setDropdownPosition] = useState<'down' | 'up'>('down');
     const actionsRef = useRef<HTMLDivElement>(null);
@@ -108,13 +110,13 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
     const bubbleClass = isOwn ? styles.ownBubble : styles.otherBubble;
 
     const senderName =
-      message.senderDisplayName || message.sender?.displayName || message.sender?.id || 'Unknown';
+      message.senderDisplayName || message.sender?.displayName || message.sender?.id || t('chat.unknownSender');
 
     const defaultRenderContent = () => {
       if (message.deletedAt) {
         return (
           <div className={styles.deletedMessage}>
-            <i>Tin nhắn đã bị xoá</i>
+            <i>{t('chat.messageDeleted')}</i>
           </div>
         );
       }
@@ -150,14 +152,14 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
 
             {renderContent ? renderContent(message) : defaultRenderContent()}
             {message.editedAt && !message.deletedAt && (
-              <span className={styles.edited}>(đã chỉnh sửa)</span>
+              <span className={styles.edited}>{t('chat.edited')}</span>
             )}
 
             {/* Message Meta: Time & Status */}
             {isLastInGroup && (
               <div className={styles.meta}>
                 <span className={styles.time}>{formatTime(message.createdAt)}</span>
-                {isOwn && message.status === 'failed' && (
+                {isOwn && message.status && (
                   <span
                     className={`${styles.status} ${message.status === 'failed' ? styles.statusError : ''}`}
                   >
@@ -181,14 +183,14 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
                   <button
                     className={styles.actionIconBtn}
                     onClick={() => handleActionClick(onReply)}
-                    title="Reply"
+                    title={t('chat.reply')}
                   >
                     <QuoteIcon />
                   </button>
                   <button
                     className={styles.actionIconBtn}
                     onClick={() => handleActionClick(onForward)}
-                    title="Forward"
+                    title={t('chat.forward')}
                   >
                     <ForwardIcon />
                   </button>
@@ -204,7 +206,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
                         }
                         setIsDropdownOpen(!isDropdownOpen);
                       }}
-                      title="More Options"
+                      title={t('chat.moreOptions')}
                     >
                       <MoreHorizontalIcon />
                     </button>
@@ -215,7 +217,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
                           className={styles.dropdownItem}
                           onClick={() => handleActionClick(onCopy)}
                         >
-                          <CopyIcon /> Copy text
+                          <CopyIcon /> {t('chat.copyText')}
                         </button>
                         <div className={styles.dropdownDivider} />
 
@@ -223,30 +225,30 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
                           className={styles.dropdownItem}
                           onClick={() => handleActionClick(onPin)}
                         >
-                          <PinIcon /> Pin message
+                          <PinIcon /> {t('chat.pinMessage')}
                         </button>
                         <button
                           className={styles.dropdownItem}
                           onClick={() => handleActionClick(onStar)}
                         >
-                          <StarIcon /> Star this message
+                          <StarIcon /> {t('chat.starMessage')}
                         </button>
                         <button
                           className={styles.dropdownItem}
                           onClick={() => handleActionClick(onSelect)}
                         >
-                          <ListChecksIcon /> Select messages
+                          <ListChecksIcon /> {t('chat.selectMessages')}
                         </button>
                         <button
                           className={styles.dropdownItem}
                           onClick={() => handleActionClick(onViewDetails)}
                         >
-                          <InfoIcon /> View details
+                          <InfoIcon /> {t('chat.viewDetails')}
                         </button>
 
                         <div className={styles.dropdownDivider} />
                         <button className={styles.dropdownItem}>
-                          Other options
+                          {t('chat.otherOptions')}
                           <div className={styles.rightContent}>
                             <ChevronRightIcon />
                           </div>
@@ -259,13 +261,13 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
                               className={styles.dropdownItem}
                               onClick={() => handleActionClick(onEdit)}
                             >
-                              <EditIcon /> Sửa tin nhắn
+                              <EditIcon /> {t('chat.editMessage')}
                             </button>
                             <button
                               className={`${styles.dropdownItem} ${styles.dangerItem}`}
                               onClick={() => handleActionClick(onRecall)}
                             >
-                              <UndoIcon /> Recall
+                              <UndoIcon /> {t('chat.recall')}
                             </button>
                           </>
                         )}
@@ -274,7 +276,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
                           className={`${styles.dropdownItem} ${styles.dangerItem}`}
                           onClick={() => handleActionClick(onDelete)}
                         >
-                          <TrashIcon /> Xoá tin nhắn
+                          <TrashIcon /> {t('chat.deleteMessage')}
                         </button>
                       </div>
                     )}

@@ -8,6 +8,7 @@ import React, {
   useEffect,
 } from 'react';
 import { SendIcon } from '../Icons';
+import { useTranslation } from 'react-i18next';
 import styles from './MessageInput.module.scss';
 
 export interface MessageInputProps {
@@ -24,7 +25,7 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(
   ({
     onSend,
     onTyping,
-    placeholder = 'Type a message...',
+    placeholder,
     disabled = false,
     maxLength,
     renderSendButton,
@@ -32,6 +33,8 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(
   }) => {
     const [content, setContent] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const { t } = useTranslation();
+    const resolvedPlaceholder = placeholder || t('chat.typeMessage');
 
     const resizeTextarea = useCallback(() => {
       if (textareaRef.current) {
@@ -80,7 +83,7 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(
             value={content}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder}
+            placeholder={resolvedPlaceholder}
             disabled={disabled}
             maxLength={maxLength}
             rows={1}

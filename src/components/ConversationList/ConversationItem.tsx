@@ -3,6 +3,7 @@ import type { Conversation } from '../../types';
 import { formatTime } from '../../utils/date';
 import { Avatar } from '../Avatar';
 import { PinIcon, VerifiedIcon } from '../Icons';
+import { useTranslation } from 'react-i18next';
 import styles from './ConversationList.module.scss';
 
 export interface ConversationItemProps {
@@ -13,7 +14,11 @@ export interface ConversationItemProps {
 
 export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
   ({ conversation, isActive, onClick }) => {
-    const name = conversation.name;
+    const { t } = useTranslation();
+    const displayName = conversation.name || 
+      (conversation.type === 'direct' 
+        ? conversation.otherParticipant?.displayName || conversation.otherParticipant?.id || t('chat.unknownUser')
+        : t('chat.unknownGroup'));
     const avatarUrl = conversation.avatarUrl;
 
     const lastMessage = conversation.lastMessage;
@@ -22,7 +27,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
       if (lastMessage.senderDisplayName) {
         previewText = `${lastMessage.senderDisplayName}: `;
       } else {
-        previewText = 'You: ';
+        previewText = `${t('chat.you')}: `;
       }
 
       if (lastMessage.attachments && lastMessage.attachments.length > 0) {
@@ -42,12 +47,12 @@ export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
         className={`${styles.conversationItem} ${isActive ? styles.active : ''}`}
         onClick={onClick}
       >
-        <Avatar url={avatarUrl} name={name} className={styles.avatarContainer} />
+        <Avatar url={avatarUrl} name={displayName} className={styles.avatarContainer} />
 
         <div className={styles.content}>
           <div className={styles.header}>
             <div className={`${styles.name} ${conversation.unreadCount > 0 ? styles.unread : ''}`}>
-              {name}
+              {displayName}
               {isVerified && <VerifiedIcon />}
             </div>
             <div className={`${styles.time} ${conversation.unreadCount > 0 ? styles.unread : ''}`}>

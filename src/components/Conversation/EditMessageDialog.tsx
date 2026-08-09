@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './EditMessageDialog.module.scss';
 
 export interface EditMessageDialogProps {
@@ -14,6 +15,7 @@ export const EditMessageDialog: React.FC<EditMessageDialogProps> = ({
   onSave,
   onCancel,
 }) => {
+  const { t } = useTranslation();
   const [content, setContent] = useState(initialContent);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -35,24 +37,24 @@ export const EditMessageDialog: React.FC<EditMessageDialogProps> = ({
   return (
     <div className={styles.dialogOverlay}>
       <div className={styles.dialogContent}>
-        <h3 className={styles.dialogHeader}>Sửa tin nhắn</h3>
+        <h3 className={styles.dialogHeader}>{t('chat.editMessage')}</h3>
         <textarea
           ref={textareaRef}
           className={styles.dialogTextarea}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Nhập nội dung tin nhắn..."
+          placeholder={t('chat.typeMessage')}
         />
         <div className={styles.dialogFooter}>
           <button className={styles.cancelBtn} onClick={onCancel}>
-            Huỷ
+            {t('chat.cancel')}
           </button>
           <button 
             className={styles.saveBtn} 
             onClick={() => onSave(content)}
             disabled={!content.trim() || content === initialContent}
           >
-            Lưu
+            {t('chat.save')}
           </button>
         </div>
       </div>

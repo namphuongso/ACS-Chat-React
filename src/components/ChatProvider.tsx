@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { I18nextProvider } from 'react-i18next';
+import { chatI18n } from '../i18n';
 import { ChatContext, ChatContextValue } from '../providers/ChatContext';
 import { chatService } from '../services/chatService';
 import { connectionService } from '../services/connectionService';
@@ -11,11 +13,25 @@ import type { ChatConfig } from '../types/config.types';
 
 export interface ChatProviderProps {
   config: ChatConfig;
+  locale?: 'en' | 'vi' | string;
+  translations?: Record<string, unknown>;
   children?: React.ReactNode;
 }
 
-export const ChatProvider: React.FC<ChatProviderProps> = React.memo(({ config, children }) => {
+export const ChatProvider: React.FC<ChatProviderProps> = React.memo(({ config, locale = 'en', translations, children }) => {
   const [, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (locale) {
+      chatI18n.changeLanguage(locale);
+    }
+  }, [locale]);
+
+  useEffect(() => {
+    if (translations) {
+      chatI18n.addResourceBundle(locale, 'translation', translations, true, true);
+    }
+  }, [translations, locale]);
 
   useEffect(() => {
     let mounted = true;
@@ -60,5 +76,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = React.memo(({ config, c
     },
   }), []);
 
-  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
+  return (
+    <I18nextProvider i18n={chatI18n}>
+      <ChatContext.Provider value={value}>{children}</ChatContext.Provider>
+    </I18nextProvider>
+  );
 });

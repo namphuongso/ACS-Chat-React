@@ -4,6 +4,7 @@ import { useConversations } from '../../hooks/useConversations';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useVirtualScroll } from '../../hooks/useVirtualScroll';
 import { useChatStore } from '../../store/chatStore';
+import { useTranslation } from 'react-i18next';
 
 import type { Contact, Conversation } from '../../types';
 import { EmptyState } from '../EmptyState';
@@ -30,6 +31,8 @@ export interface ConversationListProps {
 }
 
 export const ConversationList: React.FC<ConversationListProps> = React.memo((props) => {
+  const { t } = useTranslation();
+
   // Use hook to get default values if props are not provided
   const store = useConversations();
 
@@ -144,7 +147,7 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
   const defaultRenderEmpty = () => (
     <EmptyState
       type="no-conversations"
-      message="No conversations found"
+      message={t('chat.noConversationsFound')}
       className={styles.emptyState}
     />
   );
@@ -244,7 +247,7 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
         {isSearching && !searchTerm.trim() && (
           <div className={styles.recentSearchContainer}>
             <SectionHeader style={{ fontSize: '15px', padding: '16px 12px 8px' }}>
-              Recent search
+              {t('chat.recentSearch')}
             </SectionHeader>
             {recentSearches.length > 0 ? (
               recentSearches.map((contact) => (
@@ -255,7 +258,7 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
                 />
               ))
             ) : (
-              <div className={styles.emptyState}>No recent searches</div>
+              <div className={styles.emptyState}>{t('chat.noRecentSearches')}</div>
             )}
           </div>
         )}
@@ -273,7 +276,7 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
 
         {(loading || (!isSearching && filteredConversations.length === 0 && hasMore)) && (
           <div style={{ padding: 16, textAlign: 'center', color: '#667781', fontSize: 13 }}>
-            Loading...
+            {t('chat.loading')}
           </div>
         )}
       </div>

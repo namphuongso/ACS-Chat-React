@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './EmptyState.module.scss';
+import { useTranslation } from 'react-i18next';
 import { MessageIcon, UserPlusIcon } from '../Icons';
 
 export interface EmptyStateProps {
@@ -13,6 +14,8 @@ export const EmptyState: React.FC<EmptyStateProps> = React.memo(({
   message,
   className = ''
 }) => {
+  const { t } = useTranslation();
+
   const getIcon = () => {
     switch (type) {
       case 'no-conversations':
@@ -28,13 +31,13 @@ export const EmptyState: React.FC<EmptyStateProps> = React.memo(({
   const getDefaultMessage = () => {
     switch (type) {
       case 'no-conversations':
-        return 'Không có cuộc hội thoại nào';
+        return t('chat.noConversationsFound');
       case 'no-messages':
-        return 'Chưa có tin nhắn nào';
+        return t('chat.noMessages');
       case 'no-participants':
-        return 'Không có thành viên nào';
+        return t('chat.noParticipants');
       default:
-        return 'Không có dữ liệu';
+        return t('chat.noDataToDisplay');
     }
   };
 

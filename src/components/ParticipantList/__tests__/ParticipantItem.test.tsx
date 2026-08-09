@@ -25,9 +25,9 @@ describe('ParticipantItem Component', () => {
     expect(screen.getByText('u2')).toBeInTheDocument();
   });
 
-  it('should render "You" badge if isCurrentUser is true', () => {
+  it('should render "chat.you" badge if isCurrentUser is true', () => {
     render(<ParticipantItem participant={mockParticipant} isCurrentUser={true} />);
-    expect(screen.getByText('You')).toBeInTheDocument();
+    expect(screen.getByText('chat.you')).toBeInTheDocument();
   });
 
   it('should render remove button and handle click if onRemove is provided and not current user', () => {
@@ -38,7 +38,7 @@ describe('ParticipantItem Component', () => {
     const moreBtn = screen.getByRole('button');
     fireEvent.click(moreBtn);
     
-    const removeBtn = screen.getByText('Remove from group');
+    const removeBtn = screen.getByText('chat.removeFromGroup');
     expect(removeBtn).toBeInTheDocument();
     
     fireEvent.click(removeBtn);
@@ -52,7 +52,7 @@ describe('ParticipantItem Component', () => {
     const moreBtn = screen.getByRole('button');
     fireEvent.click(moreBtn);
     
-    const leaveBtn = screen.getByText('Leave group');
+    const leaveBtn = screen.getByText('chat.leaveGroup');
     expect(leaveBtn).toBeInTheDocument();
     
     fireEvent.click(leaveBtn);

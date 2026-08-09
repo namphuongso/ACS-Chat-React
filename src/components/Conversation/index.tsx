@@ -10,6 +10,7 @@ import { EmptyState } from '../EmptyState';
 import { LoadingState } from '../LoadingState';
 import { EditMessageDialog } from './EditMessageDialog';
 import { ConfirmDialog } from './ConfirmDialog';
+import { useTranslation } from 'react-i18next';
 import styles from './ConversationView.module.scss';
 
 export interface ConversationViewProps {
@@ -20,6 +21,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
   ({ conversationId }) => {
     const { activeConversation, conversations } = useConversations();
     const { currentUser, connectionState } = useChat();
+    const { t } = useTranslation();
 
     const idToUse = conversationId || activeConversation?.id;
 
@@ -118,7 +120,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
         return <LoadingState />;
       }
       return (
-        <EmptyState type="no-conversations" message="Chọn một cuộc hội thoại để bắt đầu nhắn tin" />
+        <EmptyState type="no-conversations" message={t('chat.selectConversation')} />
       );
     }
 
@@ -157,9 +159,10 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
 
         <ConfirmDialog
           isOpen={deleteDialog.isOpen}
-          title="Xoá tin nhắn"
-          message="Bạn có chắc chắn muốn xoá tin nhắn này không? Hành động này không thể hoàn tác."
-          confirmText="Xoá"
+          title={t('chat.deleteMessage')}
+          message={t('chat.confirmDeleteMessage')}
+          confirmText={t('chat.delete')}
+          cancelText={t('chat.cancel')}
           onConfirm={handleConfirmDelete}
           onCancel={handleCancelDelete}
         />

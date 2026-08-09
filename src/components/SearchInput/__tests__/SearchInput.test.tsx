@@ -5,7 +5,7 @@ import { SearchInput } from '../index';
 describe('SearchInput Component', () => {
   it('should render with default placeholder', () => {
     render(<SearchInput value="" onChange={vi.fn()} />);
-    expect(screen.getByPlaceholderText('Search...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('chat.search')).toBeInTheDocument();
   });
 
   it('should render with custom placeholder', () => {
@@ -22,7 +22,7 @@ describe('SearchInput Component', () => {
     const mockOnChange = vi.fn();
     render(<SearchInput value="" onChange={mockOnChange} />);
     
-    const input = screen.getByPlaceholderText('Search...');
+    const input = screen.getByPlaceholderText('chat.search');
     fireEvent.change(input, { target: { value: 'hello' } });
     
     expect(mockOnChange).toHaveBeenCalledWith('hello');

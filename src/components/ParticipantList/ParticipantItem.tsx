@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import styles from './ParticipantList.module.scss';
 import { Avatar } from '../Avatar';
 import { MoreHorizontalIcon, KeyIcon } from '../Icons';
+import { useTranslation } from 'react-i18next';
 import type { ConversationParticipant } from '../../types/participant.types';
 
 export interface ParticipantItemProps {
@@ -11,6 +12,7 @@ export interface ParticipantItemProps {
 }
 
 export const ParticipantItem: React.FC<ParticipantItemProps> = React.memo(({ participant, isCurrentUser, onRemove }) => {
+  const { t } = useTranslation();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -26,7 +28,7 @@ export const ParticipantItem: React.FC<ParticipantItemProps> = React.memo(({ par
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showDropdown]);
 
-  const displayName = isCurrentUser ? 'You' : participant.displayName || participant.id;
+  const displayName = isCurrentUser ? t('chat.you') : participant.displayName || participant.id;
   const showRoleIcon = participant.role === 'owner' || participant.role === 'admin';
 
   return (
@@ -61,7 +63,7 @@ export const ParticipantItem: React.FC<ParticipantItemProps> = React.memo(({ par
                   setShowDropdown(false);
                 }}
               >
-                {isCurrentUser ? 'Leave group' : 'Remove from group'}
+                {isCurrentUser ? t('chat.leaveGroup') : t('chat.removeFromGroup')}
               </button>
             </div>
           )}

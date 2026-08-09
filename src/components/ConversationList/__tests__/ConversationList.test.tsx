@@ -124,7 +124,7 @@ describe('ConversationList Component', () => {
 
   it('should render loading indicator when loading is true', () => {
     render(<ConversationList loading={true} />);
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.getByText('chat.loading')).toBeInTheDocument();
   });
 
   it('should allow custom renderItem', () => {
