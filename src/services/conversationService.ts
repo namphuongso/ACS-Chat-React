@@ -50,6 +50,8 @@ export interface BackendConversationItem {
 }
 
 export interface CreateRoomResponse {
+  id?: string;
+  roomId?: string;
   threadId: string;
   members?: Array<{
     cui: string;
@@ -150,8 +152,7 @@ export class ConversationService {
 
       if (config?.backendUrl) {
         // Backend pagination
-        const page = options?.page || 1;
-        const pageIndex = Math.max(0, page - 1);
+        const pageIndex = options?.page || 1;
         const res = await fetchBackend<BackendConversationItem[]>(
           config,
           `/api/chat/get-room-chats?keyword=&pageIndex=${pageIndex}`,
@@ -199,13 +200,14 @@ export class ConversationService {
           }
         }
 
-        if (page === 1) {
+        if (pageIndex === 1) {
           store.setConversations(conversations);
         } else {
           store.appendConversations(conversations);
         }
         store.setLoading(false);
         store.setHasMore(data.length > 0);
+        store.setCursor((pageIndex + 1).toString());
       } else {
         // ACS native fetch
         const threads = chatClient.listChatThreads({ maxPageSize });
@@ -538,9 +540,9 @@ export class ConversationService {
         });
       }
 
+      const roomName = contact?.fullName || 'New Conversation';
       const payload = {
-        pid: conversationId,
-        roomName: contact?.fullName || 'New Conversation',
+        participantIds: [conversationId],
         roomType: 'U',
       };
 
@@ -560,6 +562,7 @@ export class ConversationService {
 
       const directConv: DirectConversation = {
         id: threadId,
+        conversationId: res?.data?.roomId || res?.data?.id,
         type: 'direct',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -571,9 +574,9 @@ export class ConversationService {
         })),
         otherParticipant: {
           id: conversationId,
-          displayName: payload.roomName,
+          displayName: roomName,
         },
-        name: payload.roomName,
+        name: roomName,
         avatarUrl: contact?.avatarUrl,
       };
 
@@ -770,10 +773,14 @@ export class ConversationService {
     }
 
     try {
-      const res = await fetchBackend<JoinRoomResponse>(config, `/api/chat/join-room/${conversationId}`, {
-        method: 'POST',
-        body: '',
-      });
+      const res = await fetchBackend<JoinRoomResponse>(
+        config,
+        `/api/chat/join-room/${conversationId}`,
+        {
+          method: 'POST',
+          body: '',
+        }
+      );
       return res?.data;
     } catch (e) {
       const chatError = mapAcsErrorToChatError(e, 'joinRoom', { conversationId });

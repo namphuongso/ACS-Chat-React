@@ -38,7 +38,7 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
   const onSelect = props.onSelect ?? store.openConversation;
   const onLoadMore = props.onLoadMore ?? store.loadMore;
   const hasMore = props.hasMore ?? store.hasMore;
-  const loading = props.loading ?? store.loading;
+  const loading = props.loading ?? (store.loading || store.loadingMore);
   const connectionState = useChatStore((state) => state.connectionState);
 
   useEffect(() => {

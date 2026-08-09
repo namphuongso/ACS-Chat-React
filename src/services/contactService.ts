@@ -13,7 +13,7 @@ export const searchEmployees = async (
   if (!config.backendUrl) throw new Error('Backend URL is not configured');
 
   const { backendUrl } = config;
-  const endpoint = `/api/chat/get-employees?keyword=${encodeURIComponent(keyword)}&pageIndex=${pageIndex}&pageSize=${pageSize}`;
+  const endpoint = `/api/chat/get-contacts?keyword=${encodeURIComponent(keyword)}&pageIndex=${pageIndex}&pageSize=${pageSize}`;
 
   const response = await fetchBackend<Contact[]>(
     {

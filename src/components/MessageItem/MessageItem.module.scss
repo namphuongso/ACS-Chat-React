@@ -1,8 +1,12 @@
 .messageItem {
   display: flex;
-  margin-bottom: var(--chat-radius-message);
+  padding-bottom: var(--chat-spacing-lg, 24px);
   max-width: 100%;
   position: relative;
+
+  &.groupedMessage {
+    padding-bottom: 2px;
+  }
 
   &:hover {
     .actions {
@@ -14,16 +18,18 @@
 
 .ownMessage {
   justify-content: flex-end;
+  padding-right: 8px;
 }
 
 .otherMessage {
   justify-content: flex-start;
+  padding-left: 8px;
 }
 
 .systemMessage {
   justify-content: center;
   width: 100%;
-  margin: var(--chat-spacing-md) 0;
+  padding: var(--chat-spacing-md) 0;
 }
 
 .systemContent {
@@ -36,14 +42,25 @@
 }
 
 .avatarWrapper {
-  margin-right: var(--chat-radius);
-  align-self: flex-end;
+  margin-right: 12px;
+  align-self: flex-start;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+}
+
+.avatarPlaceholder {
+  margin-right: 12px;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
 }
 
 .contentWrapper {
   display: flex;
   flex-direction: column;
   max-width: 70%;
+  position: relative;
 }
 
 .ownMessage .contentWrapper {
@@ -55,44 +72,45 @@
 }
 
 .senderName {
-  font-size: var(--chat-radius-message);
-  color: var(--chat-text-secondary);
-  margin-bottom: var(--chat-spacing-xs);
-  margin-left: var(--chat-spacing-xs);
+  font-size: 13px;
+  color: var(--chat-text-secondary, #6b7280);
+  margin-bottom: 4px;
+  font-weight: 500;
 }
 
 .bubble {
-  padding: 10px var(--chat-font-size);
-  border-radius: var(--chat-spacing-md);
-  font-size: var(--chat-font-size);
-  line-height: 1.4;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
   word-break: break-word;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .ownBubble {
-  background-color: var(--chat-message-own-bg); /* A lighter blue based on standard UI, or user's style */
-  color: var(--chat-text);
-  border-bottom-right-radius: var(--chat-spacing-xs);
-  /* Let's try a softer blue or white for own messages if that's what's in the image. 
-     Wait, the image shows a white bubble for other, and the user's bubble in the second image is blue-ish white.
-     Let's keep original colors or generic ones. */
+  background-color: var(--chat-message-own-bg, #e5f0ff);
+  color: var(--chat-text, #111827);
 }
 
 .otherBubble {
-  background-color: var(--chat-bg);
-  color: var(--chat-text);
-  border: 1px solid var(--chat-border);
-  border-bottom-left-radius: var(--chat-spacing-xs);
+  background-color: var(--chat-bg, #ffffff);
+  color: var(--chat-text, #111827);
+  border: 1px solid var(--chat-border, #e5e7eb);
 }
 
 .meta {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: var(--chat-spacing-xs);
-  font-size: 11px;
-  color: var(--chat-text-secondary);
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--chat-text-secondary, #6b7280);
+}
+
+.ownMessage .meta {
+  justify-content: flex-end;
 }
 
 .status {
@@ -103,7 +121,7 @@
   font-style: italic;
   font-size: 11px;
   opacity: 0.8;
-  margin-left: var(--chat-spacing-xs);
+  margin-top: 4px;
 }
 
 .actions {
@@ -132,11 +150,13 @@
 }
 
 .ownMessage .actions {
-  left: -110px;
+  right: 100%;
+  margin-right: 8px;
 }
 
 .otherMessage .actions {
-  right: -110px;
+  left: 100%;
+  margin-left: 8px;
 }
 
 .actionIconBtn {
@@ -154,7 +174,7 @@
 
   &:hover {
     background-color: var(--chat-bg-secondary);
-    color: #374151;
+    color: var(--chat-text-primary, #374151);
   }
 
   svg {
@@ -196,13 +216,13 @@
   gap: var(--chat-radius-message);
 
   &:hover {
-    background-color: #f9fafb;
+    background-color: var(--chat-bg-hover, #f9fafb);
   }
 
   svg {
     width: 18px;
     height: 18px;
-    color: #4b5563;
+    color: var(--chat-text-secondary, #4b5563);
   }
 }
 
@@ -213,10 +233,10 @@
 }
 
 .dangerItem {
-  color: #ef4444;
+  color: var(--chat-error, #ef4444);
 
   svg {
-    color: #ef4444;
+    color: var(--chat-error, #ef4444);
   }
 }
 

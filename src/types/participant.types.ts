@@ -27,3 +27,13 @@ export interface AddParticipantOptions {
   /** Optional timestamp from which to share message history */
   shareHistoryTime?: Date;
 }
+
+/**
+ * Represents a member in a specific room
+ */
+export interface RoomMember {
+  userId?: string;
+  contactName?: string;
+  avatarUrl?: string;
+  cui?: string;
+}

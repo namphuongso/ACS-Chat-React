@@ -42,13 +42,11 @@ export const useConversations = () => {
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;
     
-    // Read the current state to figure out how many pages we have
-    // Assuming each page is maxPageSize (50 by default), we can calculate the next page
-    // Or we could track a separate page state. Let's use conversation counts as an estimate.
-    const currentCount = useConversationStore.getState().conversationIds.length;
-    const nextPage = Math.floor(currentCount / 50) + 1;
+    const storeState = useConversationStore.getState();
+    const cursor = storeState.cursor;
+    const nextPage = cursor ? parseInt(cursor, 10) : 2;
     
-    useConversationStore.getState().setLoadingMore(true);
+    storeState.setLoadingMore(true);
     try {
       await conversationService.loadConversations({ page: nextPage, maxPageSize: 50 });
     } catch (e) {

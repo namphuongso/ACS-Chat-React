@@ -30,6 +30,16 @@ export const useMessages = (conversationId: string) => {
 
   const { messages, loading, loadingMore, hasMore } = convData;
 
+  const loadMessages = useCallback(async (options?: { maxPageSize?: number; startTime?: Date }) => {
+    setError(null);
+    try {
+      return await messageService.loadMessages(conversationId, options);
+    } catch (err) {
+      setError(err as AcsChatError);
+      throw err;
+    }
+  }, [conversationId]);
+
   const loadMore = useCallback(async (options?: { maxPageSize?: number }) => {
     setError(null);
     try {
@@ -86,6 +96,7 @@ export const useMessages = (conversationId: string) => {
     editMessage,
     deleteMessage,
     retryMessage,
+    loadMessages,
     loadMore,
-  }), [messages, loading, loadingMore, hasMore, error, sendMessage, editMessage, deleteMessage, retryMessage, loadMore]);
+  }), [messages, loading, loadingMore, hasMore, error, sendMessage, editMessage, deleteMessage, retryMessage, loadMessages, loadMore]);
 };
