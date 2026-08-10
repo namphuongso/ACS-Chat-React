@@ -30,8 +30,14 @@
   "keywords": [
     "react",
     "chat",
+    "chat-ui",
     "acs",
-    "azure-communication-services"
+    "azure-communication-services",
+    "react-hooks",
+    "headless-chat",
+    "ui-components",
+    "typescript",
+    "i18n"
   ],
   "author": "Nam Phuong Technology",
   "license": "MIT",

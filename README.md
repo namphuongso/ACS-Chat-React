@@ -1,8 +1,22 @@
 # @namphuongtechnologi/acs-chat-react
 
-React + TypeScript Azure Communication Services (ACS) Chat Library for Nam Phuong.
+[![npm version](https://img.shields.io/npm/v/@namphuongtechnologi/acs-chat-react.svg?style=flat-square)](https://www.npmjs.com/package/@namphuongtechnologi/acs-chat-react)
+[![npm downloads](https://img.shields.io/npm/dm/@namphuongtechnologi/acs-chat-react.svg?style=flat-square)](https://www.npmjs.com/package/@namphuongtechnologi/acs-chat-react)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-This library provides a comprehensive set of UI components and React hooks for building chat applications powered by Azure Communication Services. It supports two main approaches for integration: **Approach A (Pre-built UI Components)** and **Approach B (Headless Hooks)**.
+**React + TypeScript Azure Communication Services (ACS) Chat Library**
+
+A powerful, customizable, and production-ready React chat library for **Azure Communication Services (ACS)**. Build feature-rich chat applications quickly with our pre-built UI components, or create fully custom chat experiences using our headless React hooks.
+
+## ✨ Key Features
+
+- 🧩 **Two Integration Modes**: Choose between pre-built UI components or headless hooks for complete design freedom.
+- 🎨 **Highly Customizable**: Easily theme the chat UI using CSS variables to match your brand identity.
+- 🌍 **Internationalization (i18n)**: Built-in multi-language support using `react-i18next`.
+- 💬 **Full Chat Capabilities**: Real-time messaging, typing indicators, read receipts, message editing, and deletion.
+- 👥 **Advanced Contact Management**: Search contacts, view avatars, and handle room membership automatically.
+- 📌 **Conversation Management**: Support for pinned conversations, unread message counts, and dynamic sorting.
+- 🛡️ **TypeScript Ready**: Written in TypeScript with full type definitions included out of the box.
 
 ## Table of Contents
 
