@@ -163,42 +163,39 @@ export class ConversationService {
 
         const data = Array.isArray(res?.data) ? res.data : [];
         for (const item of data) {
+          const commonProps = {
+            id: item.threadId || item.id,
+            conversationId: item.id,
+            createdAt: new Date(item.created || item.createdAt || Date.now()),
+            updatedAt:
+              item.modified || item.updatedAt
+                ? new Date((item.modified || item.updatedAt) as string | number | Date)
+                : undefined,
+            unreadCount: item.isRead === false ? 1 : 0,
+            participants: [],
+            avatarUrl: item.avatarUrl || undefined,
+            pin: item.pin || false,
+            lastMessage: item.lastMessage || '',
+            lastMessageTime: item.lastMessageTime || '',
+            isRead: item.isRead || false,
+          };
+
           if (item.type === 'U' || item.type === 'direct') {
             conversations.push({
-              id: item.threadId || item.id,
-              conversationId: item.id,
+              ...commonProps,
               type: 'direct',
-              createdAt: new Date(item.created || item.createdAt || Date.now()),
-              updatedAt:
-                item.modified || item.updatedAt
-                  ? new Date((item.modified || item.updatedAt) as string | number | Date)
-                  : undefined,
-              unreadCount: item.isRead === false ? 1 : 0,
-              participants: [],
               otherParticipant: {
                 id: item.pid || 'unknown',
                 displayName: item.roomName || 'Unknown',
               },
-              avatarUrl: item.avatarUrl || undefined,
               name: item.roomName || 'Unknown',
-              pin: item.pin || false,
-            });
+            } as Conversation);
           } else {
             conversations.push({
-              id: item.threadId || item.id,
-              conversationId: item.id,
+              ...commonProps,
               type: 'group',
               name: item.roomName || item.topic || 'Group',
-              createdAt: new Date(item.created || item.createdAt || Date.now()),
-              updatedAt:
-                item.modified || item.updatedAt
-                  ? new Date((item.modified || item.updatedAt) as string | number | Date)
-                  : undefined,
-              unreadCount: item.isRead === false ? 1 : 0,
-              participants: [],
-              avatarUrl: item.avatarUrl || undefined,
-              pin: item.pin || false,
-            });
+            } as Conversation);
           }
         }
 

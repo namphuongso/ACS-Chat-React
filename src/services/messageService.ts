@@ -273,9 +273,9 @@ export class MessageService {
       content,
       sender: {
         id: currentUserId,
-        displayName: currentUser?.displayName,
+        displayName: options?.senderDisplayName || currentUser?.displayName,
       },
-      senderDisplayName: currentUser?.displayName,
+      senderDisplayName: options?.senderDisplayName || currentUser?.displayName,
       createdAt: new Date(),
       status: 'sending',
       clientMessageId,
@@ -285,6 +285,7 @@ export class MessageService {
 
     // Add optimistic message to store immediately
     msgStore.addMessage(conversationId, optimisticMessage);
+    useConversationStore.getState().updateLastMessage(conversationId, optimisticMessage);
 
     try {
       const config = this.getChatService().getConfig();

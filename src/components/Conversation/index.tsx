@@ -46,10 +46,17 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
     const handleSend = useCallback(
       (content: string) => {
         if (idToUse) {
-          sendMessage(content);
+          let senderDisplayName = currentUser?.displayName;
+          if ((!senderDisplayName || senderDisplayName === 'Unknown') && currentUser?.id) {
+            const member = roomMembers?.find(m => m.cui === currentUser.id);
+            if (member && member.contactName) {
+              senderDisplayName = member.contactName;
+            }
+          }
+          sendMessage(content, { senderDisplayName });
         }
       },
-      [idToUse, sendMessage]
+      [idToUse, sendMessage, currentUser, roomMembers]
     );
 
     const handleTyping = useCallback(() => {

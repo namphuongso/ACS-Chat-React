@@ -1,4 +1,4 @@
-# @namphuong/acs-chat-react
+# @namphuongtechnologi/acs-chat-react
 
 React + TypeScript Azure Communication Services (ACS) Chat Library for Nam Phuong.
 
@@ -22,13 +22,15 @@ This library provides a comprehensive set of UI components and React hooks for b
 You can install the library via npm or yarn:
 
 ```bash
-npm install @namphuong/acs-chat-react
+npm install @namphuongtechnologi/acs-chat-react
 # or
-yarn add @namphuong/acs-chat-react
+yarn add @namphuongtechnologi/acs-chat-react
 ```
 
 ### Peer Dependencies
+
 Make sure you have React and React DOM installed in your project:
+
 ```bash
 npm install react react-dom
 ```
@@ -40,7 +42,7 @@ npm install react react-dom
 Before using the library, ensure you import the library styles in your application's entry point if you plan to use the pre-built UI components or if you want to leverage the default CSS variables:
 
 ```tsx
-import '@namphuong/acs-chat-react/dist/index.css';
+import '@namphuongtechnologi/acs-chat-react/dist/index.css';
 ```
 
 ### Approach A: Pre-built UI Components
@@ -49,7 +51,7 @@ This is the fastest way to get a chat interface up and running. You wrap your ap
 
 ```tsx
 import React from 'react';
-import { ChatProvider, ChatContainer, ChatConfig } from '@namphuong/acs-chat-react';
+import { ChatProvider, ChatContainer, ChatConfig } from '@namphuongtechnologi/acs-chat-react';
 
 const chatConfig: ChatConfig = {
   endpoint: 'https://<your-acs-resource>.communication.azure.com/',
@@ -61,7 +63,7 @@ const chatConfig: ChatConfig = {
     const response = await fetch('/api/get-token');
     const data = await response.json();
     return data.token;
-  }
+  },
 };
 
 const App = () => {
@@ -83,16 +85,16 @@ If you need complete control over the UI, you can use the headless hooks provide
 
 ```tsx
 import React, { useEffect } from 'react';
-import { 
-  ChatProvider, 
-  useChat, 
-  useConversations, 
-  ChatConfig 
-} from '@namphuong/acs-chat-react';
+import {
+  ChatProvider,
+  useChat,
+  useConversations,
+  ChatConfig,
+} from '@namphuongtechnologi/acs-chat-react';
 
 const CustomConversationList = () => {
   const { conversations, isLoading, fetchConversations } = useConversations();
-  
+
   useEffect(() => {
     fetchConversations();
   }, [fetchConversations]);
@@ -101,7 +103,7 @@ const CustomConversationList = () => {
 
   return (
     <ul>
-      {conversations.map(conv => (
+      {conversations.map((conv) => (
         <li key={conv.id}>{conv.topic || 'Untitled'}</li>
       ))}
     </ul>
@@ -130,7 +132,7 @@ const chatConfig: ChatConfig = {
   tokenRefresher: async () => {
     // Refresh token logic
     return 'new-token';
-  }
+  },
 };
 
 const App = () => {
@@ -152,20 +154,21 @@ export default App;
 
 The `ChatProvider` requires a `config` object of type `ChatConfig` to initialize the connection to Azure Communication Services.
 
-| Property | Type | Required | Description |
-| :--- | :--- | :---: | :--- |
-| **`endpoint`** | `string` | **Yes** | Your ACS resource endpoint URL (e.g., `https://<resource>.communication.azure.com/`). |
-| **`userId`** | `string` | **Yes** | The current user's ACS Communication User ID (e.g., `8:acs:123456`). |
-| **`displayName`** | `string` | **Yes** | The display name of the current user. |
-| **`token`** | `string` | **Yes** | The initial ACS access token. |
-| **`tokenRefresher`** | `() => Promise<string>` | **Yes** | An async callback function that fetches and returns a new access token when the current one expires. |
-| **`backendUrl`** | `string` | No | Optional backend API base URL for custom integrations. |
-| **`backendHeaders`** | `Record<string, string>` | No | Optional custom headers to include with requests to the `backendUrl`. |
-| **`reconnectPolicy`** | `ReconnectPolicy` | No | Configuration for reconnecting to ACS. Includes `maxRetries`, `initialDelayMs`, `maxDelayMs`, and `backoffMultiplier`. |
-| **`logger`** | `ChatLogger` | No | Optional custom logger implementation (`debug`, `info`, `warn`, `error`). |
-| **`onFileUpload`** | `(file: File) => Promise<FileAttachment>` | No | Optional callback to handle file uploads, returning metadata for attachment. |
+| Property              | Type                                      | Required | Description                                                                                                            |
+| :-------------------- | :---------------------------------------- | :------: | :--------------------------------------------------------------------------------------------------------------------- |
+| **`endpoint`**        | `string`                                  | **Yes**  | Your ACS resource endpoint URL (e.g., `https://<resource>.communication.azure.com/`).                                  |
+| **`userId`**          | `string`                                  | **Yes**  | The current user's ACS Communication User ID (e.g., `8:acs:123456`).                                                   |
+| **`displayName`**     | `string`                                  | **Yes**  | The display name of the current user.                                                                                  |
+| **`token`**           | `string`                                  | **Yes**  | The initial ACS access token.                                                                                          |
+| **`tokenRefresher`**  | `() => Promise<string>`                   | **Yes**  | An async callback function that fetches and returns a new access token when the current one expires.                   |
+| **`backendUrl`**      | `string`                                  |    No    | Optional backend API base URL for custom integrations.                                                                 |
+| **`backendHeaders`**  | `Record<string, string>`                  |    No    | Optional custom headers to include with requests to the `backendUrl`.                                                  |
+| **`reconnectPolicy`** | `ReconnectPolicy`                         |    No    | Configuration for reconnecting to ACS. Includes `maxRetries`, `initialDelayMs`, `maxDelayMs`, and `backoffMultiplier`. |
+| **`logger`**          | `ChatLogger`                              |    No    | Optional custom logger implementation (`debug`, `info`, `warn`, `error`).                                              |
+| **`onFileUpload`**    | `(file: File) => Promise<FileAttachment>` |    No    | Optional callback to handle file uploads, returning metadata for attachment.                                           |
 
 #### Reconnect Policy (`ReconnectPolicy`)
+
 - **`maxRetries`**: Maximum number of reconnection attempts (default: `10`).
 - **`initialDelayMs`**: Initial delay before first reconnection attempt (default: `1000`).
 - **`maxDelayMs`**: Maximum delay between reconnection attempts (default: `30000`).
@@ -198,15 +201,15 @@ If you are using the pre-built UI components, you can easily customize the appea
   --acs-color-primary-hover: #106ebe;
   --acs-color-background: #ffffff;
   --acs-color-background-muted: #f3f2f1;
-  
+
   /* Text */
   --acs-color-text: #323130;
   --acs-color-text-muted: #605e5c;
-  
+
   /* Borders */
   --acs-border-color: #edebe9;
   --acs-border-radius-md: 8px;
-  
+
   /* Typography */
   --acs-font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }

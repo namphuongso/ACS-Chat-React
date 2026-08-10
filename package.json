@@ -1,5 +1,5 @@
 {
-  "name": "@namphuong/acs-chat-react",
+  "name": "@namphuongtechnologi/acs-chat-react",
   "version": "1.0.0",
   "description": "React + TypeScript Azure Communication Services (ACS) Chat Library",
   "type": "module",

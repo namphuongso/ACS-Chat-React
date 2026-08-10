@@ -1,5 +1,5 @@
 
-> @namphuong/acs-chat-react@1.0.0 test
+> @namphuongtechnologi/acs-chat-react@1.0.0 test
 > vitest run
 
 

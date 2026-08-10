@@ -18,10 +18,10 @@
 .dateSeparator {
   display: flex;
   justify-content: center;
-  padding: var(--chat-text-secondary, 24px) 0;
+  padding: var(--chat-spacing-lg, 24px) 0;
 
   span {
-    background-color: var(--chat-bg-secondary, #b0b5be);
+    background-color: var(--chat-text-secondary, #b0b5be);
     padding: 6px 16px;
     border-radius: 16px;
     color: var(--chat-text-inverted, #ffffff);

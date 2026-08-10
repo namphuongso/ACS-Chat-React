@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - `useChatLanguage` hook to manage and synchronize chat locale state.
 - Internationalization (i18n) support across chat components using `react-i18next`.
 - Character counter added to `MessageInput`.
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Contact search functionality with debounced search, virtualized list, and integration with chat providers.
 
 ### Changed
+
 - Refactored message lifecycle operations to use custom backend API endpoints.
 - Updated conversation view state handling.
 - Improved message list layout styling.
@@ -27,7 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-08-05
 
 ### Added
-- Initial release of `@namphuong/acs-chat-react` library.
+
+- Initial release of `@namphuongtechnologi/acs-chat-react` library.
 - Core hooks (`useChatClient`, `useMessages`, `useConversations`, etc.).
 - UI Components for chat (`ChatProvider`, `MessageList`, `ConversationList`, etc.).
 - Theming and customizable UI through CSS variables.

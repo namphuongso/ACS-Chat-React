@@ -74,7 +74,7 @@ Cập nhật các trường sau trong `package.json`:
 
 ```json
 {
-  "name": "@namphuong/acs-chat-react",
+  "name": "@namphuongtechnologi/acs-chat-react",
   "version": "1.0.0",
   "type": "module",
 

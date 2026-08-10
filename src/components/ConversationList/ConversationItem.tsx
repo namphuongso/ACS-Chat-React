@@ -9,7 +9,6 @@ import dropdownStyles from '../Dropdown/Dropdown.module.scss';
 import styles from './ConversationList.module.scss';
 import { conversationService } from '../../services/conversationService';
 
-
 export interface ConversationItemProps {
   conversation: Conversation;
   isActive: boolean;
@@ -98,25 +97,15 @@ export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
         : t('chat.unknownGroup'));
     const avatarUrl = conversation.avatarUrl;
 
+    console.log('conversation', conversation);
     const lastMessage = conversation.lastMessage;
-    let previewText = '';
-    if (lastMessage) {
-      if (lastMessage.senderDisplayName) {
-        previewText = `${lastMessage.senderDisplayName}: `;
-      } else {
-        previewText = `${t('chat.you')}: `;
-      }
-
-      if (lastMessage.attachments && lastMessage.attachments.length > 0) {
-        previewText += `📎 ${lastMessage.attachments[0].name || 'Attachment'}`;
-      } else {
-        previewText += lastMessage.content;
-      }
-    }
+    const previewText: string = lastMessage ?? '';
 
     // Extract metadata (mocking the features from the image like pin and verified)
     const isVerified = conversation.metadata?.verified === 'true';
-    const timestamp = conversation.updatedAt || conversation.createdAt;
+    const timestamp = conversation.lastMessageTime
+      ? new Date(conversation.lastMessageTime)
+      : conversation.updatedAt || conversation.createdAt;
 
     return (
       <div
@@ -207,9 +196,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
               </DropdownItem>
               <DropdownDivider />
 
-              <DropdownItem onClick={handleActionClick}>
-                {t('chat.report', 'Report')}
-              </DropdownItem>
+              <DropdownItem onClick={handleActionClick}>{t('chat.report', 'Report')}</DropdownItem>
             </div>
           )}
         </div>

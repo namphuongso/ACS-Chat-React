@@ -143,7 +143,7 @@ describe('conversationStore', () => {
 
     const state = useConversationStore.getState();
     expect(state.conversationIds).toEqual(['thread-1', 'thread-2']);
-    expect(state.conversations['thread-1'].lastMessage).toEqual(lastMessage);
+    expect(state.conversations['thread-1'].lastMessage).toEqual('Alice: Hello world');
     expect(state.conversations['thread-1'].updatedAt).toEqual(lastMessage.createdAt);
   });
 

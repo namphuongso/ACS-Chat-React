@@ -1,6 +1,6 @@
-# Cấu trúc thư viện @namphuong/acs-chat-react
+# Cấu trúc thư viện @namphuongtechnologi/acs-chat-react
 
-Thư viện `@namphuong/acs-chat-react` được thiết kế dựa trên **Layered Architecture** (kiến trúc phân tầng) kết hợp với **Adapter Pattern**. Cách thiết kế này giúp tách biệt rõ ràng giữa giao diện người dùng (UI), logic nghiệp vụ (Business Logic), quản lý trạng thái (State) và hạ tầng kết nối backend (ACS SDK).
+Thư viện `@namphuongtechnologi/acs-chat-react` được thiết kế dựa trên **Layered Architecture** (kiến trúc phân tầng) kết hợp với **Adapter Pattern**. Cách thiết kế này giúp tách biệt rõ ràng giữa giao diện người dùng (UI), logic nghiệp vụ (Business Logic), quản lý trạng thái (State) và hạ tầng kết nối backend (ACS SDK).
 
 ## 1. Kiến trúc tổng thể
 
@@ -30,6 +30,7 @@ Thư viện `@namphuong/acs-chat-react` được thiết kế dựa trên **Laye
 ```
 
 **Luồng dữ liệu hoạt động:**
+
 1. **Hooks**: Cung cấp API để Consumer App tương tác, gọi tới các Services.
 2. **Services**: Chịu trách nhiệm thực thi các logic nghiệp vụ và yêu cầu các Adapters hành động.
 3. **Adapters**: Là tầng giao tiếp trực tiếp với Azure Communication Services (ACS SDK). Dữ liệu thô từ ACS sẽ đi qua các **Mappers** để biến đổi thành dữ liệu chuẩn nội bộ.
@@ -61,20 +62,20 @@ src/
 
 ### Chức năng chi tiết của các modules chính:
 
-| Thư mục | Mục đích sử dụng |
-|---|---|
-| **`adapters/`** | Giao tiếp trực tiếp với external SDK (Azure ACS). Đóng gói logic gọi SDK giúp dễ dàng mock khi test hoặc thay thế nhà cung cấp khác nếu cần. |
-| **`components/`** | Cung cấp UI Components sẵn sàng dùng. Các component này thuần hiển thị và đọc dữ liệu qua Hooks, không gọi API hay chứa logic nghiệp vụ phức tạp trực tiếp. |
-| **`hooks/`** | Cầu nối giữa UI và logic. Cung cấp API trực quan (như `useMessages`, `useTypingIndicator`) để custom UI bên ngoài dễ dàng truy cập và sử dụng library. |
-| **`services/`** | Nơi chứa logic cốt lõi. Làm nhiệm vụ điều phối (orchestration): kết nối Adapter, đồng bộ dữ liệu và ra lệnh cập nhật trạng thái vào Store. |
-| **`store/`** | Quản lý trạng thái bộ nhớ cục bộ bằng Zustand. Tối ưu hoá lưu trữ dạng chuẩn hoá (normalized state) giúp dễ truy xuất, deduplicate dữ liệu. |
-| **`types/`** & **`models/`** | Định nghĩa Data Contract rõ ràng. Đảm bảo Type Safety với TypeScript cho mọi layer tương tác với nhau trong thư viện. |
+| Thư mục                      | Mục đích sử dụng                                                                                                                                            |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`adapters/`**              | Giao tiếp trực tiếp với external SDK (Azure ACS). Đóng gói logic gọi SDK giúp dễ dàng mock khi test hoặc thay thế nhà cung cấp khác nếu cần.                |
+| **`components/`**            | Cung cấp UI Components sẵn sàng dùng. Các component này thuần hiển thị và đọc dữ liệu qua Hooks, không gọi API hay chứa logic nghiệp vụ phức tạp trực tiếp. |
+| **`hooks/`**                 | Cầu nối giữa UI và logic. Cung cấp API trực quan (như `useMessages`, `useTypingIndicator`) để custom UI bên ngoài dễ dàng truy cập và sử dụng library.      |
+| **`services/`**              | Nơi chứa logic cốt lõi. Làm nhiệm vụ điều phối (orchestration): kết nối Adapter, đồng bộ dữ liệu và ra lệnh cập nhật trạng thái vào Store.                  |
+| **`store/`**                 | Quản lý trạng thái bộ nhớ cục bộ bằng Zustand. Tối ưu hoá lưu trữ dạng chuẩn hoá (normalized state) giúp dễ truy xuất, deduplicate dữ liệu.                 |
+| **`types/`** & **`models/`** | Định nghĩa Data Contract rõ ràng. Đảm bảo Type Safety với TypeScript cho mọi layer tương tác với nhau trong thư viện.                                       |
 
 ## 3. Integration Layer (2 Approaches)
 
 Thư viện hỗ trợ **hai cách tích hợp** để đáp ứng nhiều nhu cầu khác nhau:
 
-| Approach | Mô tả | Khi nào dùng |
-|---|---|---|
-| **A — Built-in UI** | Sử dụng các component UI có sẵn của thư viện, tuỳ biến qua CSS Variables / Render Props / Component Overrides | Muốn nhanh, ít effort, chấp nhận layout mặc định |
-| **B — Headless (Custom UI)** | Chỉ sử dụng public APIs (hooks, types, services) để tự xây dựng UI hoàn toàn | Muốn kiểm soát 100% giao diện, tích hợp vào design system riêng |
+| Approach                     | Mô tả                                                                                                         | Khi nào dùng                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| **A — Built-in UI**          | Sử dụng các component UI có sẵn của thư viện, tuỳ biến qua CSS Variables / Render Props / Component Overrides | Muốn nhanh, ít effort, chấp nhận layout mặc định                |
+| **B — Headless (Custom UI)** | Chỉ sử dụng public APIs (hooks, types, services) để tự xây dựng UI hoàn toàn                                  | Muốn kiểm soát 100% giao diện, tích hợp vào design system riêng |

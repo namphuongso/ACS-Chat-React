@@ -269,9 +269,9 @@ export class ChatService {
         const msg = event.payload as ChatMessage;
         msgStore.updateMessage(event.conversationId, msg.id, msg);
         const conv = convStore.conversations[event.conversationId];
-        if (conv?.lastMessage?.id === msg.id) {
+        if (conv?.lastMessage === msg.id) {
           convStore.updateConversation(event.conversationId, {
-            lastMessage: msg,
+            lastMessage: msg.content,
           });
         }
         break;

@@ -1,7 +1,10 @@
 import { create } from 'zustand';
+import { chatI18n } from '../i18n';
+import { useChatStore } from './chatStore';
+import { useMessageStore } from './messageStore';
 import type { Conversation } from '../types/conversation.types';
-import type { ChatMessage } from '../types/message.types';
 import type { ChatError } from '../types/errors.types';
+import type { ChatMessage } from '../types/message.types';
 
 export interface ConversationState {
   /** Map of conversation ID to Conversation entity (normalized state) */
@@ -64,6 +67,24 @@ export const initialConversationState = {
   error: null,
 };
 
+const sortConversationIds = (ids: string[], conversations: Record<string, Conversation>): string[] => {
+  return [...ids].sort((a, b) => {
+    const convA = conversations[a];
+    const convB = conversations[b];
+    if (!convA || !convB) return 0;
+
+    // 1. Sort by pin status
+    if (convA.pin && !convB.pin) return -1;
+    if (!convA.pin && convB.pin) return 1;
+
+    // 2. Sort by updatedAt (or createdAt)
+    const timeA = convA.updatedAt ? new Date(convA.updatedAt).getTime() : (convA.createdAt ? new Date(convA.createdAt).getTime() : 0);
+    const timeB = convB.updatedAt ? new Date(convB.updatedAt).getTime() : (convB.createdAt ? new Date(convB.createdAt).getTime() : 0);
+    
+    return timeB - timeA;
+  });
+};
+
 export const useConversationStore = create<ConversationState>((set) => ({
   ...initialConversationState,
 
@@ -77,7 +98,7 @@ export const useConversationStore = create<ConversationState>((set) => ({
       }
       return {
         conversations: record,
-        conversationIds: ids,
+        conversationIds: sortConversationIds(ids, record),
       };
     }),
 
@@ -93,7 +114,7 @@ export const useConversationStore = create<ConversationState>((set) => ({
       }
       return {
         conversations: record,
-        conversationIds: ids,
+        conversationIds: sortConversationIds(ids, record),
       };
     }),
 
@@ -104,7 +125,7 @@ export const useConversationStore = create<ConversationState>((set) => ({
       const ids = exists ? state.conversationIds : [conversation.id, ...state.conversationIds];
       return {
         conversations: record,
-        conversationIds: ids,
+        conversationIds: sortConversationIds(ids, record),
       };
     }),
 
@@ -113,11 +134,13 @@ export const useConversationStore = create<ConversationState>((set) => ({
       const existing = state.conversations[id];
       if (!existing) return state;
       const updated = { ...existing, ...updates } as Conversation;
+      const newConversations = {
+        ...state.conversations,
+        [id]: updated,
+      };
       return {
-        conversations: {
-          ...state.conversations,
-          [id]: updated,
-        },
+        conversations: newConversations,
+        conversationIds: sortConversationIds(state.conversationIds, newConversations),
       };
     }),
 
@@ -173,19 +196,59 @@ export const useConversationStore = create<ConversationState>((set) => ({
       const existing = state.conversations[id];
       if (!existing) return state;
 
+      const currentUser = useChatStore.getState().currentUser;
+      const currentUserId = currentUser?.id;
+
+      let senderName = lastMessage.senderDisplayName || lastMessage.sender?.displayName || '';
+      
+      if (senderName === 'Unknown' || senderName === chatI18n.t('chat.unknownSender')) {
+        senderName = '';
+      }
+      
+      if (!senderName && lastMessage.sender?.id === currentUserId) {
+        senderName = currentUser?.displayName 
+          || existing.participants?.find(p => p.id === currentUserId)?.displayName 
+          || '';
+
+        if (senderName === 'Unknown' || senderName === chatI18n.t('chat.unknownSender')) {
+          senderName = '';
+        }
+        
+        // If still empty, try to find the sender name from previous messages
+        if (!senderName) {
+          const messages = useMessageStore.getState().messagesByConversation[id]?.messages;
+          const lastOwnMsg = messages?.find((m: ChatMessage) => m.sender.id === currentUserId && m.senderDisplayName && m.senderDisplayName !== 'Unknown');
+          if (lastOwnMsg) {
+            senderName = lastOwnMsg.senderDisplayName || '';
+          }
+        }
+      }
+
+      let content = lastMessage.content || '';
+
+      if (lastMessage.type === 'html') {
+        content = content.replace(/<[^>]*>?/gm, '');
+      }
+
+      const formattedMessage = senderName ? `${senderName}: ${content}` : content;
+
+      const messageTime = lastMessage.createdAt || new Date();
+
       const updated = {
         ...existing,
-        lastMessage,
-        updatedAt: lastMessage.createdAt || new Date(),
+        lastMessage: formattedMessage,
+        lastMessageTime: messageTime.toISOString(),
+        updatedAt: messageTime,
       };
 
-      const filteredIds = state.conversationIds.filter((item) => item !== id);
+      const newConversations = {
+        ...state.conversations,
+        [id]: updated,
+      };
+      const newIds = state.conversationIds.includes(id) ? state.conversationIds : [id, ...state.conversationIds];
       return {
-        conversations: {
-          ...state.conversations,
-          [id]: updated,
-        },
-        conversationIds: [id, ...filteredIds],
+        conversations: newConversations,
+        conversationIds: sortConversationIds(newIds, newConversations),
       };
     }),
 

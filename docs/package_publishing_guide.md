@@ -1,8 +1,9 @@
 # Package Publishing Guide
 
-This guide provides step-by-step instructions for versioning, maintaining the changelog, and publishing the `@namphuong/acs-chat-react` package.
+This guide provides step-by-step instructions for versioning, maintaining the changelog, and publishing the `@namphuongtechnologi/acs-chat-react` package.
 
 ## Prerequisites
+
 - Ensure you have Node.js and npm installed.
 - Ensure you are logged into the correct npm registry (`npm login`).
 - Your Git working directory must be clean (all changes committed).
@@ -44,7 +45,7 @@ It's important to keep a record of what changes in each version.
    - `### Security` - In case of vulnerabilities.
 4. Stage and amend your version commit to include these changelog updates (or commit it separately before running `npm version`).
 
-*(Note: If the project adopts an automated tool like `release-it` or `standard-version` in the future, this step can be automated.)*
+_(Note: If the project adopts an automated tool like `release-it` or `standard-version` in the future, this step can be automated.)_
 
 ## Step 3: Build the Library
 
@@ -53,6 +54,7 @@ Before publishing, you must ensure that the latest production build is generated
 ```bash
 npm run build
 ```
+
 This command compiles TypeScript and bundles the assets into the `dist/` directory.
 
 ## Step 4: Publish to npm
@@ -61,16 +63,18 @@ Publish the built package to the npm registry.
 
 1. **Dry Run (Recommended):**
    Verify exactly what files will be packed and published.
+
    ```bash
    npm publish --dry-run
    ```
-   *Check the output to ensure no sensitive files or unnecessary source files are being included.*
+
+   _Check the output to ensure no sensitive files or unnecessary source files are being included._
 
 2. **Publish the Package:**
    ```bash
    npm publish
    ```
-   *Note: If `@namphuong/acs-chat-react` is a public scoped package, you may need to run `npm publish --access public` for the first publish. If it's a private registry, ensure your `.npmrc` is configured correctly.*
+   _Note: If `@namphuongtechnologi/acs-chat-react` is a public scoped package, you may need to run `npm publish --access public` for the first publish. If it's a private registry, ensure your `.npmrc` is configured correctly._
 
 ## Step 5: Push Commits and Tags
 

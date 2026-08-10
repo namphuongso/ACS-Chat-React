@@ -81,6 +81,8 @@ export interface SendMessageOptions {
   metadata?: Record<string, string>;
   /** Optional file attachments */
   attachments?: FileAttachment[];
+  /** Optional explicit sender display name for optimistic UI updates */
+  senderDisplayName?: string;
 }
 
 /**

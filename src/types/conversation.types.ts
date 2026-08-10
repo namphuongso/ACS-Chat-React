@@ -1,4 +1,3 @@
-import type { ChatMessage } from './message.types';
 import type { ConversationParticipant } from './participant.types';
 
 /**
@@ -21,7 +20,9 @@ export interface BaseConversation {
   /** Timestamp when conversation was last updated */
   updatedAt?: Date;
   /** Most recent message in the conversation */
-  lastMessage?: ChatMessage;
+  lastMessage?: string;
+  /** Time of last message in the conversation */
+  lastMessageTime?: string;
   /** Number of unread messages for the current user */
   unreadCount: number;
   /** Display title/name of the group */
@@ -34,6 +35,8 @@ export interface BaseConversation {
   metadata?: Record<string, string>;
   /** Whether the conversation is pinned */
   pin?: boolean;
+  /** Whether the conversation is read */
+  isRead?: boolean;
 }
 
 /**

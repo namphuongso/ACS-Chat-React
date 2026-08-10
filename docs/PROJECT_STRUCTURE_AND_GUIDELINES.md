@@ -8,22 +8,22 @@
 
 ### Mô tả
 
-`@namphuong/acs-chat-react` là một **React library** cung cấp bộ components, hooks và services để tích hợp **Azure Communication Services (ACS) Chat** vào ứng dụng React. Library được build dưới dạng package (ES module + CJS) để consumer import và sử dụng.
+`@namphuongtechnologi/acs-chat-react` là một **React library** cung cấp bộ components, hooks và services để tích hợp **Azure Communication Services (ACS) Chat** vào ứng dụng React. Library được build dưới dạng package (ES module + CJS) để consumer import và sử dụng.
 
 ### Công nghệ chính
 
-| Công nghệ | Phiên bản | Mục đích |
-|---|---|---|
-| **React** | ≥18.0.0 | UI framework (peer dependency) |
-| **TypeScript** | ^5.3 | Type safety, strict mode |
-| **Zustand** | ^4.5 | State management (global store) |
-| **Vite** | ^5.1 | Build tool (library mode) |
-| **Vitest** | ^1.3 | Unit testing (jsdom environment) |
-| **SCSS Modules** | sass ^1.102 | Scoped component styling |
-| **Azure ACS SDK** | chat ^1.6, common ^2.0 | ACS Chat backend (peer dependency) |
-| **i18next / react-i18next** | ^23.0 / ^15.0 | Internationalization (i18n) |
-| **ESLint** | ^8.56 | Linting |
-| **Prettier** | ^3.2 | Code formatting |
+| Công nghệ                   | Phiên bản              | Mục đích                           |
+| --------------------------- | ---------------------- | ---------------------------------- |
+| **React**                   | ≥18.0.0                | UI framework (peer dependency)     |
+| **TypeScript**              | ^5.3                   | Type safety, strict mode           |
+| **Zustand**                 | ^4.5                   | State management (global store)    |
+| **Vite**                    | ^5.1                   | Build tool (library mode)          |
+| **Vitest**                  | ^1.3                   | Unit testing (jsdom environment)   |
+| **SCSS Modules**            | sass ^1.102            | Scoped component styling           |
+| **Azure ACS SDK**           | chat ^1.6, common ^2.0 | ACS Chat backend (peer dependency) |
+| **i18next / react-i18next** | ^23.0 / ^15.0          | Internationalization (i18n)        |
+| **ESLint**                  | ^8.56                  | Linting                            |
+| **Prettier**                | ^3.2                   | Code formatting                    |
 
 ### Kiến trúc tổng thể
 
@@ -55,6 +55,7 @@ Dự án áp dụng **Layered Architecture** (kiến trúc phân tầng) kết h
 ```
 
 **Luồng dữ liệu:**
+
 1. **Hooks** gọi **Services** để thực hiện business logic
 2. **Services** gọi **Adapters** để tương tác với ACS SDK
 3. **Adapters** gọi ACS SDK, chuyển đổi dữ liệu qua **Mappers**
@@ -182,20 +183,20 @@ src/
 
 ### Chi tiết từng thư mục
 
-| Thư mục | Dùng để làm gì | Khi nào thêm file | Không nên đặt |
-|---|---|---|---|
-| `adapters/` | Wrap external SDK (ACS), chuyển đổi dữ liệu | Khi tích hợp SDK mới hoặc thêm phương thức ACS | Business logic, UI code |
-| `components/` | React UI components | Khi tạo component hiển thị mới | API calls trực tiếp, complex business logic |
-| `constants/` | Giá trị cố định, config mặc định | Khi có magic number/string cần tái sử dụng | Logic code, types |
-| `domain/` | Domain logic thuần (hiện đang placeholder) | Khi cần validation/transformation phức tạp | UI code, API calls |
-| `hooks/` | React hooks - public API cho consumer | Khi tạo hook mới expose cho consumer | Direct store manipulation phức tạp |
-| `i18n/` | Cấu hình và từ điển đa ngôn ngữ | Khi thêm key/ngôn ngữ mới | Business logic |
-| `models/` | Internal domain model type aliases | Khi cần model nội bộ khác với API types | Implementation logic |
-| `providers/` | React Context providers | Khi cần context mới cho dependency injection | Business logic |
-| `services/` | Business logic, orchestration | Khi thêm feature mới cần xử lý nghiệp vụ | UI code, store definition |
-| `store/` | Zustand stores + selectors | Khi cần state slice mới | API calls, UI rendering |
-| `types/` | TypeScript interfaces/types | Khi cần type mới cho API, component, event | Implementation logic |
-| `utils/` | Pure utility functions | Khi cần helper function tái sử dụng | Stateful logic, React hooks |
+| Thư mục       | Dùng để làm gì                              | Khi nào thêm file                              | Không nên đặt                               |
+| ------------- | ------------------------------------------- | ---------------------------------------------- | ------------------------------------------- |
+| `adapters/`   | Wrap external SDK (ACS), chuyển đổi dữ liệu | Khi tích hợp SDK mới hoặc thêm phương thức ACS | Business logic, UI code                     |
+| `components/` | React UI components                         | Khi tạo component hiển thị mới                 | API calls trực tiếp, complex business logic |
+| `constants/`  | Giá trị cố định, config mặc định            | Khi có magic number/string cần tái sử dụng     | Logic code, types                           |
+| `domain/`     | Domain logic thuần (hiện đang placeholder)  | Khi cần validation/transformation phức tạp     | UI code, API calls                          |
+| `hooks/`      | React hooks - public API cho consumer       | Khi tạo hook mới expose cho consumer           | Direct store manipulation phức tạp          |
+| `i18n/`       | Cấu hình và từ điển đa ngôn ngữ             | Khi thêm key/ngôn ngữ mới                      | Business logic                              |
+| `models/`     | Internal domain model type aliases          | Khi cần model nội bộ khác với API types        | Implementation logic                        |
+| `providers/`  | React Context providers                     | Khi cần context mới cho dependency injection   | Business logic                              |
+| `services/`   | Business logic, orchestration               | Khi thêm feature mới cần xử lý nghiệp vụ       | UI code, store definition                   |
+| `store/`      | Zustand stores + selectors                  | Khi cần state slice mới                        | API calls, UI rendering                     |
+| `types/`      | TypeScript interfaces/types                 | Khi cần type mới cho API, component, event     | Implementation logic                        |
+| `utils/`      | Pure utility functions                      | Khi cần helper function tái sử dụng            | Stateful logic, React hooks                 |
 
 ---
 
@@ -206,6 +207,7 @@ src/
 Khi thêm một feature mới (ví dụ: "Reactions"), thực hiện theo thứ tự:
 
 1. **Định nghĩa Types** → `src/types/reaction.types.ts`
+
    ```ts
    export interface Reaction {
      type: string;
@@ -249,21 +251,21 @@ Khi thêm một feature mới (ví dụ: "Reactions"), thực hiện theo thứ 
 
 ### Quy tắc đặt tên
 
-| Loại | Convention | Ví dụ |
-|---|---|---|
-| **File type/interface** | `{feature}.types.ts` (camelCase) | `reaction.types.ts` |
-| **File model** | `{Feature}.ts` (PascalCase) | `Reaction.ts` |
-| **File store** | `{feature}Store.ts` (camelCase) | `reactionStore.ts` |
-| **File service** | `{feature}Service.ts` (camelCase) | `reactionService.ts` |
-| **File hook** | `use{Feature}.ts` (camelCase) | `useReactions.ts` |
-| **File component** | `index.tsx` trong thư mục PascalCase | `Reaction/index.tsx` |
-| **File SCSS** | `{Component}.module.scss` | `Reaction.module.scss` |
-| **Interface/Type** | PascalCase | `ReactionState`, `ChatMessage` |
-| **Function** | camelCase | `sendReaction`, `mapAcsReaction` |
-| **Constant** | UPPER_SNAKE_CASE | `MAX_REACTIONS`, `CHAT_DEFAULTS` |
-| **React Component** | PascalCase | `ReactionList`, `ConversationItem` |
-| **Zustand Hook** | `use{Feature}Store` | `useReactionStore` |
-| **Custom Hook** | `use{Feature}` | `useReactions` |
+| Loại                    | Convention                           | Ví dụ                              |
+| ----------------------- | ------------------------------------ | ---------------------------------- |
+| **File type/interface** | `{feature}.types.ts` (camelCase)     | `reaction.types.ts`                |
+| **File model**          | `{Feature}.ts` (PascalCase)          | `Reaction.ts`                      |
+| **File store**          | `{feature}Store.ts` (camelCase)      | `reactionStore.ts`                 |
+| **File service**        | `{feature}Service.ts` (camelCase)    | `reactionService.ts`               |
+| **File hook**           | `use{Feature}.ts` (camelCase)        | `useReactions.ts`                  |
+| **File component**      | `index.tsx` trong thư mục PascalCase | `Reaction/index.tsx`               |
+| **File SCSS**           | `{Component}.module.scss`            | `Reaction.module.scss`             |
+| **Interface/Type**      | PascalCase                           | `ReactionState`, `ChatMessage`     |
+| **Function**            | camelCase                            | `sendReaction`, `mapAcsReaction`   |
+| **Constant**            | UPPER_SNAKE_CASE                     | `MAX_REACTIONS`, `CHAT_DEFAULTS`   |
+| **React Component**     | PascalCase                           | `ReactionList`, `ConversationItem` |
+| **Zustand Hook**        | `use{Feature}Store`                  | `useReactionStore`                 |
+| **Custom Hook**         | `use{Feature}`                       | `useReactions`                     |
 
 ---
 
@@ -278,7 +280,10 @@ export function extractCommunicationUserId(identifier?: CommunicationIdentifier)
   // ... logic trích xuất ID
 }
 
-export function mapAcsIdentifierToUser(identifier?: CommunicationIdentifier, displayName?: string): ChatUser {
+export function mapAcsIdentifierToUser(
+  identifier?: CommunicationIdentifier,
+  displayName?: string
+): ChatUser {
   const id = extractCommunicationUserId(identifier);
   return { id: id || 'system', displayName: displayName || (id ? undefined : 'System') };
 }
@@ -330,7 +335,10 @@ const isDirect = participants.length === 2;
 const otherParticipant = participants.find((p) => p.id !== currentUserId);
 
 // ❌ Xấu: "Thông minh" nhưng khó đọc
-const [isDirect, otherParticipant] = [participants.length === 2, participants.find(p => p.id !== currentUserId)];
+const [isDirect, otherParticipant] = [
+  participants.length === 2,
+  participants.find((p) => p.id !== currentUserId),
+];
 ```
 
 ---
@@ -385,6 +393,7 @@ ComponentName/
 ```
 
 **Ví dụ thực tế**: `ConversationList/` chứa:
+
 - `index.tsx` — `ConversationList` component
 - `ConversationItem.tsx` — Component con hiển thị từng conversation
 - `ConversationList.module.scss` — Scoped styles
@@ -403,7 +412,9 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
   conversation,
   isActive,
   onClick,
-}) => { /* ... */ };
+}) => {
+  /* ... */
+};
 ```
 
 ### 5.5. Cách xử lý loading/error/empty state
@@ -412,9 +423,15 @@ Pattern hiện tại trong dự án:
 
 ```tsx
 // Trong component
-{loading && <LoadingState />}
-{!loading && conversations.length === 0 && <EmptyState message="No conversations found" />}
-{error && <ErrorState />}
+{
+  loading && <LoadingState />;
+}
+{
+  !loading && conversations.length === 0 && <EmptyState message="No conversations found" />;
+}
+{
+  error && <ErrorState />;
+}
 ```
 
 **Trong hooks**, loading/error state được quản lý rõ ràng:
@@ -425,7 +442,7 @@ export const useMessages = (conversationId: string) => {
   const [error, setError] = useState<AcsChatError | null>(null);
   const { messages, loading, loadingMore, hasMore } = convData;
 
-  return { messages, loading, loadingMore, hasMore, error, sendMessage, /* ... */ };
+  return { messages, loading, loadingMore, hasMore, error, sendMessage /* ... */ };
 };
 ```
 
@@ -451,10 +468,10 @@ export const useMessages = (conversationId: string) => {
 ```ts
 // Từ acsMappers.ts — luôn có fallback
 const content = isSystem
-  ? acsMsg.content?.topic || acsMsg.content?.message || ''  // Fallback chuỗi rỗng
+  ? acsMsg.content?.topic || acsMsg.content?.message || '' // Fallback chuỗi rỗng
   : acsMsg.content?.message || '';
 
-const createdAt = acsMsg.createdOn ? new Date(acsMsg.createdOn) : new Date();  // Fallback Date hiện tại
+const createdAt = acsMsg.createdOn ? new Date(acsMsg.createdOn) : new Date(); // Fallback Date hiện tại
 ```
 
 **Pattern 2: Kiểm tra Array trước khi iterate**
@@ -463,7 +480,7 @@ const createdAt = acsMsg.createdOn ? new Date(acsMsg.createdOn) : new Date();  /
 // Từ acsEventAdapter.ts
 const participants = Array.isArray(e?.participants)
   ? e.participants.map(mapAcsParticipantToParticipant)
-  : [];  // Fallback mảng rỗng
+  : []; // Fallback mảng rỗng
 
 // Từ chatService.ts — kiểm tra length trước khi xử lý
 if (payload.participants?.length > 0) {
@@ -494,7 +511,7 @@ export function mapAcsErrorToChatError(
   operation?: string,
   options?: { messageId?: string; conversationId?: string }
 ): AcsChatError {
-  if (error instanceof AcsChatError) return error;  // Đã là custom error
+  if (error instanceof AcsChatError) return error; // Đã là custom error
 
   const err = error as { statusCode?: number; status?: number; message?: string };
   const statusCode = err?.statusCode || err?.status;
@@ -520,8 +537,8 @@ if (!threadId) {
 }
 
 // ❌ KHÔNG BAO GIỜ
-const data = response.data;  // Có thể undefined
-const name = response.user.name;  // Có thể crash nếu user undefined
+const data = response.data; // Có thể undefined
+const name = response.user.name; // Có thể crash nếu user undefined
 ```
 
 ### 6.4. Mapping dữ liệu API sang model nội bộ
@@ -559,6 +576,7 @@ Dự án sử dụng custom error class `AcsChatError` với hệ thống error 
 ### 7.2. Pattern xử lý lỗi theo layer
 
 **Adapter Layer** — Catch & Transform:
+
 ```ts
 // Catch lỗi ACS SDK, transform thành AcsChatError
 try {
@@ -572,6 +590,7 @@ try {
 ```
 
 **Service Layer** — Catch, Map & Update Store:
+
 ```ts
 // Catch lỗi, map qua mapAcsErrorToChatError, cập nhật store error state
 try {
@@ -586,21 +605,28 @@ try {
 ```
 
 **Hook Layer** — Catch & Expose Error State:
+
 ```ts
 // Catch lỗi từ service, set vào local state cho component
-const sendMessage = useCallback(async (content: string) => {
-  setError(null);
-  const result = await messageService.sendMessage(conversationId, content);
-  if (result.error) {
-    setError(result.error);
-  }
-  return result;
-}, [conversationId]);
+const sendMessage = useCallback(
+  async (content: string) => {
+    setError(null);
+    const result = await messageService.sendMessage(conversationId, content);
+    if (result.error) {
+      setError(result.error);
+    }
+    return result;
+  },
+  [conversationId]
+);
 ```
 
 **Component Layer** — Render error UI:
+
 ```tsx
-{error && <ErrorState />}
+{
+  error && <ErrorState />;
+}
 ```
 
 ### 7.3. Lỗi không nghiêm trọng (Non-critical)
@@ -652,12 +678,12 @@ try {
 
 Dự án sử dụng **Zustand** với 4 stores tách biệt:
 
-| Store | Scope | Dữ liệu chính |
-|---|---|---|
-| `chatStore` | Global app state | `currentUser`, `connectionState`, `initializing`, `initError` |
-| `conversationStore` | Conversation entities | `conversations` (normalized), `conversationIds`, `activeConversationId`, loading/error |
-| `messageStore` | Per-conversation messages | `messagesByConversation` (map conversationId → messages[]), loading/pagination |
-| `participantStore` | Per-conversation data | `participantsByConversation`, `typingUsers`, `readReceipts` |
+| Store               | Scope                     | Dữ liệu chính                                                                          |
+| ------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
+| `chatStore`         | Global app state          | `currentUser`, `connectionState`, `initializing`, `initError`                          |
+| `conversationStore` | Conversation entities     | `conversations` (normalized), `conversationIds`, `activeConversationId`, loading/error |
+| `messageStore`      | Per-conversation messages | `messagesByConversation` (map conversationId → messages[]), loading/pagination         |
+| `participantStore`  | Per-conversation data     | `participantsByConversation`, `typingUsers`, `readReceipts`                            |
 
 ### 8.2. Pattern chuẩn khi tạo Store
 
@@ -714,15 +740,16 @@ const participants = useParticipantStore((state) =>
 
 ### 8.5. Quy tắc State
 
-| Loại state | Đặt ở đâu | Ví dụ |
-|---|---|---|
-| **UI-local** | `useState` trong component/hook | `searchTerm`, `error` trong hook |
-| **Feature-shared** | Zustand store | Conversations, messages, participants |
-| **App-global** | `chatStore` | CurrentUser, connectionState |
-| **Server cache** | Zustand store (load from API) | Conversation list, message list |
-| **Computed** | Selectors hoặc `useMemo` | Filtered conversations, typing display text |
+| Loại state         | Đặt ở đâu                       | Ví dụ                                       |
+| ------------------ | ------------------------------- | ------------------------------------------- |
+| **UI-local**       | `useState` trong component/hook | `searchTerm`, `error` trong hook            |
+| **Feature-shared** | Zustand store                   | Conversations, messages, participants       |
+| **App-global**     | `chatStore`                     | CurrentUser, connectionState                |
+| **Server cache**   | Zustand store (load from API)   | Conversation list, message list             |
+| **Computed**       | Selectors hoặc `useMemo`        | Filtered conversations, typing display text |
 
 **Quy tắc**:
+
 - Không duplicate state giữa các stores
 - Không mutate state trực tiếp — luôn dùng `set()` trong Zustand
 - Mỗi store có method `reset()` để cleanup khi dispose
@@ -761,19 +788,19 @@ export interface ConversationListProps {
 
 ### 9.3. Reusable vs Feature-specific
 
-| Loại | Đặt ở đâu | Ví dụ |
-|---|---|---|
-| **Reusable** | `components/Avatar/`, `components/Icons/`, `components/EmptyState/` | Avatar, Icons, LoadingState, ErrorState, EmptyState, SearchInput |
-| **Feature-specific** | `components/ConversationList/`, `components/MessageList/` | ConversationList, ConversationItem, MessageItem |
-| **Layout** | `components/ChatContainer.tsx` | ChatContainer (main layout) |
-| **Provider** | `components/ChatProvider.tsx` | ChatProvider (init + context) |
+| Loại                 | Đặt ở đâu                                                           | Ví dụ                                                            |
+| -------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **Reusable**         | `components/Avatar/`, `components/Icons/`, `components/EmptyState/` | Avatar, Icons, LoadingState, ErrorState, EmptyState, SearchInput |
+| **Feature-specific** | `components/ConversationList/`, `components/MessageList/`           | ConversationList, ConversationItem, MessageItem                  |
+| **Layout**           | `components/ChatContainer.tsx`                                      | ChatContainer (main layout)                                      |
+| **Provider**         | `components/ChatProvider.tsx`                                       | ChatProvider (init + context)                                    |
 
 ### 9.4. Styling
 
 - Sử dụng **SCSS Modules** (`*.module.scss`)
 - Import: `import styles from './Component.module.scss'`
 - ClassName: `className={styles.conversationItem}`
-- Active/state classes: `` className={`${styles.item} ${isActive ? styles.active : ''}`} ``
+- Active/state classes: ``className={`${styles.item} ${isActive ? styles.active : ''}`}``
 - Inline styles chỉ dùng cho layout containers (`CSSProperties`)
 
 ### 9.5. Quy tắc UI
@@ -787,6 +814,7 @@ export interface ConversationListProps {
 ### 9.6. Đa ngôn ngữ (i18n)
 
 Dự án sử dụng `react-i18next` với một instance độc lập (`chatI18n`) để không xung đột với ứng dụng sử dụng library:
+
 - Tất cả text trong UI **phải** được lấy qua hook `useTranslation()`
 - Không hard-code strings trực tiếp trong components
 - Consumer app có thể truyền `locale` ("en", "vi",...) qua `<ChatProvider locale="vi">`
@@ -797,7 +825,7 @@ import { useTranslation } from 'react-i18next';
 export const MyComponent = () => {
   const { t } = useTranslation();
   return <div>{t('chat.loading')}</div>;
-}
+};
 ```
 
 ---
@@ -806,14 +834,14 @@ export const MyComponent = () => {
 
 ### 10.1. Phân loại Types
 
-| Loại | File | Mục đích |
-|---|---|---|
-| **API types** | `types/*.types.ts` | Contract với ACS SDK và consumers |
-| **Domain models** | `models/*.ts` | Type aliases cho internal domain logic |
-| **Store types** | `store/*Store.ts` | State shape + action types |
-| **Component props** | Trong file component | Component public API |
-| **Event types** | `types/events.types.ts` | Domain event payloads |
-| **Error types** | `types/errors.types.ts` | Custom error class + error codes |
+| Loại                | File                    | Mục đích                               |
+| ------------------- | ----------------------- | -------------------------------------- |
+| **API types**       | `types/*.types.ts`      | Contract với ACS SDK và consumers      |
+| **Domain models**   | `models/*.ts`           | Type aliases cho internal domain logic |
+| **Store types**     | `store/*Store.ts`       | State shape + action types             |
+| **Component props** | Trong file component    | Component public API                   |
+| **Event types**     | `types/events.types.ts` | Domain event payloads                  |
+| **Error types**     | `types/errors.types.ts` | Custom error class + error codes       |
 
 ### 10.2. Discriminated Union Pattern
 
@@ -824,7 +852,7 @@ export type Conversation = DirectConversation | GroupConversation;
 
 // Type narrowing qua `type` field:
 if (conversation.type === 'group') {
-  console.log(conversation.name);  // TypeScript biết đây là GroupConversation
+  console.log(conversation.name); // TypeScript biết đây là GroupConversation
 }
 ```
 
@@ -852,7 +880,7 @@ export interface ChatDomainEvent<T = unknown> {
 }
 
 // Sử dụng:
-function normalizeChatMessageReceived(e: ChatMessageReceivedEvent): ChatDomainEvent<ChatMessage> { }
+function normalizeChatMessageReceived(e: ChatMessageReceivedEvent): ChatDomainEvent<ChatMessage> {}
 ```
 
 ---
@@ -862,12 +890,14 @@ function normalizeChatMessageReceived(e: ChatMessageReceivedEvent): ChatDomainEv
 ### Checklist cho Reviewer
 
 #### Kiến trúc & Cấu trúc
+
 - [ ] File được đặt đúng thư mục theo layer (adapter/service/store/hook/component)?
 - [ ] Có tuân theo naming convention hiện tại?
 - [ ] Có phá vỡ kiến trúc phân tầng (ví dụ: component gọi trực tiếp adapter)?
 - [ ] Barrel exports (`index.ts`) đã được cập nhật?
 
 #### Code Quality
+
 - [ ] Code có đơn giản và dễ đọc không?
 - [ ] Có duplicate logic với code hiện có không?
 - [ ] Function/method có quá dài hoặc làm quá nhiều việc không?
@@ -875,29 +905,34 @@ function normalizeChatMessageReceived(e: ChatMessageReceivedEvent): ChatDomainEv
 - [ ] Có hard-code magic number/string không cần thiết không?
 
 #### Data Safety
+
 - [ ] Có validate dữ liệu từ API trước khi sử dụng không?
 - [ ] Có handle null/undefined/empty array không?
 - [ ] Có risk crash vì thiếu null check không?
 - [ ] Response data có được map qua mapper function không?
 
 #### State & Side Effects
+
 - [ ] State mới có đặt đúng scope (local vs global)?
 - [ ] Store có method `reset()` không?
 - [ ] `useEffect` cleanup có đúng không?
 - [ ] Có memory leak potential (event listener, timer chưa cleanup)?
 
 #### UI Completeness
+
 - [ ] Có handle loading state không?
 - [ ] Có handle empty state không?
 - [ ] Có handle error state không?
 - [ ] Optimistic update có rollback khi fail không?
 
 #### Type Safety
+
 - [ ] Có dùng `any` không? Nếu có, lý do hợp lệ không?
 - [ ] `import type` có được dùng khi chỉ import type?
 - [ ] Types có rõ ràng, dễ hiểu không?
 
 #### Impact Assessment
+
 - [ ] Có ảnh hưởng module/feature khác không?
 - [ ] Có breaking change cho consumer API không?
 - [ ] Có cần thêm test không?
@@ -938,18 +973,18 @@ function normalizeChatMessageReceived(e: ChatMessageReceivedEvent): ChatDomainEv
 
 ### Pattern references cho AI Agent
 
-| Cần làm gì | Tham khảo file |
-|---|---|
-| Tạo service mới | `services/messageService.ts` |
-| Tạo store mới | `store/conversationStore.ts` |
-| Tạo hook mới | `hooks/useMessages.ts` |
-| Tạo component mới | `components/ConversationList/` |
-| Map dữ liệu ACS | `adapters/acs/acsMappers.ts` |
-| Xử lý error | `types/errors.types.ts` + `acsMappers.ts#mapAcsErrorToChatError` |
-| Tạo adapter mới | `adapters/acs/acsThreadAdapter.ts` |
-| Tạo selector | `store/selectors.ts` |
-| Normalize event | `adapters/acs/acsEventAdapter.ts` |
-| Optimistic update | `services/messageService.ts#sendMessage` |
+| Cần làm gì        | Tham khảo file                                                   |
+| ----------------- | ---------------------------------------------------------------- |
+| Tạo service mới   | `services/messageService.ts`                                     |
+| Tạo store mới     | `store/conversationStore.ts`                                     |
+| Tạo hook mới      | `hooks/useMessages.ts`                                           |
+| Tạo component mới | `components/ConversationList/`                                   |
+| Map dữ liệu ACS   | `adapters/acs/acsMappers.ts`                                     |
+| Xử lý error       | `types/errors.types.ts` + `acsMappers.ts#mapAcsErrorToChatError` |
+| Tạo adapter mới   | `adapters/acs/acsThreadAdapter.ts`                               |
+| Tạo selector      | `store/selectors.ts`                                             |
+| Normalize event   | `adapters/acs/acsEventAdapter.ts`                                |
+| Optimistic update | `services/messageService.ts#sendMessage`                         |
 
 ---
 
@@ -979,23 +1014,23 @@ function normalizeChatMessageReceived(e: ChatMessageReceivedEvent): ChatDomainEv
 
 ### Anti-patterns
 
-| ❌ Không nên | ✅ Nên làm thay thế |
-|---|---|
-| Viết toàn bộ logic trong một component lớn | Tách hook + service + component |
-| Gọi ACS SDK trực tiếp trong component | Gọi qua service → adapter → ACS SDK |
-| Gọi ACS SDK trực tiếp trong hook | Gọi qua service singleton |
-| Tin tưởng API response tuyệt đối | Validate + fallback cho mọi field |
-| Dùng `any` để né type error | Dùng `unknown` + type guard hoặc tìm type chính xác |
-| Hard-code magic number/string | Tạo constant trong `constants/` |
-| Copy-paste logic giữa các service | Tách helper function vào `utils/` |
-| Refactor nhiều file không liên quan | Chỉ sửa phần liên quan đến task |
-| Bỏ qua error/empty/loading state | Luôn handle cả 3 trạng thái |
-| Thêm dependency mới khi chưa cần | Kiểm tra utils/helpers hiện có trước |
-| Mutate state trực tiếp | Dùng immutable updates trong store |
-| Lưu state duplicate giữa stores | Dùng selectors để derive data |
-| Import raw ACS types vào component | Map qua mapper → internal types |
-| Tạo store action quá phức tạp | Tách logic vào service, store chỉ set/get |
-| Quên cleanup timer/listener | Luôn cleanup trong dispose/unmount |
+| ❌ Không nên                               | ✅ Nên làm thay thế                                 |
+| ------------------------------------------ | --------------------------------------------------- |
+| Viết toàn bộ logic trong một component lớn | Tách hook + service + component                     |
+| Gọi ACS SDK trực tiếp trong component      | Gọi qua service → adapter → ACS SDK                 |
+| Gọi ACS SDK trực tiếp trong hook           | Gọi qua service singleton                           |
+| Tin tưởng API response tuyệt đối           | Validate + fallback cho mọi field                   |
+| Dùng `any` để né type error                | Dùng `unknown` + type guard hoặc tìm type chính xác |
+| Hard-code magic number/string              | Tạo constant trong `constants/`                     |
+| Copy-paste logic giữa các service          | Tách helper function vào `utils/`                   |
+| Refactor nhiều file không liên quan        | Chỉ sửa phần liên quan đến task                     |
+| Bỏ qua error/empty/loading state           | Luôn handle cả 3 trạng thái                         |
+| Thêm dependency mới khi chưa cần           | Kiểm tra utils/helpers hiện có trước                |
+| Mutate state trực tiếp                     | Dùng immutable updates trong store                  |
+| Lưu state duplicate giữa stores            | Dùng selectors để derive data                       |
+| Import raw ACS types vào component         | Map qua mapper → internal types                     |
+| Tạo store action quá phức tạp              | Tách logic vào service, store chỉ set/get           |
+| Quên cleanup timer/listener                | Luôn cleanup trong dispose/unmount                  |
 
 ---
 
