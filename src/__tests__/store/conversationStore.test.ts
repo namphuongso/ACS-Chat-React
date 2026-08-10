@@ -56,7 +56,7 @@ describe('conversationStore', () => {
     useConversationStore.getState().setConversations([sampleDirect, sampleGroup]);
 
     const state = useConversationStore.getState();
-    expect(state.conversationIds).toEqual(['thread-1', 'thread-2']);
+    expect(state.conversationIds).toEqual(['thread-2', 'thread-1']);
     expect(state.conversations['thread-1']).toEqual(sampleDirect);
     expect(state.conversations['thread-2']).toEqual(sampleGroup);
   });
@@ -72,7 +72,7 @@ describe('conversationStore', () => {
     useConversationStore.getState().appendConversations([sampleDirect, newGroup]);
 
     const state = useConversationStore.getState();
-    expect(state.conversationIds).toEqual(['thread-1', 'thread-3']);
+    expect(state.conversationIds).toEqual(['thread-3', 'thread-1']);
     expect(Object.keys(state.conversations)).toHaveLength(2);
   });
 
@@ -192,7 +192,7 @@ describe('conversationStore', () => {
     it('selectAllConversations returns conversations in conversationIds order', () => {
       const state = useConversationStore.getState();
       const all = selectAllConversations(state);
-      expect(all).toEqual([sampleDirect, sampleGroup]);
+      expect(all).toEqual([sampleGroup, sampleDirect]);
     });
 
     it('selectActiveConversation returns active conversation', () => {

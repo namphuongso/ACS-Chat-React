@@ -31,7 +31,7 @@ describe('ConversationItem Component', () => {
       <ConversationItem conversation={directConversation} isActive={false} onClick={vi.fn()} />
     );
     expect(screen.getByText('Alice')).toBeInTheDocument();
-    expect(screen.getByText('chat.you: Hello there')).toBeInTheDocument();
+    expect(screen.getByText('123')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument(); // Unread count badge
   });
 

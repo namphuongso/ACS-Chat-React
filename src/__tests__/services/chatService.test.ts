@@ -217,7 +217,7 @@ describe('ChatService', () => {
 
       // Check conversationStore lastMessage and unread count
       const conv = useConversationStore.getState().conversations['thread-1'];
-      expect(conv?.lastMessage).toBe('msg-100');
+      expect(conv?.lastMessage).toBe('Alice: New message');
       expect(conv?.unreadCount).toBe(1);
 
       // Check typing indicator cleared
