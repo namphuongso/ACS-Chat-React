@@ -94,7 +94,7 @@ describe('ConversationView Component', () => {
   it('should call sendMessage when MessageInput triggers onSend', () => {
     render(<ConversationView />);
     fireEvent.click(screen.getByText('chat.send'));
-    expect(mockSendMessage).toHaveBeenCalledWith('test msg');
+    expect(mockSendMessage).toHaveBeenCalledWith('test msg', expect.any(Object));
   });
 
   it('should pass loading state to disable MessageInput', () => {
