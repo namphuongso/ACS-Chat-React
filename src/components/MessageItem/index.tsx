@@ -2,7 +2,7 @@ import React, { ReactNode, useState, useRef, useEffect } from 'react';
 import type { ChatMessage, MessageStatus } from '../../types/message.types';
 import { Avatar } from '../Avatar';
 import { formatTime } from '../../utils/date';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import styles from './MessageItem.module.scss';
 import {
   QuoteIcon,
@@ -25,6 +25,8 @@ export interface MessageItemProps {
   isOwn: boolean;
   showSender?: boolean;
   isLastInGroup?: boolean;
+  currentUserId?: string;
+  roomMembers?: Array<{ userId?: string; contactName?: string; avatarUrl?: string; cui?: string }>;
   onEdit?: (messageId: string) => void;
   onDelete?: (messageId: string) => void;
   onRetry?: (clientMessageId: string) => void;
@@ -48,6 +50,8 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
     isOwn,
     showSender = false,
     isLastInGroup = true,
+    currentUserId,
+    roomMembers,
     onEdit,
     onDelete,
     onReply,
@@ -86,24 +90,80 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
 
     // Handle System Messages
     if (message.type === 'system') {
-      let systemText = message.content;
+      let systemNode: React.ReactNode = message.content;
       if (message.systemEvent) {
         const { type, initiator, participants, newTopic } = message.systemEvent;
-        const initiatorName = initiator?.displayName || initiator?.id || 'System';
+        
+        const getMemberName = (id?: string, defaultName?: string) => {
+          if (!id) return defaultName || 'System';
+          if (id === currentUserId) return t('chat.you', 'You');
+          const member = roomMembers?.find((m) => m.cui === id || m.userId === id);
+          return member?.contactName || defaultName || id;
+        };
+
+        const isInitiatorMe = initiator?.id === currentUserId;
+        const initiatorName = isInitiatorMe 
+          ? t('chat.you_lowercase', 'you') 
+          : getMemberName(initiator?.id, initiator?.displayName);
+
         if (type === 'topicUpdated') {
-          systemText = `${initiatorName} changed topic to "${newTopic}"`;
+          const topicInitiator = isInitiatorMe ? t('chat.you', 'You') : initiatorName;
+          systemNode = (
+            <Trans 
+              i18nKey="chat.system.topicUpdated"
+              defaults="<b>{{initiator}}</b> changed topic to <b>&quot;{{newTopic}}&quot;</b>"
+              values={{ initiator: topicInitiator, newTopic }}
+              components={{ b: <b /> }}
+            />
+          );
         } else if (type === 'participantAdded') {
-          const addedNames = participants?.map((p) => p.displayName || p.id).join(', ');
-          systemText = `${initiatorName} added ${addedNames}`;
+          const addedNames = participants?.filter((p) => p.id !== initiator?.id).map((p) => getMemberName(p.id, p.displayName))?.join(', ');
+          if (isInitiatorMe) {
+            systemNode = (
+              <Trans
+                i18nKey="chat.system.youAddedParticipants"
+                defaults="<b>{{participants}}</b> were added to the group by <b>you</b>"
+                values={{ participants: addedNames }}
+                components={{ b: <b /> }}
+              />
+            );
+          } else {
+            systemNode = (
+              <Trans
+                i18nKey="chat.system.participantsAddedBy"
+                defaults="<b>{{participants}}</b> were added to the group by <b>{{initiator}}</b>"
+                values={{ participants: addedNames, initiator: initiatorName }}
+                components={{ b: <b /> }}
+              />
+            );
+          }
         } else if (type === 'participantRemoved') {
-          const removedNames = participants?.map((p) => p.displayName || p.id).join(', ');
-          systemText = `${initiatorName} removed ${removedNames}`;
+          const removedNames = participants?.filter((p) => p.id !== initiator?.id).map((p) => getMemberName(p.id, p.displayName))?.join(', ');
+          if (isInitiatorMe) {
+            systemNode = (
+              <Trans
+                i18nKey="chat.system.youRemovedParticipants"
+                defaults="<b>{{participants}}</b> were removed from the group by <b>you</b>"
+                values={{ participants: removedNames }}
+                components={{ b: <b /> }}
+              />
+            );
+          } else {
+            systemNode = (
+              <Trans
+                i18nKey="chat.system.participantsRemovedBy"
+                defaults="<b>{{participants}}</b> were removed from the group by <b>{{initiator}}</b>"
+                values={{ participants: removedNames, initiator: initiatorName }}
+                components={{ b: <b /> }}
+              />
+            );
+          }
         }
       }
 
       return (
         <div className={`${styles.messageItem} ${styles.systemMessage}`}>
-          <div className={styles.systemContent}>{systemText}</div>
+          <div className={styles.systemContent}>{systemNode}</div>
         </div>
       );
     }

@@ -193,6 +193,8 @@ export const MessageList: React.FC<MessageListProps> = React.memo(
           onEdit={onEditMessage}
           onDelete={onDeleteMessage}
           onPin={onPinMessage}
+          currentUserId={currentUserId}
+          roomMembers={roomMembers}
         />
       );
     };
