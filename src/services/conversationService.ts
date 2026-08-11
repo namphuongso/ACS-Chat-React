@@ -457,6 +457,87 @@ export class ConversationService {
   }
 
   /**
+   * Create a group room via backend API.
+   */
+  public async createGroupRoom(
+    roomName: string,
+    participantIds: string[],
+    avatarUrl?: string
+  ): Promise<ConversationResult> {
+    const store = useConversationStore.getState();
+    store.setLoading(true);
+    store.setError(null);
+
+    try {
+      const config = this.chatServiceRef?.getConfig();
+      if (!config) {
+        throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
+          operation: 'createGroupRoom',
+        });
+      }
+
+      const currentUserId = useChatStore.getState().currentUser?.id;
+      if (!currentUserId) {
+        throw new AcsChatError('AUTH_UNAUTHORIZED', 'Current user is not set.', {
+          operation: 'createGroupRoom',
+        });
+      }
+
+      const payload = {
+        participantIds,
+        roomName,
+        roomType: 'G',
+        avatarUrl: avatarUrl || '',
+      };
+
+      const res = await fetchBackend<JoinRoomResponse>(config, '/api/chat/create-room', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      const threadId = res?.data?.threadId;
+      if (!threadId) {
+        throw new AcsChatError('UNKNOWN_ERROR', 'Failed to get thread ID from backend.', {
+          operation: 'createGroupRoom',
+        });
+      }
+
+      const members = Array.isArray(res?.data?.members) ? res.data.members : [];
+
+      const participants: ConversationParticipant[] = members.map((m) => ({
+        id: m.cui || '',
+        displayName: m.contactName,
+        role: m.isAdmin ? 'owner' : 'member',
+      }));
+
+      const groupConv: GroupConversation = {
+        id: threadId,
+        type: 'group',
+        name: res?.data?.roomName || roomName,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        unreadCount: 0,
+        participants,
+        avatarUrl: res?.data?.avatarUrl,
+        conversationId: res?.data?.roomId,
+      };
+
+      store.addConversation(groupConv);
+      useParticipantStore.getState().setParticipants(threadId, participants);
+      
+      // Auto open it? Yes, we can just return it.
+      store.setLoading(false);
+
+      return { conversation: groupConv };
+    } catch (error) {
+      const chatError = mapAcsErrorToChatError(error, 'createGroupRoom');
+      store.setError(chatError);
+      store.setLoading(false);
+      return { error: chatError };
+    }
+  }
+
+  /**
    * Open a conversation by setting it as the active conversation.
    * Resets unread count for the conversation.
    */

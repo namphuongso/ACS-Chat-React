@@ -61,6 +61,7 @@ describe('ConversationList Component', () => {
       deleteConversation: vi.fn(),
       leaveConversation: vi.fn(),
       joinRoom: vi.fn(),
+      createGroupRoom: vi.fn(),
     });
   });
 

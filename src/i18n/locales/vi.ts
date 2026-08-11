@@ -68,5 +68,10 @@ export const vi = {
     openGroupBoard: 'Mở bảng nhóm',
     unpin: 'Bỏ ghim',
     viewAllInGroupBoard: 'Xem tất cả trong bảng nhóm >',
+    createGroup: 'Tạo nhóm',
+    enterGroupName: 'Nhập tên nhóm...',
+    searchGroupContact: 'Nhập tên, số điện thoại, hoặc danh sách số điện thoại...',
+    selectedContacts: 'Đã chọn',
+    creating: 'Đang tạo...',
   },
 };

@@ -14,6 +14,7 @@ import { ConversationSearchResults } from './ConversationSearchResults';
 import { ContactItem } from './ContactItem';
 import { ConversationItem } from './ConversationItem';
 import { SectionHeader } from './SectionHeader';
+import { CreateGroupModal } from './CreateGroupModal';
 import styles from './ConversationList.module.scss';
 
 const CONVERSATION_ITEM_HEIGHT = 72;
@@ -85,6 +86,7 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
   const setIsSearching = useChatStore((state) => state.setIsSearching);
   const [activeTab, setActiveTab] = useState<TabType>('All');
   const [recentSearches, setRecentSearches] = useState<Contact[]>([]);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -197,6 +199,7 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
           onSearchClose={handleSearchClose}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          onOpenCreateGroup={() => setIsCreateGroupOpen(true)}
         />
       )}
 
@@ -306,6 +309,8 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
           </div>
         )}
       </div>
+
+      <CreateGroupModal isOpen={isCreateGroupOpen} onClose={() => setIsCreateGroupOpen(false)} />
     </div>
   );
 });

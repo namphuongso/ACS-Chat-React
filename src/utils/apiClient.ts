@@ -37,7 +37,7 @@ export async function fetchBackend<T>(
 
   // Merge headers
   const headers = new Headers(options?.headers);
-  if (!headers.has('Content-Type')) {
+  if (!headers.has('Content-Type') && !(options?.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
   // Inject authorization if provided via token/headers, assuming token might be used for backend as well

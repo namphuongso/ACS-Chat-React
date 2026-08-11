@@ -68,5 +68,10 @@ export const en = {
     openGroupBoard: 'Open group board',
     unpin: 'Unpin',
     viewAllInGroupBoard: 'View all in the group board >',
+    createGroup: 'Create group',
+    enterGroupName: 'Enter group name...',
+    searchGroupContact: 'Enter name, phone number, or list of phone number here',
+    selectedContacts: 'Selected',
+    creating: 'Creating...',
   },
 };

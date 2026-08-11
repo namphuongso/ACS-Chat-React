@@ -5,3 +5,4 @@ export * from './participantService';
 export * from './typingService';
 export * from './readReceiptService';
 export * from './connectionService';
+export * from './fileService';

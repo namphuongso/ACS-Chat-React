@@ -44,6 +44,7 @@ describe('ChatContainer Component', () => {
       deleteConversation: vi.fn(),
       leaveConversation: vi.fn(),
       joinRoom: vi.fn(),
+      createGroupRoom: vi.fn(),
     });
   });
 
@@ -69,7 +70,6 @@ describe('ChatContainer Component', () => {
     expect(screen.getByTestId('mock-conversation-view')).toBeInTheDocument();
     expect(screen.queryByTestId('mock-empty-state-no-conversations')).not.toBeInTheDocument();
   });
-
 
   it('should allow custom renderers', () => {
     const customList = () => <div data-testid="custom-list">Custom List</div>;
@@ -113,6 +113,7 @@ describe('ChatContainer Component', () => {
       deleteConversation: vi.fn(),
       leaveConversation: vi.fn(),
       joinRoom: vi.fn(),
+      createGroupRoom: vi.fn(),
     });
 
     render(
