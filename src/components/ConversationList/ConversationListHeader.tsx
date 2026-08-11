@@ -4,7 +4,7 @@ import { SearchInput } from '../SearchInput';
 import { useTranslation } from 'react-i18next';
 import styles from './ConversationList.module.scss';
 
-export type TabType = 'All' | 'Contacts' | 'Messages' | 'Files';
+export type TabType = 'All' | 'Contacts' | 'Conversation';
 
 export interface ConversationListHeaderProps {
   searchTerm: string;
@@ -26,7 +26,7 @@ export const ConversationListHeader: React.FC<ConversationListHeaderProps> = ({
   onTabChange,
 }) => {
   const { t } = useTranslation();
-  const TABS: TabType[] = ['All', 'Contacts', 'Messages', 'Files'];
+  const TABS: TabType[] = ['All', 'Contacts', 'Conversation'];
 
   return (
     <div className={styles.searchHeaderWrapper}>

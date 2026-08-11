@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import { useConversations } from '../../hooks/useConversations';
 import { useMessages } from '../../hooks/useMessages';
 import { useChat } from '../../hooks/useChat';
+import { useChatStore } from '../../store/chatStore';
 import { useRoomMembers } from '../../hooks/useRoomMembers';
 import { MessageList } from '../MessageList';
 import { ConversationFooter } from './ConversationFooter';
@@ -22,6 +23,8 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
   ({ conversationId, pinnedMessageIds }) => {
     const { activeConversation, conversations } = useConversations();
     const { currentUser, connectionState } = useChat();
+    const setIsSearching = useChatStore((state) => state.setIsSearching);
+    const setSearchTerm = useChatStore((state) => state.setSearchTerm);
     const { t } = useTranslation();
 
     const idToUse = conversationId || activeConversation?.id;
@@ -55,9 +58,11 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
             }
           }
           sendMessage(content, { senderDisplayName });
+          setIsSearching(false);
+          setSearchTerm('');
         }
       },
-      [idToUse, sendMessage, currentUser, roomMembers]
+      [idToUse, sendMessage, currentUser, roomMembers, setIsSearching, setSearchTerm]
     );
 
     const handleTyping = useCallback(() => {
@@ -162,9 +167,11 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
         </div>
 
         <ConversationFooter
+          key={idToUse}
           onSend={handleSend}
           onTyping={handleTyping}
           disabled={loading || connectionState !== 'connected'}
+          autoFocus={true}
         />
 
         <EditMessageDialog

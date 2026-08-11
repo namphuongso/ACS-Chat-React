@@ -38,11 +38,13 @@ export const en = {
     tabs: {
       all: 'All',
       contacts: 'Contacts',
+      conversation: 'Conversation',
       messages: 'Messages',
       files: 'Files',
     },
     noContactsFound: 'No contacts found',
     seeAllContacts: 'See all contacts',
+    seeAll: 'See all',
     noMessagesFound: 'No messages found',
     noFilesFound: 'No files found',
     anErrorOccurred: 'An error occurred',

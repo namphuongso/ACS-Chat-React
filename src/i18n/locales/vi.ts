@@ -38,11 +38,13 @@ export const vi = {
     tabs: {
       all: 'Tất cả',
       contacts: 'Danh bạ',
+      conversation: 'Hội thoại',
       messages: 'Tin nhắn',
       files: 'Tệp',
     },
     noContactsFound: 'Không tìm thấy danh bạ',
     seeAllContacts: 'Xem tất cả danh bạ',
+    seeAll: 'Xem tất cả',
     noMessagesFound: 'Không tìm thấy tin nhắn',
     noFilesFound: 'Không tìm thấy tệp',
     anErrorOccurred: 'Đã xảy ra lỗi',

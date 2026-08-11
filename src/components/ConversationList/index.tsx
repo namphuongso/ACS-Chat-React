@@ -1,5 +1,6 @@
 import React, { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useContactSearch } from '../../hooks/useContactSearch';
+import { useConversationSearch } from '../../hooks/useConversationSearch';
 import { useConversations } from '../../hooks/useConversations';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useVirtualScroll } from '../../hooks/useVirtualScroll';
@@ -64,7 +65,8 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
     store,
   ]);
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const searchTerm = useChatStore((state) => state.searchTerm);
+  const setSearchTerm = useChatStore((state) => state.setSearchTerm);
 
   const filteredConversations = useMemo(() => {
     if (!searchTerm) return conversations;
@@ -79,7 +81,8 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
     });
   }, [conversations, searchTerm]);
 
-  const [isSearching, setIsSearching] = useState(false);
+  const isSearching = useChatStore((state) => state.isSearching);
+  const setIsSearching = useChatStore((state) => state.setIsSearching);
   const [activeTab, setActiveTab] = useState<TabType>('All');
   const [recentSearches, setRecentSearches] = useState<Contact[]>([]);
 
@@ -104,6 +107,7 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
     // Prevent activating if we are already in the direct conversation with this contact
     const currentActiveConv = conversations.find(c => c.id === activeId);
     if (currentActiveConv?.type === 'direct' && currentActiveConv.otherParticipant?.id === id) {
+      window.dispatchEvent(new CustomEvent('focusMessageInput'));
       return;
     }
 
@@ -117,13 +121,15 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
   };
 
   const { contacts, loading: contactsLoading, search: searchContacts } = useContactSearch();
+  const { conversations: searchedConversations, loading: searchedConversationsLoading, search: searchRoomChats } = useConversationSearch();
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   useEffect(() => {
     if (isSearching) {
       searchContacts(debouncedSearchTerm);
+      searchRoomChats(debouncedSearchTerm);
     }
-  }, [debouncedSearchTerm, isSearching, searchContacts]);
+  }, [debouncedSearchTerm, isSearching, searchContacts, searchRoomChats]);
 
   const globalContacts = useMemo(() => {
     return contacts;
@@ -235,7 +241,10 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
                         conversation={conv}
                         isActive={conv.id === activeId}
                         onClick={() => {
-                          if (conv.id === activeId) return;
+                          if (conv.id === activeId) {
+                            window.dispatchEvent(new CustomEvent('focusMessageInput'));
+                            return;
+                          }
                           if (onSelect) onSelect(conv.id);
                         }}
                         isDropdownOpen={openDropdownId === conv.id}
@@ -276,8 +285,18 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
             activeTab={activeTab}
             contacts={allContacts}
             contactsLoading={contactsLoading}
+            conversations={searchedConversations}
+            conversationsLoading={searchedConversationsLoading}
             onContactSelect={handleContactSelect}
             onSeeAllContacts={() => setActiveTab('Contacts')}
+            onConversationSelect={(id) => {
+              if (id === activeId) {
+                window.dispatchEvent(new CustomEvent('focusMessageInput'));
+                return;
+              }
+              if (onSelect) onSelect(id);
+            }}
+            onSeeAllConversations={() => setActiveTab('Conversation')}
           />
         )}
 
