@@ -12,13 +12,21 @@ import type {
 } from '@azure/communication-signaling';
 import type { ChatClient } from '@azure/communication-chat';
 import type { ChatDomainEvent, ChatEventHandler } from '../../types/events.types';
-import type { ChatMessage, ConversationParticipant } from '../../types';
+import type {
+  ChatMessage,
+  ConversationParticipant,
+  Conversation,
+  BackendConversationItem,
+} from '../../types';
 import type { ReadReceipt } from '../../models/ReadReceipt';
 import { AcsChatError } from '../../types/errors.types';
+import type { ChatConfig } from '../../types/config.types';
+import { fetchBackend } from '../../utils/apiClient';
 import {
   mapAcsIdentifierToUser,
   mapAcsParticipantToParticipant,
   mapAcsReadReceiptToReadReceipt,
+  mapBackendItemToConversation,
 } from './acsMappers';
 
 export type ChatEventHandlerFn = (event: ChatDomainEvent) => void;
@@ -147,37 +155,70 @@ export function normalizeReadReceiptReceived(
   };
 }
 
-export function normalizeChatThreadCreated(e: ChatThreadCreatedEvent): ChatDomainEvent<{
-  id: string;
-  type: 'group';
-  name: string;
-  createdAt: Date;
-  metadata?: Record<string, string>;
-  createdBy?: ReturnType<typeof mapAcsIdentifierToUser>;
-  participants: ConversationParticipant[];
-}> {
+export async function normalizeChatThreadCreated(
+  e: ChatThreadCreatedEvent,
+  config?: ChatConfig | null
+): Promise<ChatDomainEvent<Conversation>> {
+  console.log('🚀 ~ normalizeChatThreadCreated ~ e:', e);
   const threadId = e?.threadId || '';
   const createdOn = e?.createdOn ? new Date(e.createdOn) : new Date();
-  const createdBy = e?.createdBy?.id
-    ? mapAcsIdentifierToUser(e.createdBy.id, e.createdBy.displayName)
-    : undefined;
   const participants = Array.isArray(e?.participants)
     ? e.participants.map(mapAcsParticipantToParticipant)
     : [];
+  const createdBy = e?.createdBy?.id
+    ? mapAcsIdentifierToUser(e.createdBy.id, e.createdBy.displayName)
+    : undefined;
+
+  let name = e?.properties?.topic || '';
+  let roomData: BackendConversationItem | undefined = undefined;
+
+  if (config && threadId) {
+    try {
+      const endpoint = `api/chat/get-room-chats?keyword=${encodeURIComponent(threadId)}&pageIndex=1&pageSize=50`;
+      const res = await fetchBackend<BackendConversationItem[]>(config, endpoint, {
+        method: 'GET',
+      });
+      if (res && res.data && res.data.length > 0) {
+        roomData = res.data[0];
+        name = roomData.roomName || name;
+      }
+    } catch (err) {
+      console.error('Error fetching room info for thread:', threadId, err);
+    }
+  }
+
+  let payload: Conversation;
+
+  if (roomData) {
+    payload = mapBackendItemToConversation(roomData);
+    // Merge participants if needed, though they might be in roomData
+    if (participants.length > 0 && payload.participants.length === 0) {
+      payload.participants = participants;
+    }
+    if (createdBy) {
+      payload.createdBy = createdBy;
+    }
+  } else {
+    // We do not have currentUserId here easily, but we just fallback to group if not sure
+    // or just assume group if no backend data
+    payload = {
+      id: threadId,
+      conversationId: threadId,
+      type: 'group',
+      name: name,
+      createdAt: createdOn,
+      metadata: e?.properties?.metadata,
+      participants,
+      unreadCount: 0,
+      createdBy,
+    };
+  }
 
   return {
     type: 'conversation:created',
     conversationId: threadId,
     timestamp: createdOn,
-    payload: {
-      id: threadId,
-      type: 'group',
-      name: e?.properties?.topic || '',
-      createdAt: createdOn,
-      metadata: e?.properties?.metadata,
-      createdBy,
-      participants,
-    },
+    payload,
   };
 }
 
@@ -312,10 +353,15 @@ export function normalizeRealTimeDisconnected(): ChatDomainEvent<{ status: strin
 export class AcsEventAdapter {
   private chatClient: ChatClient;
   private eventHandler: ChatEventHandler | ChatEventHandlerFn;
+  private config?: ChatConfig | null;
   private listeners: Map<string, (...args: unknown[]) => void> = new Map();
   private isSubscribed = false;
 
-  constructor(chatClient: ChatClient, eventHandler: ChatEventHandler | ChatEventHandlerFn) {
+  constructor(
+    chatClient: ChatClient,
+    eventHandler: ChatEventHandler | ChatEventHandlerFn,
+    config?: ChatConfig | null
+  ) {
     if (!chatClient) {
       throw new AcsChatError('INVALID_INPUT', 'ChatClient is required.', {
         operation: 'constructor',
@@ -338,6 +384,7 @@ export class AcsEventAdapter {
 
     this.chatClient = chatClient;
     this.eventHandler = eventHandler;
+    this.config = config;
   }
 
   /**
@@ -363,8 +410,8 @@ export class AcsEventAdapter {
     this.register('readReceiptReceived', (e: ReadReceiptReceivedEvent) =>
       this.dispatch(normalizeReadReceiptReceived(e))
     );
-    this.register('chatThreadCreated', (e: ChatThreadCreatedEvent) =>
-      this.dispatch(normalizeChatThreadCreated(e))
+    this.register('chatThreadCreated', async (e: ChatThreadCreatedEvent) =>
+      this.dispatch(await normalizeChatThreadCreated(e, this.config))
     );
     this.register('chatThreadDeleted', (e: ChatThreadDeletedEvent) =>
       this.dispatch(normalizeChatThreadDeleted(e))

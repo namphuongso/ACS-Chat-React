@@ -1,20 +1,20 @@
-import { AzureCommunicationTokenCredential } from '@azure/communication-common';
 import type { ChatClient } from '@azure/communication-chat';
+import { AzureCommunicationTokenCredential } from '@azure/communication-common';
+import { unstable_batchedUpdates } from 'react-dom';
 import { AcsClientAdapter } from '../adapters/acs/acsClientAdapter';
 import { AcsEventAdapter } from '../adapters/acs/acsEventAdapter';
+import type { ReadReceipt } from '../models/ReadReceipt';
 import { useChatStore } from '../store/chatStore';
 import { useConversationStore } from '../store/conversationStore';
 import { useMessageStore } from '../store/messageStore';
 import { useParticipantStore } from '../store/participantStore';
+import type { ChatUser } from '../types/chat.types';
 import type { ChatConfig } from '../types/config.types';
+import type { Conversation } from '../types/conversation.types';
+import { AcsChatError } from '../types/errors.types';
 import type { ChatDomainEvent } from '../types/events.types';
 import type { ChatMessage } from '../types/message.types';
 import type { ConversationParticipant } from '../types/participant.types';
-import type { GroupConversation } from '../types/conversation.types';
-import type { ReadReceipt } from '../models/ReadReceipt';
-import type { ChatUser } from '../types/chat.types';
-import { AcsChatError } from '../types/errors.types';
-import { unstable_batchedUpdates } from 'react-dom';
 
 export type EventListenerFn = (event: ChatDomainEvent) => void;
 
@@ -88,7 +88,8 @@ export class ChatService {
       this.clientAdapter = new AcsClientAdapter(config.endpoint, credential);
       this.eventAdapter = new AcsEventAdapter(
         this.clientAdapter.getChatClient(),
-        (event: ChatDomainEvent) => this.handleDomainEvent(event)
+        (event: ChatDomainEvent) => this.handleDomainEvent(event),
+        config
       );
 
       await this.clientAdapter.startRealtimeNotifications();
@@ -301,27 +302,9 @@ export class ChatService {
       }
 
       case 'conversation:created': {
-        const payload = event.payload as {
-          id: string;
-          type?: 'group';
-          name: string;
-          createdAt: Date;
-          metadata?: Record<string, string>;
-          createdBy?: ChatUser;
-          participants: ConversationParticipant[];
-        };
+        const payload = event.payload as Conversation;
 
-        const groupConv: GroupConversation = {
-          id: payload.id,
-          type: 'group',
-          name: payload.name || '',
-          createdAt: payload.createdAt || new Date(),
-          participants: payload.participants || [],
-          unreadCount: 0,
-          metadata: payload.metadata,
-        };
-
-        convStore.addConversation(groupConv);
+        convStore.addConversation(payload);
         if (payload.participants?.length > 0) {
           partStore.setParticipants(payload.id, payload.participants);
         }

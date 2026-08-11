@@ -46,6 +46,7 @@ describe('ConversationList Component', () => {
     vi.mocked(useConversations).mockReturnValue({
       conversations: mockConversations as unknown as Conversation[],
       activeConversation: null,
+      openingConversation: false,
       loading: false,
       loadingMore: false,
       hasMore: false,

@@ -18,6 +18,7 @@ import { initialConversationMessages } from '../store/messageStore';
  * @property {Function} editMessage - Method to edit an existing message
  * @property {Function} deleteMessage - Method to delete an existing message
  * @property {Function} retryMessage - Method to retry sending a failed message
+ * @property {Function} pinMessage - Method to pin or unpin a message
  * @property {Function} loadMore - Method to load older messages
  */
 export const useMessages = (conversationId: string) => {
@@ -86,6 +87,15 @@ export const useMessages = (conversationId: string) => {
     return result;
   }, [conversationId]);
 
+  const pinMessage = useCallback(async (messageId: string, pin: boolean) => {
+    setError(null);
+    const result = await messageService.pinMessage(conversationId, messageId, pin);
+    if (result.error) {
+      setError(result.error);
+    }
+    return result;
+  }, [conversationId]);
+
   return useMemo(() => ({
     messages,
     loading,
@@ -96,7 +106,8 @@ export const useMessages = (conversationId: string) => {
     editMessage,
     deleteMessage,
     retryMessage,
+    pinMessage,
     loadMessages,
     loadMore,
-  }), [messages, loading, loadingMore, hasMore, error, sendMessage, editMessage, deleteMessage, retryMessage, loadMessages, loadMore]);
+  }), [messages, loading, loadingMore, hasMore, error, sendMessage, editMessage, deleteMessage, retryMessage, pinMessage, loadMessages, loadMore]);
 };

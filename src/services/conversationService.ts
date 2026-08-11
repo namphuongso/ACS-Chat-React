@@ -3,6 +3,7 @@ import {
   mapAcsErrorToChatError,
   mapAcsParticipantToParticipant,
   mapAcsThreadItemToConversation,
+  mapBackendItemToConversation,
 } from '../adapters/acs/acsMappers';
 import { useChatStore } from '../store/chatStore';
 import { useConversationStore } from '../store/conversationStore';
@@ -16,6 +17,7 @@ import type {
   CreateGroupConversationOptions,
   GroupConversation,
   DirectConversation,
+  BackendConversationItem,
 } from '../types/conversation.types';
 import type { ConversationParticipant } from '../types/participant.types';
 import type { Contact } from '../types/contact.types';
@@ -24,30 +26,7 @@ import { AcsChatError } from '../types/errors.types';
 import { logger } from '../utils/logger';
 import type { ChatService } from './chatService';
 
-export interface BackendConversationItem {
-  id: string;
-  type: string;
-  topic?: string;
-  createdAt?: string | Date | number;
-  updatedAt?: string | Date | number;
-  participants?: ConversationParticipant[];
-  pid?: string;
-  hostId?: string;
-  roomName?: string;
-  description?: string;
-  threadId?: string;
-  avatarUrl?: string;
-  created?: string;
-  modified?: string | null;
-  creator?: string;
-  modifier?: string;
-  pin?: boolean;
-  isMuted?: boolean;
-  lastMessage?: string;
-  lastMessageTime?: string | null;
-  lastViewedDate?: string | null;
-  isRead?: boolean;
-}
+
 
 export interface CreateRoomResponse {
   id?: string;
@@ -163,40 +142,7 @@ export class ConversationService {
 
         const data = Array.isArray(res?.data) ? res.data : [];
         for (const item of data) {
-          const commonProps = {
-            id: item.threadId || item.id,
-            conversationId: item.id,
-            createdAt: new Date(item.created || item.createdAt || Date.now()),
-            updatedAt:
-              item.modified || item.updatedAt
-                ? new Date((item.modified || item.updatedAt) as string | number | Date)
-                : undefined,
-            unreadCount: item.isRead === false ? 1 : 0,
-            participants: [],
-            avatarUrl: item.avatarUrl || undefined,
-            pin: item.pin || false,
-            lastMessage: item.lastMessage || '',
-            lastMessageTime: item.lastMessageTime || '',
-            isRead: item.isRead || false,
-          };
-
-          if (item.type === 'U' || item.type === 'direct') {
-            conversations.push({
-              ...commonProps,
-              type: 'direct',
-              otherParticipant: {
-                id: item.pid || 'unknown',
-                displayName: item.roomName || 'Unknown',
-              },
-              name: item.roomName || 'Unknown',
-            } as Conversation);
-          } else {
-            conversations.push({
-              ...commonProps,
-              type: 'group',
-              name: item.roomName || item.topic || 'Group',
-            } as Conversation);
-          }
+          conversations.push(mapBackendItemToConversation(item));
         }
 
         if (pageIndex === 1) {
@@ -532,6 +478,7 @@ export class ConversationService {
     }
 
     try {
+      store.setOpeningConversation(true);
       const config = this.chatServiceRef?.getConfig();
       if (!config) {
         throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
@@ -589,6 +536,8 @@ export class ConversationService {
       const chatError = mapAcsErrorToChatError(e, 'openConversation', { conversationId });
       store.setError(chatError);
       throw chatError;
+    } finally {
+      store.setOpeningConversation(false);
     }
   }
 

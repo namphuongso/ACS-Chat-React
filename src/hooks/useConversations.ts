@@ -34,6 +34,7 @@ export const useConversations = () => {
   
   const conversations = useConversationStore(selectAllConversations);
   const activeConversation = useConversationStore(selectActiveConversation);
+  const openingConversation = useConversationStore((state) => state.openingConversation);
 
   const loadConversations = useCallback(async (options?: ListConversationsOptions) => {
     return await conversationService.loadConversations(options);
@@ -91,6 +92,7 @@ export const useConversations = () => {
   return useMemo(() => ({
     conversations,
     activeConversation,
+    openingConversation,
     loading,
     loadingMore,
     hasMore,
@@ -105,5 +107,5 @@ export const useConversations = () => {
     deleteConversation,
     leaveConversation,
     joinRoom,
-  }), [conversations, activeConversation, loading, loadingMore, hasMore, error, loadConversations, loadMore, openConversation, closeConversation, createDirectConversation, createGroupConversation, updateTopic, deleteConversation, leaveConversation, joinRoom]);
+  }), [conversations, activeConversation, openingConversation, loading, loadingMore, hasMore, error, loadConversations, loadMore, openConversation, closeConversation, createDirectConversation, createGroupConversation, updateTopic, deleteConversation, leaveConversation, joinRoom]);
 };

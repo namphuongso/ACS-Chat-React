@@ -1,4 +1,5 @@
 import type { ConversationParticipant } from './participant.types';
+import type { ChatUser } from './chat.types';
 
 /**
  * Supported conversation types in the chat system
@@ -37,6 +38,8 @@ export interface BaseConversation {
   pin?: boolean;
   /** Whether the conversation is read */
   isRead?: boolean;
+  /** The user who created the conversation */
+  createdBy?: ChatUser;
 }
 
 /**
@@ -82,4 +85,32 @@ export interface CreateGroupConversationOptions {
   participants: Array<{ userId: string; displayName?: string }>;
   /** Optional description for the group */
   description?: string;
+}
+
+/**
+ * Represents a conversation item returned from the backend API
+ */
+export interface BackendConversationItem {
+  id: string;
+  type: string;
+  topic?: string;
+  createdAt?: string | Date | number;
+  updatedAt?: string | Date | number;
+  participants?: ConversationParticipant[];
+  pid?: string;
+  hostId?: string;
+  roomName?: string;
+  description?: string;
+  threadId?: string;
+  avatarUrl?: string;
+  created?: string;
+  modified?: string | Date | number | null;
+  creator?: string;
+  modifier?: string;
+  isRead?: boolean;
+  pin?: boolean;
+  isMuted?: boolean;
+  lastMessage?: string;
+  lastMessageTime?: string | null;
+  lastViewedDate?: string | null;
 }

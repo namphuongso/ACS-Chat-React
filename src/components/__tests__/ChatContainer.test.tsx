@@ -29,6 +29,7 @@ describe('ChatContainer Component', () => {
     vi.mocked(useConversations).mockReturnValue({
       conversations: [],
       activeConversation: null,
+      openingConversation: false,
       loading: false,
       loadingMore: false,
       hasMore: false,
@@ -97,6 +98,7 @@ describe('ChatContainer Component', () => {
     vi.mocked(useConversations).mockReturnValue({
       conversations: [],
       activeConversation: null,
+      openingConversation: false,
       loading: false,
       loadingMore: false,
       hasMore: false,

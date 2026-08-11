@@ -581,6 +581,53 @@ export class MessageService {
 
     return result;
   }
+
+  /**
+   * Pin or unpin a message.
+   */
+  public async pinMessage(conversationId: string, messageId: string, pin: boolean): Promise<MessageResult> {
+    if (!conversationId || conversationId.trim() === '') {
+      throw new AcsChatError('INVALID_INPUT', 'conversationId is required.', {
+        operation: 'pinMessage',
+      });
+    }
+
+    if (!messageId || messageId.trim() === '') {
+      throw new AcsChatError('INVALID_INPUT', 'messageId is required.', {
+        operation: 'pinMessage',
+      });
+    }
+
+    try {
+      const config = this.getChatService().getConfig();
+      if (!config) {
+        throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
+          operation: 'pinMessage',
+        });
+      }
+      
+      if (!config.backendUrl) {
+        throw new AcsChatError('INVALID_INPUT', 'Backend URL is not configured.', {
+          operation: 'pinMessage',
+        });
+      }
+
+      await fetchBackend<boolean>(
+        config,
+        `/api/chat/pin-message?messageId=${messageId}&pin=${pin}`,
+        {
+          method: 'POST'
+        }
+      );
+
+      logger.info(`Message ${messageId} pin status updated to ${pin} in conversation ${conversationId}`);
+      return {};
+    } catch (error) {
+      const chatError = mapAcsErrorToChatError(error, 'pinMessage', { messageId });
+      logger.error(`Failed to update pin status for message ${messageId}`, error);
+      return { error: chatError };
+    }
+  }
 }
 
 /**

@@ -19,6 +19,8 @@ export interface ConversationState {
   loadingMore: boolean;
   /** Indicates if there are more conversations to fetch */
   hasMore: boolean;
+  /** Flag for when a single conversation is being opened/loaded */
+  openingConversation: boolean;
   /** Pagination continuation token / cursor */
   cursor: string | null;
   /** Error object if fetching or conversation operation fails */
@@ -48,6 +50,8 @@ export interface ConversationState {
   setLoadingMore: (loadingMore: boolean) => void;
   /** Set hasMore flag for pagination */
   setHasMore: (hasMore: boolean) => void;
+  /** Set opening conversation flag */
+  setOpeningConversation: (opening: boolean) => void;
   /** Set pagination cursor */
   setCursor: (cursor: string | null) => void;
   /** Set conversation error */
@@ -63,6 +67,7 @@ export const initialConversationState = {
   loading: false,
   loadingMore: false,
   hasMore: true,
+  openingConversation: false,
   cursor: null,
   error: null,
 };
@@ -255,6 +260,7 @@ export const useConversationStore = create<ConversationState>((set) => ({
   setLoading: (loading: boolean) => set({ loading }),
   setLoadingMore: (loadingMore: boolean) => set({ loadingMore }),
   setHasMore: (hasMore: boolean) => set({ hasMore }),
+  setOpeningConversation: (openingConversation: boolean) => set({ openingConversation }),
   setCursor: (cursor: string | null) => set({ cursor }),
   setError: (error: ChatError | null) => set({ error }),
 

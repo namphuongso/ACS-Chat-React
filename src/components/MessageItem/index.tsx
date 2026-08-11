@@ -17,6 +17,7 @@ import {
   UndoIcon,
   TrashIcon,
   EditIcon,
+  PinOffIcon,
 } from '../Icons';
 
 export interface MessageItemProps {
@@ -30,7 +31,8 @@ export interface MessageItemProps {
   onReply?: (messageId: string) => void;
   onForward?: (messageId: string) => void;
   onCopy?: (messageId: string) => void;
-  onPin?: (messageId: string) => void;
+  onPin?: (messageId: string, pin: boolean) => void;
+  isPinned?: boolean;
   onStar?: (messageId: string) => void;
   onSelect?: (messageId: string) => void;
   onViewDetails?: (messageId: string) => void;
@@ -52,6 +54,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
     onForward,
     onCopy,
     onPin,
+    isPinned = false,
     onStar,
     onSelect,
     onViewDetails,
@@ -223,9 +226,20 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
 
                         <button
                           className={styles.dropdownItem}
-                          onClick={() => handleActionClick(onPin)}
+                          onClick={() => {
+                            if (onPin) onPin(message.id, !isPinned);
+                            setIsDropdownOpen(false);
+                          }}
                         >
-                          <PinIcon /> {t('chat.pinMessage')}
+                          {isPinned ? (
+                            <>
+                              <PinOffIcon /> {t('chat.unpinMessage', 'Bỏ ghim')}
+                            </>
+                          ) : (
+                            <>
+                              <PinIcon /> {t('chat.pinMessage')}
+                            </>
+                          )}
                         </button>
                         <button
                           className={styles.dropdownItem}

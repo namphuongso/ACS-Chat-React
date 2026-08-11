@@ -3,6 +3,7 @@ import { useConversations } from '../hooks/useConversations';
 import { ConversationList } from './ConversationList';
 import { ConversationView } from './Conversation';
 import { EmptyState } from './EmptyState';
+import { LoadingState } from './LoadingState';
 
 export interface ConversationListRenderProps {}
 
@@ -20,7 +21,7 @@ export interface ChatContainerProps {
 
 export const ChatContainer: React.FC<ChatContainerProps> = React.memo(
   ({ className, style, renderConversationList, renderConversation, renderEmpty }) => {
-    const { activeConversation } = useConversations();
+    const { activeConversation, openingConversation } = useConversations();
 
     const defaultStyle: CSSProperties = {
       display: 'flex',
@@ -54,7 +55,9 @@ export const ChatContainer: React.FC<ChatContainerProps> = React.memo(
           {renderConversationList ? renderConversationList({}) : <ConversationList />}
         </div>
         <div className="acs-chat-main-area" style={defaultMainStyle}>
-          {activeConversation ? (
+          {openingConversation ? (
+            <LoadingState />
+          ) : activeConversation ? (
             renderConversation ? (
               renderConversation({ conversationId: activeConversation.id })
             ) : (

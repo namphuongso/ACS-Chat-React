@@ -15,10 +15,11 @@ import styles from './ConversationView.module.scss';
 
 export interface ConversationViewProps {
   conversationId?: string;
+  pinnedMessageIds?: Set<string> | string[];
 }
 
 export const ConversationView: React.FC<ConversationViewProps> = React.memo(
-  ({ conversationId }) => {
+  ({ conversationId, pinnedMessageIds }) => {
     const { activeConversation, conversations } = useConversations();
     const { currentUser, connectionState } = useChat();
     const { t } = useTranslation();
@@ -32,7 +33,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
     const { roomMembers, roomType } = useRoomMembers(conversation);
 
     // Call hooks unconditionally
-    const { messages, loading, loadingMore, hasMore, loadMore, loadMessages, sendMessage, editMessage, deleteMessage } =
+    const { messages, loading, loadingMore, hasMore, loadMore, loadMessages, sendMessage, editMessage, deleteMessage, pinMessage } =
       useMessages(idToUse || '');
 
     useEffect(() => {
@@ -122,6 +123,13 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
       setDeleteDialog({ isOpen: false, messageId: '' });
     }, []);
 
+    const handlePinMessage = useCallback(
+      (messageId: string, pin: boolean) => {
+        pinMessage(messageId, pin);
+      },
+      [pinMessage]
+    );
+
     if (!idToUse || !conversation) {
       if (loading && conversations.length === 0) {
         return <LoadingState />;
@@ -148,6 +156,8 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
             roomType={roomType || conversation.type}
             onEditMessage={handleEditMessage}
             onDeleteMessage={handleDeleteMessage}
+            onPinMessage={handlePinMessage}
+            pinnedMessageIds={pinnedMessageIds}
           />
         </div>
 

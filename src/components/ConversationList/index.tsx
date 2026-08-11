@@ -101,6 +101,12 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
   };
 
   const handleContactSelect = (id: string) => {
+    // Prevent activating if we are already in the direct conversation with this contact
+    const currentActiveConv = conversations.find(c => c.id === activeId);
+    if (currentActiveConv?.type === 'direct' && currentActiveConv.otherParticipant?.id === id) {
+      return;
+    }
+
     const contact = allContacts.find((c) => c.id === id) || recentSearches.find((c) => c.id === id);
     if (contact) {
       saveRecentSearch(contact);
@@ -120,15 +126,8 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
   }, [debouncedSearchTerm, isSearching, searchContacts]);
 
   const globalContacts = useMemo(() => {
-    return contacts.filter(
-      (c) =>
-        !conversations.some(
-          (conv) =>
-            conv.type === 'direct' &&
-            (conv.otherParticipant?.id === c.cui || conv.otherParticipant?.id === c.id)
-        )
-    );
-  }, [contacts, conversations]);
+    return contacts;
+  }, [contacts]);
 
   const allContacts = useMemo<Contact[]>(() => {
     return globalContacts;
@@ -236,10 +235,13 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
                         conversation={conv}
                         isActive={conv.id === activeId}
                         onClick={() => {
+                          if (conv.id === activeId) return;
                           if (onSelect) onSelect(conv.id);
                         }}
                         isDropdownOpen={openDropdownId === conv.id}
-                        onDropdownOpenChange={(isOpen) => setOpenDropdownId(isOpen ? conv.id : null)}
+                        onDropdownOpenChange={(isOpen) =>
+                          setOpenDropdownId(isOpen ? conv.id : null)
+                        }
                       />
                     )}
                   </div>
