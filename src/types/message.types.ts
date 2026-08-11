@@ -52,6 +52,8 @@ export interface ChatMessage {
   editedAt?: Date;
   /** Deletion timestamp if message was deleted */
   deletedAt?: Date;
+  /** Recall timestamp if message was recalled */
+  recalledAt?: Date;
   /** Current delivery/read status */
   status: MessageStatus;
   /** Custom key-value metadata attached to message */

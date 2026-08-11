@@ -113,7 +113,10 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
     const bubbleClass = isOwn ? styles.ownBubble : styles.otherBubble;
 
     const senderName =
-      message.senderDisplayName || message.sender?.displayName || message.sender?.id || t('chat.unknownSender');
+      message.senderDisplayName ||
+      message.sender?.displayName ||
+      message.sender?.id ||
+      t('chat.unknownSender');
 
     const defaultRenderContent = () => {
       if (message.deletedAt) {
@@ -154,7 +157,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
             {!isOwn && showSender && <div className={styles.senderName}>{senderName}</div>}
 
             {renderContent ? renderContent(message) : defaultRenderContent()}
-            {message.editedAt && !message.deletedAt && (
+            {message.editedAt && !message.deletedAt && !message.recalledAt && (
               <span className={styles.edited}>{t('chat.edited')}</span>
             )}
 
@@ -215,7 +218,9 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
                     </button>
 
                     {isDropdownOpen && (
-                      <div className={`${styles.dropdownMenu} ${dropdownPosition === 'up' ? styles.dropdownMenuUp : ''}`}>
+                      <div
+                        className={`${styles.dropdownMenu} ${dropdownPosition === 'up' ? styles.dropdownMenuUp : ''}`}
+                      >
                         <button
                           className={styles.dropdownItem}
                           onClick={() => handleActionClick(onCopy)}
@@ -286,12 +291,14 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
                           </>
                         )}
 
-                        <button
-                          className={`${styles.dropdownItem} ${styles.dangerItem}`}
-                          onClick={() => handleActionClick(onDelete)}
-                        >
-                          <TrashIcon /> {t('chat.deleteMessage')}
-                        </button>
+                        {isOwn && (
+                          <button
+                            className={`${styles.dropdownItem} ${styles.dangerItem}`}
+                            onClick={() => handleActionClick(onDelete)}
+                          >
+                            <TrashIcon /> {t('chat.deleteMessage')}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

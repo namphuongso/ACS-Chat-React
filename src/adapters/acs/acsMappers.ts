@@ -140,6 +140,10 @@ export function mapAcsMessageToMessage(
     ? acsMsg.content?.topic || acsMsg.content?.message || ''
     : acsMsg.content?.message || '';
 
+  const recalledAt = acsMsg.metadata?.deletedBy
+    ? new Date(acsMsg.editedOn || acsMsg.createdOn)
+    : undefined;
+
   return {
     id: acsMsg.id,
     conversationId: convId,
@@ -150,6 +154,7 @@ export function mapAcsMessageToMessage(
     createdAt: acsMsg.createdOn ? new Date(acsMsg.createdOn) : new Date(),
     editedAt: acsMsg.editedOn ? new Date(acsMsg.editedOn) : undefined,
     deletedAt: acsMsg.deletedOn ? new Date(acsMsg.deletedOn) : undefined,
+    recalledAt,
     status: 'sent',
     metadata: acsMsg.metadata,
     systemEvent,
