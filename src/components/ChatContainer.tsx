@@ -1,5 +1,7 @@
 import React, { CSSProperties, ReactNode } from 'react';
+import { useMessageStore } from '../store/messageStore';
 import { useConversations } from '../hooks/useConversations';
+import { usePinnedMessages } from '../hooks/usePinnedMessages';
 import { ConversationList } from './ConversationList';
 import { ConversationView } from './Conversation';
 import { EmptyState } from './EmptyState';
@@ -22,6 +24,13 @@ export interface ChatContainerProps {
 export const ChatContainer: React.FC<ChatContainerProps> = React.memo(
   ({ className, style, renderConversationList, renderConversation, renderEmpty }) => {
     const { activeConversation, openingConversation } = useConversations();
+    const { loading: loadingPinnedMessages } = usePinnedMessages(
+      activeConversation?.id || '',
+      activeConversation?.conversationId
+    );
+    const hasFetchedPinned = useMessageStore(
+      (state) => state.messagesByConversation[activeConversation?.id || '']?.hasFetchedPinned
+    );
 
     const defaultStyle: CSSProperties = {
       display: 'flex',
@@ -55,7 +64,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = React.memo(
           {renderConversationList ? renderConversationList({}) : <ConversationList />}
         </div>
         <div className="acs-chat-main-area" style={defaultMainStyle}>
-          {openingConversation ? (
+          {openingConversation || loadingPinnedMessages || (activeConversation && !hasFetchedPinned) ? (
             <LoadingState />
           ) : activeConversation ? (
             renderConversation ? (

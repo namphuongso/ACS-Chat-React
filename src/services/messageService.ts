@@ -1,4 +1,4 @@
-import type { ChatMessage, SendMessageOptions } from '../types/message.types';
+import type { ChatMessage, SendMessageOptions, PinnedMessage } from '../types/message.types';
 import { useMessageStore } from '../store/messageStore';
 import { useChatStore } from '../store/chatStore';
 import { useConversationStore } from '../store/conversationStore';
@@ -625,6 +625,46 @@ export class MessageService {
     } catch (error) {
       const chatError = mapAcsErrorToChatError(error, 'pinMessage', { messageId });
       logger.error(`Failed to update pin status for message ${messageId}`, error);
+      return { error: chatError };
+    }
+  }
+
+  /**
+   * Fetch pinned messages for a conversation
+   */
+  public async getPinnedMessages(conversationId: string): Promise<{ data?: PinnedMessage[], error?: AcsChatError }> {
+    if (!conversationId || conversationId.trim() === '') {
+      return {
+        error: new AcsChatError('INVALID_INPUT', 'conversationId is required.', {
+          operation: 'getPinnedMessages',
+        })
+      };
+    }
+
+    try {
+      const config = this.getChatService().getConfig();
+      if (!config) {
+        throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
+          operation: 'getPinnedMessages',
+        });
+      }
+
+      if (!config.backendUrl) {
+        throw new AcsChatError('INVALID_INPUT', 'Backend URL is not configured.', {
+          operation: 'getPinnedMessages',
+        });
+      }
+
+      const res = await fetchBackend<PinnedMessage[]>(
+        config,
+        `/api/chat/get-pinned-messages/${conversationId}`,
+        { method: 'GET' }
+      );
+
+      return { data: res.data };
+    } catch (error) {
+      const chatError = mapAcsErrorToChatError(error, 'getPinnedMessages', { conversationId });
+      logger.error(`Failed to fetch pinned messages for conversation ${conversationId}`, error);
       return { error: chatError };
     }
   }

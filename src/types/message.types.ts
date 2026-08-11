@@ -88,6 +88,20 @@ export interface SendMessageOptions {
 }
 
 /**
+ * Represents a pinned message returned from the backend API
+ */
+export interface PinnedMessage {
+  messageId: string;
+  type: string;
+  content: string;
+  createdDate: string;
+  creator: string;
+  attachmentType: string;
+  attachmentUrl: string;
+  thumbUrl: string;
+}
+
+/**
  * Options when listing messages from a thread
  */
 export interface ListMessagesOptions {

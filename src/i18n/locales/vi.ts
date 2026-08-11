@@ -60,5 +60,13 @@ export const vi = {
     hoursAgo: '{{count}} giờ trước',
     yesterday: 'Hôm qua',
     daysAgo: '{{count}} ngày trước',
+    pinboard: 'Bảng ghim ({{count}})',
+    collapse: 'Thu gọn',
+    message: 'Tin nhắn',
+    pinCount: '+{{count}} ghim',
+    copy: 'Sao chép',
+    openGroupBoard: 'Mở bảng nhóm',
+    unpin: 'Bỏ ghim',
+    viewAllInGroupBoard: 'Xem tất cả trong bảng nhóm >',
   },
 };

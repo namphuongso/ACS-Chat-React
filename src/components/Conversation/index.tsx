@@ -11,6 +11,7 @@ import { EmptyState } from '../EmptyState';
 import { LoadingState } from '../LoadingState';
 import { EditMessageDialog } from './EditMessageDialog';
 import { ConfirmDialog } from './ConfirmDialog';
+import { PinnedMessageBanner } from './PinnedMessageBanner';
 import { useTranslation } from 'react-i18next';
 import styles from './ConversationView.module.scss';
 
@@ -147,6 +148,13 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
     return (
       <div className={styles.container}>
         <ConversationHeader conversation={conversation} />
+
+        <PinnedMessageBanner
+          conversationId={idToUse}
+          backendConversationId={conversation.conversationId}
+          pinnedMessageIds={pinnedMessageIds}
+          onUnpinMessage={handlePinMessage}
+        />
 
         <div className={styles.messageListWrapper}>
           <MessageList

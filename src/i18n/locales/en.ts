@@ -60,5 +60,13 @@ export const en = {
     hoursAgo: '{{count}} hours',
     yesterday: 'Yesterday',
     daysAgo: '{{count}} days',
+    pinboard: 'Pinboard ({{count}})',
+    collapse: 'Collapse',
+    message: 'Message',
+    pinCount: '+{{count}} pin',
+    copy: 'Copy',
+    openGroupBoard: 'Open group board',
+    unpin: 'Unpin',
+    viewAllInGroupBoard: 'View all in the group board >',
   },
 };
