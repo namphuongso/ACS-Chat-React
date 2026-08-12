@@ -5,6 +5,7 @@ import { useConversations } from '../../../hooks/useConversations';
 import type { ConversationItemProps } from '../ConversationItem';
 import type { SearchInputProps } from '../../SearchInput';
 import type { Conversation } from '../../../types';
+import { useChatStore } from '../../../store/chatStore';
 
 vi.mock('../../../hooks/useConversations');
 
@@ -43,6 +44,7 @@ describe('ConversationList Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useChatStore.setState({ searchTerm: '', isSearching: false });
     vi.mocked(useConversations).mockReturnValue({
       conversations: mockConversations as unknown as Conversation[],
       activeConversation: null,
