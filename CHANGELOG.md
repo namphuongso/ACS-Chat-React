@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-12
+
+### Added
+
+- Added `openingConversation` state and actions to `conversationStore`.
+- Added support for pinned messages in `messageStore` (`pinnedMessages`, `loadingPinned`, `hasFetchedPinned`).
+- Added `createdBy` field to `BaseConversation` type.
+- Added `recalledAt` field to `ChatMessage` type.
+- Added `BackendConversationItem` and `PinnedMessage` interfaces.
+
+### Changed
+
+- Updated `fetchBackend` in `apiClient` to correctly handle `FormData` bodies without overriding the `Content-Type` header.
+
 ## [1.0.0] - 2026-08-10
 
 ### Added

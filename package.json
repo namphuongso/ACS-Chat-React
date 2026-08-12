@@ -1,6 +1,6 @@
 {
   "name": "@namphuongtechnologi/acs-chat-react",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "React + TypeScript Azure Communication Services (ACS) Chat Library",
   "type": "module",
   "main": "./dist/index.cjs",
