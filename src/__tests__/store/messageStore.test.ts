@@ -231,6 +231,9 @@ describe('messageStore', () => {
       setLoading: expect.any(Function),
       setLoadingMore: expect.any(Function),
       setHasMore: expect.any(Function),
+      setPinnedMessages: expect.any(Function),
+      setLoadingPinned: expect.any(Function),
+      setHasFetchedPinned: expect.any(Function),
       reset: expect.any(Function),
       trimInactiveConversations: expect.any(Function),
     });

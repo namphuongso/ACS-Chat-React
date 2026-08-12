@@ -26,7 +26,7 @@ describe('MessageItem Component', () => {
       },
     };
     render(<MessageItem message={sysMessage} isOwn={false} />);
-    expect(screen.getByText('chat.system changed topic to "General"')).toBeInTheDocument();
+    expect(screen.getByText('<b>chat.system</b> changed topic to <b>"General"</b>')).toBeInTheDocument();
   });
 
   it('should render own message correctly', () => {

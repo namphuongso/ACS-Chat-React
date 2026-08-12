@@ -6,6 +6,18 @@ import type { Conversation } from '../../types';
 
 vi.mock('../../hooks/useConversations');
 
+vi.mock('../../hooks/usePinnedMessages', () => ({
+  usePinnedMessages: vi.fn(() => ({ loading: false })),
+}));
+
+vi.mock('../../store/messageStore', () => ({
+  useMessageStore: vi.fn((selector) => selector({
+    messagesByConversation: {
+      'conv-1': { hasFetchedPinned: true }
+    }
+  })),
+}));
+
 // Mock child components to isolate ChatContainer testing
 vi.mock('../ConversationList', () => ({
   ConversationList: () => <div data-testid="mock-conversation-list">Conversation List</div>,
