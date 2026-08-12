@@ -2,6 +2,8 @@ export * from './useChat';
 export * from './useConversations';
 export * from './useConversation';
 export * from './useMessages';
+export * from './useVirtualScroll';
+export * from './usePinnedMessages';
 export * from './useParticipants';
 export * from './useTypingIndicator';
 export * from './useReadReceipt';

@@ -20,6 +20,8 @@ export interface MessageListProps {
   roomType?: string;
   onEditMessage?: (messageId: string) => void;
   onDeleteMessage?: (messageId: string) => void;
+  onPinMessage?: (messageId: string, pin: boolean) => void;
+  pinnedMessageIds?: Set<string> | string[];
 }
 
 type ListItem =
@@ -42,6 +44,8 @@ export const MessageList: React.FC<MessageListProps> = React.memo(
     roomType,
     onEditMessage,
     onDeleteMessage,
+    onPinMessage,
+    pinnedMessageIds,
   }) => {
     const items: ListItem[] = useMemo(() => {
       const result: ListItem[] = [];
@@ -185,8 +189,12 @@ export const MessageList: React.FC<MessageListProps> = React.memo(
           isOwn={isOwn}
           showSender={isFirstInGroup}
           isLastInGroup={isLastInGroup}
+          isPinned={pinnedMessageIds instanceof Set ? pinnedMessageIds.has(message.id) : Array.isArray(pinnedMessageIds) ? pinnedMessageIds.includes(message.id) : false}
           onEdit={onEditMessage}
           onDelete={onDeleteMessage}
+          onPin={onPinMessage}
+          currentUserId={currentUserId}
+          roomMembers={roomMembers}
         />
       );
     };

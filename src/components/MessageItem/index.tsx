@@ -2,7 +2,7 @@ import React, { ReactNode, useState, useRef, useEffect } from 'react';
 import type { ChatMessage, MessageStatus } from '../../types/message.types';
 import { Avatar } from '../Avatar';
 import { formatTime } from '../../utils/date';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import styles from './MessageItem.module.scss';
 import {
   QuoteIcon,
@@ -17,6 +17,7 @@ import {
   UndoIcon,
   TrashIcon,
   EditIcon,
+  PinOffIcon,
 } from '../Icons';
 
 export interface MessageItemProps {
@@ -24,13 +25,16 @@ export interface MessageItemProps {
   isOwn: boolean;
   showSender?: boolean;
   isLastInGroup?: boolean;
+  currentUserId?: string;
+  roomMembers?: Array<{ userId?: string; contactName?: string; avatarUrl?: string; cui?: string }>;
   onEdit?: (messageId: string) => void;
   onDelete?: (messageId: string) => void;
   onRetry?: (clientMessageId: string) => void;
   onReply?: (messageId: string) => void;
   onForward?: (messageId: string) => void;
   onCopy?: (messageId: string) => void;
-  onPin?: (messageId: string) => void;
+  onPin?: (messageId: string, pin: boolean) => void;
+  isPinned?: boolean;
   onStar?: (messageId: string) => void;
   onSelect?: (messageId: string) => void;
   onViewDetails?: (messageId: string) => void;
@@ -46,12 +50,15 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
     isOwn,
     showSender = false,
     isLastInGroup = true,
+    currentUserId,
+    roomMembers,
     onEdit,
     onDelete,
     onReply,
     onForward,
     onCopy,
     onPin,
+    isPinned = false,
     onStar,
     onSelect,
     onViewDetails,
@@ -83,24 +90,80 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
 
     // Handle System Messages
     if (message.type === 'system') {
-      let systemText = message.content;
+      let systemNode: React.ReactNode = message.content;
       if (message.systemEvent) {
         const { type, initiator, participants, newTopic } = message.systemEvent;
-        const initiatorName = initiator?.displayName || initiator?.id || 'System';
+        
+        const getMemberName = (id?: string, defaultName?: string) => {
+          if (!id) return defaultName || 'System';
+          if (id === currentUserId) return t('chat.you', 'You');
+          const member = roomMembers?.find((m) => m.cui === id || m.userId === id);
+          return member?.contactName || defaultName || id;
+        };
+
+        const isInitiatorMe = initiator?.id === currentUserId;
+        const initiatorName = isInitiatorMe 
+          ? t('chat.you_lowercase', 'you') 
+          : getMemberName(initiator?.id, initiator?.displayName);
+
         if (type === 'topicUpdated') {
-          systemText = `${initiatorName} changed topic to "${newTopic}"`;
+          const topicInitiator = isInitiatorMe ? t('chat.you', 'You') : initiatorName;
+          systemNode = (
+            <Trans 
+              i18nKey="chat.system.topicUpdated"
+              defaults="<b>{{initiator}}</b> changed topic to <b>&quot;{{newTopic}}&quot;</b>"
+              values={{ initiator: topicInitiator, newTopic }}
+              components={{ b: <b /> }}
+            />
+          );
         } else if (type === 'participantAdded') {
-          const addedNames = participants?.map((p) => p.displayName || p.id).join(', ');
-          systemText = `${initiatorName} added ${addedNames}`;
+          const addedNames = participants?.filter((p) => p.id !== initiator?.id).map((p) => getMemberName(p.id, p.displayName))?.join(', ');
+          if (isInitiatorMe) {
+            systemNode = (
+              <Trans
+                i18nKey="chat.system.youAddedParticipants"
+                defaults="<b>{{participants}}</b> were added to the group by <b>you</b>"
+                values={{ participants: addedNames }}
+                components={{ b: <b /> }}
+              />
+            );
+          } else {
+            systemNode = (
+              <Trans
+                i18nKey="chat.system.participantsAddedBy"
+                defaults="<b>{{participants}}</b> were added to the group by <b>{{initiator}}</b>"
+                values={{ participants: addedNames, initiator: initiatorName }}
+                components={{ b: <b /> }}
+              />
+            );
+          }
         } else if (type === 'participantRemoved') {
-          const removedNames = participants?.map((p) => p.displayName || p.id).join(', ');
-          systemText = `${initiatorName} removed ${removedNames}`;
+          const removedNames = participants?.filter((p) => p.id !== initiator?.id).map((p) => getMemberName(p.id, p.displayName))?.join(', ');
+          if (isInitiatorMe) {
+            systemNode = (
+              <Trans
+                i18nKey="chat.system.youRemovedParticipants"
+                defaults="<b>{{participants}}</b> were removed from the group by <b>you</b>"
+                values={{ participants: removedNames }}
+                components={{ b: <b /> }}
+              />
+            );
+          } else {
+            systemNode = (
+              <Trans
+                i18nKey="chat.system.participantsRemovedBy"
+                defaults="<b>{{participants}}</b> were removed from the group by <b>{{initiator}}</b>"
+                values={{ participants: removedNames, initiator: initiatorName }}
+                components={{ b: <b /> }}
+              />
+            );
+          }
         }
       }
 
       return (
         <div className={`${styles.messageItem} ${styles.systemMessage}`}>
-          <div className={styles.systemContent}>{systemText}</div>
+          <div className={styles.systemContent}>{systemNode}</div>
         </div>
       );
     }
@@ -110,7 +173,10 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
     const bubbleClass = isOwn ? styles.ownBubble : styles.otherBubble;
 
     const senderName =
-      message.senderDisplayName || message.sender?.displayName || message.sender?.id || t('chat.unknownSender');
+      message.senderDisplayName ||
+      message.sender?.displayName ||
+      message.sender?.id ||
+      t('chat.unknownSender');
 
     const defaultRenderContent = () => {
       if (message.deletedAt) {
@@ -151,7 +217,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
             {!isOwn && showSender && <div className={styles.senderName}>{senderName}</div>}
 
             {renderContent ? renderContent(message) : defaultRenderContent()}
-            {message.editedAt && !message.deletedAt && (
+            {message.editedAt && !message.deletedAt && !message.recalledAt && (
               <span className={styles.edited}>{t('chat.edited')}</span>
             )}
 
@@ -212,7 +278,9 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
                     </button>
 
                     {isDropdownOpen && (
-                      <div className={`${styles.dropdownMenu} ${dropdownPosition === 'up' ? styles.dropdownMenuUp : ''}`}>
+                      <div
+                        className={`${styles.dropdownMenu} ${dropdownPosition === 'up' ? styles.dropdownMenuUp : ''}`}
+                      >
                         <button
                           className={styles.dropdownItem}
                           onClick={() => handleActionClick(onCopy)}
@@ -223,9 +291,20 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
 
                         <button
                           className={styles.dropdownItem}
-                          onClick={() => handleActionClick(onPin)}
+                          onClick={() => {
+                            if (onPin) onPin(message.id, !isPinned);
+                            setIsDropdownOpen(false);
+                          }}
                         >
-                          <PinIcon /> {t('chat.pinMessage')}
+                          {isPinned ? (
+                            <>
+                              <PinOffIcon /> {t('chat.unpinMessage', 'Bỏ ghim')}
+                            </>
+                          ) : (
+                            <>
+                              <PinIcon /> {t('chat.pinMessage')}
+                            </>
+                          )}
                         </button>
                         <button
                           className={styles.dropdownItem}
@@ -272,12 +351,14 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
                           </>
                         )}
 
-                        <button
-                          className={`${styles.dropdownItem} ${styles.dangerItem}`}
-                          onClick={() => handleActionClick(onDelete)}
-                        >
-                          <TrashIcon /> {t('chat.deleteMessage')}
-                        </button>
+                        {isOwn && (
+                          <button
+                            className={`${styles.dropdownItem} ${styles.dangerItem}`}
+                            onClick={() => handleActionClick(onDelete)}
+                          >
+                            <TrashIcon /> {t('chat.deleteMessage')}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

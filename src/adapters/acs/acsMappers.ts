@@ -14,9 +14,10 @@ import type {
   ChatMessage,
   MessageType,
   Conversation,
-  GroupConversation,
   ConversationParticipant,
   ChatErrorCode,
+  BackendConversationItem,
+  GroupConversation,
 } from '../../types';
 import type { ReadReceipt } from '../../models/ReadReceipt';
 import { AcsChatError } from '../../types/errors.types';
@@ -48,6 +49,46 @@ export function extractCommunicationUserId(
     return idObj.id;
   }
   return '';
+}
+
+/**
+ * Map BackendConversationItem to Library Conversation.
+ */
+export function mapBackendItemToConversation(item: BackendConversationItem): Conversation {
+  const commonProps = {
+    id: item.threadId || item.id,
+    conversationId: item.id,
+    createdAt: new Date(item.created || item.createdAt || Date.now()),
+    updatedAt:
+      item.modified || item.updatedAt
+        ? new Date((item.modified || item.updatedAt) as string | number | Date)
+        : undefined,
+    unreadCount: item.isRead === false ? 1 : 0,
+    participants: item.participants || [],
+    avatarUrl: item.avatarUrl || undefined,
+    pin: item.pin || false,
+    lastMessage: item.lastMessage || '',
+    lastMessageTime: item.lastMessageTime || '',
+    isRead: item.isRead || false,
+  };
+
+  if (item.type === 'U' || item.type === 'direct') {
+    return {
+      ...commonProps,
+      type: 'direct',
+      otherParticipant: {
+        id: item.pid || 'unknown',
+        displayName: item.roomName || 'Unknown',
+      },
+      name: item.roomName || 'Unknown',
+    };
+  }
+
+  return {
+    ...commonProps,
+    type: 'group',
+    name: item.roomName || item.topic || 'Group',
+  };
 }
 
 /**
@@ -99,6 +140,10 @@ export function mapAcsMessageToMessage(
     ? acsMsg.content?.topic || acsMsg.content?.message || ''
     : acsMsg.content?.message || '';
 
+  const recalledAt = acsMsg.metadata?.deletedBy
+    ? new Date(acsMsg.editedOn || acsMsg.createdOn)
+    : undefined;
+
   return {
     id: acsMsg.id,
     conversationId: convId,
@@ -109,6 +154,7 @@ export function mapAcsMessageToMessage(
     createdAt: acsMsg.createdOn ? new Date(acsMsg.createdOn) : new Date(),
     editedAt: acsMsg.editedOn ? new Date(acsMsg.editedOn) : undefined,
     deletedAt: acsMsg.deletedOn ? new Date(acsMsg.deletedOn) : undefined,
+    recalledAt,
     status: 'sent',
     metadata: acsMsg.metadata,
     systemEvent,
@@ -233,7 +279,8 @@ export function mapAcsErrorToChatError(
     retryable = true;
   }
 
-  const message = err?.message || CHAT_ERRORS.MESSAGES[errorCode] || 'An ACS service error occurred.';
+  const message =
+    err?.message || CHAT_ERRORS.MESSAGES[errorCode] || 'An ACS service error occurred.';
 
   return new AcsChatError(errorCode, message, {
     cause: error,

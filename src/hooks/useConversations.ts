@@ -20,7 +20,8 @@ import type { Contact } from '../types/contact.types';
  * @property {Function} openConversation - Method to set a conversation as active
  * @property {Function} closeConversation - Method to clear the active conversation
  * @property {Function} createDirectConversation - Method to create a 1:1 conversation
- * @property {Function} createGroupConversation - Method to create a group conversation
+ * @property {Function} createGroupConversation - Method to create a group conversation (ACS directly)
+ * @property {Function} createGroupRoom - Method to create a group room (backend API)
  * @property {Function} updateTopic - Method to update the topic of a group conversation
  * @property {Function} deleteConversation - Method to delete a conversation
  * @property {Function} leaveConversation - Method to leave a conversation
@@ -34,6 +35,7 @@ export const useConversations = () => {
   
   const conversations = useConversationStore(selectAllConversations);
   const activeConversation = useConversationStore(selectActiveConversation);
+  const openingConversation = useConversationStore((state) => state.openingConversation);
 
   const loadConversations = useCallback(async (options?: ListConversationsOptions) => {
     return await conversationService.loadConversations(options);
@@ -72,6 +74,10 @@ export const useConversations = () => {
     return await conversationService.createGroupConversation(options);
   }, []);
 
+  const createGroupRoom = useCallback(async (roomName: string, participantIds: string[], avatarUrl?: string) => {
+    return await conversationService.createGroupRoom(roomName, participantIds, avatarUrl);
+  }, []);
+
   const updateTopic = useCallback(async (conversationId: string, topic: string) => {
     return await conversationService.updateGroupTopic(conversationId, topic);
   }, []);
@@ -91,6 +97,7 @@ export const useConversations = () => {
   return useMemo(() => ({
     conversations,
     activeConversation,
+    openingConversation,
     loading,
     loadingMore,
     hasMore,
@@ -101,9 +108,10 @@ export const useConversations = () => {
     closeConversation,
     createDirectConversation,
     createGroupConversation,
+    createGroupRoom,
     updateTopic,
     deleteConversation,
     leaveConversation,
     joinRoom,
-  }), [conversations, activeConversation, loading, loadingMore, hasMore, error, loadConversations, loadMore, openConversation, closeConversation, createDirectConversation, createGroupConversation, updateTopic, deleteConversation, leaveConversation, joinRoom]);
+  }), [conversations, activeConversation, openingConversation, loading, loadingMore, hasMore, error, loadConversations, loadMore, openConversation, closeConversation, createDirectConversation, createGroupConversation, createGroupRoom, updateTopic, deleteConversation, leaveConversation, joinRoom]);
 };

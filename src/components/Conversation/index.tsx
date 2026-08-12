@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import { useConversations } from '../../hooks/useConversations';
 import { useMessages } from '../../hooks/useMessages';
 import { useChat } from '../../hooks/useChat';
+import { useChatStore } from '../../store/chatStore';
 import { useRoomMembers } from '../../hooks/useRoomMembers';
 import { MessageList } from '../MessageList';
 import { ConversationFooter } from './ConversationFooter';
@@ -10,17 +11,21 @@ import { EmptyState } from '../EmptyState';
 import { LoadingState } from '../LoadingState';
 import { EditMessageDialog } from './EditMessageDialog';
 import { ConfirmDialog } from './ConfirmDialog';
+import { PinnedMessageBanner } from './PinnedMessageBanner';
 import { useTranslation } from 'react-i18next';
 import styles from './ConversationView.module.scss';
 
 export interface ConversationViewProps {
   conversationId?: string;
+  pinnedMessageIds?: Set<string> | string[];
 }
 
 export const ConversationView: React.FC<ConversationViewProps> = React.memo(
-  ({ conversationId }) => {
+  ({ conversationId, pinnedMessageIds }) => {
     const { activeConversation, conversations } = useConversations();
     const { currentUser, connectionState } = useChat();
+    const setIsSearching = useChatStore((state) => state.setIsSearching);
+    const setSearchTerm = useChatStore((state) => state.setSearchTerm);
     const { t } = useTranslation();
 
     const idToUse = conversationId || activeConversation?.id;
@@ -32,7 +37,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
     const { roomMembers, roomType } = useRoomMembers(conversation);
 
     // Call hooks unconditionally
-    const { messages, loading, loadingMore, hasMore, loadMore, loadMessages, sendMessage, editMessage, deleteMessage } =
+    const { messages, loading, loadingMore, hasMore, loadMore, loadMessages, sendMessage, editMessage, deleteMessage, pinMessage } =
       useMessages(idToUse || '');
 
     useEffect(() => {
@@ -54,9 +59,11 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
             }
           }
           sendMessage(content, { senderDisplayName });
+          setIsSearching(false);
+          setSearchTerm('');
         }
       },
-      [idToUse, sendMessage, currentUser, roomMembers]
+      [idToUse, sendMessage, currentUser, roomMembers, setIsSearching, setSearchTerm]
     );
 
     const handleTyping = useCallback(() => {
@@ -122,6 +129,13 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
       setDeleteDialog({ isOpen: false, messageId: '' });
     }, []);
 
+    const handlePinMessage = useCallback(
+      (messageId: string, pin: boolean) => {
+        pinMessage(messageId, pin);
+      },
+      [pinMessage]
+    );
+
     if (!idToUse || !conversation) {
       if (loading && conversations.length === 0) {
         return <LoadingState />;
@@ -134,6 +148,13 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
     return (
       <div className={styles.container}>
         <ConversationHeader conversation={conversation} />
+
+        <PinnedMessageBanner
+          conversationId={idToUse}
+          backendConversationId={conversation.conversationId}
+          pinnedMessageIds={pinnedMessageIds}
+          onUnpinMessage={handlePinMessage}
+        />
 
         <div className={styles.messageListWrapper}>
           <MessageList
@@ -148,13 +169,17 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
             roomType={roomType || conversation.type}
             onEditMessage={handleEditMessage}
             onDeleteMessage={handleDeleteMessage}
+            onPinMessage={handlePinMessage}
+            pinnedMessageIds={pinnedMessageIds}
           />
         </div>
 
         <ConversationFooter
+          key={idToUse}
           onSend={handleSend}
           onTyping={handleTyping}
           disabled={loading || connectionState !== 'connected'}
+          autoFocus={true}
         />
 
         <EditMessageDialog

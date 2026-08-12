@@ -3,6 +3,7 @@ import {
   mapAcsErrorToChatError,
   mapAcsParticipantToParticipant,
   mapAcsThreadItemToConversation,
+  mapBackendItemToConversation,
 } from '../adapters/acs/acsMappers';
 import { useChatStore } from '../store/chatStore';
 import { useConversationStore } from '../store/conversationStore';
@@ -16,6 +17,7 @@ import type {
   CreateGroupConversationOptions,
   GroupConversation,
   DirectConversation,
+  BackendConversationItem,
 } from '../types/conversation.types';
 import type { ConversationParticipant } from '../types/participant.types';
 import type { Contact } from '../types/contact.types';
@@ -24,30 +26,7 @@ import { AcsChatError } from '../types/errors.types';
 import { logger } from '../utils/logger';
 import type { ChatService } from './chatService';
 
-export interface BackendConversationItem {
-  id: string;
-  type: string;
-  topic?: string;
-  createdAt?: string | Date | number;
-  updatedAt?: string | Date | number;
-  participants?: ConversationParticipant[];
-  pid?: string;
-  hostId?: string;
-  roomName?: string;
-  description?: string;
-  threadId?: string;
-  avatarUrl?: string;
-  created?: string;
-  modified?: string | null;
-  creator?: string;
-  modifier?: string;
-  pin?: boolean;
-  isMuted?: boolean;
-  lastMessage?: string;
-  lastMessageTime?: string | null;
-  lastViewedDate?: string | null;
-  isRead?: boolean;
-}
+
 
 export interface CreateRoomResponse {
   id?: string;
@@ -163,40 +142,7 @@ export class ConversationService {
 
         const data = Array.isArray(res?.data) ? res.data : [];
         for (const item of data) {
-          const commonProps = {
-            id: item.threadId || item.id,
-            conversationId: item.id,
-            createdAt: new Date(item.created || item.createdAt || Date.now()),
-            updatedAt:
-              item.modified || item.updatedAt
-                ? new Date((item.modified || item.updatedAt) as string | number | Date)
-                : undefined,
-            unreadCount: item.isRead === false ? 1 : 0,
-            participants: [],
-            avatarUrl: item.avatarUrl || undefined,
-            pin: item.pin || false,
-            lastMessage: item.lastMessage || '',
-            lastMessageTime: item.lastMessageTime || '',
-            isRead: item.isRead || false,
-          };
-
-          if (item.type === 'U' || item.type === 'direct') {
-            conversations.push({
-              ...commonProps,
-              type: 'direct',
-              otherParticipant: {
-                id: item.pid || 'unknown',
-                displayName: item.roomName || 'Unknown',
-              },
-              name: item.roomName || 'Unknown',
-            } as Conversation);
-          } else {
-            conversations.push({
-              ...commonProps,
-              type: 'group',
-              name: item.roomName || item.topic || 'Group',
-            } as Conversation);
-          }
+          conversations.push(mapBackendItemToConversation(item));
         }
 
         if (pageIndex === 1) {
@@ -511,6 +457,87 @@ export class ConversationService {
   }
 
   /**
+   * Create a group room via backend API.
+   */
+  public async createGroupRoom(
+    roomName: string,
+    participantIds: string[],
+    avatarUrl?: string
+  ): Promise<ConversationResult> {
+    const store = useConversationStore.getState();
+    store.setLoading(true);
+    store.setError(null);
+
+    try {
+      const config = this.chatServiceRef?.getConfig();
+      if (!config) {
+        throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
+          operation: 'createGroupRoom',
+        });
+      }
+
+      const currentUserId = useChatStore.getState().currentUser?.id;
+      if (!currentUserId) {
+        throw new AcsChatError('AUTH_UNAUTHORIZED', 'Current user is not set.', {
+          operation: 'createGroupRoom',
+        });
+      }
+
+      const payload = {
+        participantIds,
+        roomName,
+        roomType: 'G',
+        avatarUrl: avatarUrl || '',
+      };
+
+      const res = await fetchBackend<JoinRoomResponse>(config, '/api/chat/create-room', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      const threadId = res?.data?.threadId;
+      if (!threadId) {
+        throw new AcsChatError('UNKNOWN_ERROR', 'Failed to get thread ID from backend.', {
+          operation: 'createGroupRoom',
+        });
+      }
+
+      const members = Array.isArray(res?.data?.members) ? res.data.members : [];
+
+      const participants: ConversationParticipant[] = members.map((m) => ({
+        id: m.cui || '',
+        displayName: m.contactName,
+        role: m.isAdmin ? 'owner' : 'member',
+      }));
+
+      const groupConv: GroupConversation = {
+        id: threadId,
+        type: 'group',
+        name: res?.data?.roomName || roomName,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        unreadCount: 0,
+        participants,
+        avatarUrl: res?.data?.avatarUrl,
+        conversationId: res?.data?.roomId,
+      };
+
+      store.addConversation(groupConv);
+      useParticipantStore.getState().setParticipants(threadId, participants);
+      
+      // Auto open it? Yes, we can just return it.
+      store.setLoading(false);
+
+      return { conversation: groupConv };
+    } catch (error) {
+      const chatError = mapAcsErrorToChatError(error, 'createGroupRoom');
+      store.setError(chatError);
+      store.setLoading(false);
+      return { error: chatError };
+    }
+  }
+
+  /**
    * Open a conversation by setting it as the active conversation.
    * Resets unread count for the conversation.
    */
@@ -532,6 +559,7 @@ export class ConversationService {
     }
 
     try {
+      store.setOpeningConversation(true);
       const config = this.chatServiceRef?.getConfig();
       if (!config) {
         throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
@@ -589,6 +617,8 @@ export class ConversationService {
       const chatError = mapAcsErrorToChatError(e, 'openConversation', { conversationId });
       store.setError(chatError);
       throw chatError;
+    } finally {
+      store.setOpeningConversation(false);
     }
   }
 

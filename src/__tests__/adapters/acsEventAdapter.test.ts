@@ -331,7 +331,7 @@ describe('AcsEventAdapter', () => {
       });
     });
 
-    it('normalizeChatThreadCreated should map thread created event', () => {
+    it('normalizeChatThreadCreated should map thread created event', async () => {
       const createdOn = new Date();
       const acsEvent: ChatThreadCreatedEvent = {
         threadId: 'thread-new',
@@ -356,7 +356,7 @@ describe('AcsEventAdapter', () => {
         retentionPolicy: { kind: 'none' },
       };
 
-      const domainEvent = normalizeChatThreadCreated(acsEvent);
+      const domainEvent = await normalizeChatThreadCreated(acsEvent);
 
       expect(domainEvent.type).toBe('conversation:created');
       expect(domainEvent.conversationId).toBe('thread-new');

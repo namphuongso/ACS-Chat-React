@@ -1,5 +1,6 @@
 import React, { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useContactSearch } from '../../hooks/useContactSearch';
+import { useConversationSearch } from '../../hooks/useConversationSearch';
 import { useConversations } from '../../hooks/useConversations';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useVirtualScroll } from '../../hooks/useVirtualScroll';
@@ -13,6 +14,7 @@ import { ConversationSearchResults } from './ConversationSearchResults';
 import { ContactItem } from './ContactItem';
 import { ConversationItem } from './ConversationItem';
 import { SectionHeader } from './SectionHeader';
+import { CreateGroupModal } from './CreateGroupModal';
 import styles from './ConversationList.module.scss';
 
 const CONVERSATION_ITEM_HEIGHT = 72;
@@ -64,7 +66,8 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
     store,
   ]);
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const searchTerm = useChatStore((state) => state.searchTerm);
+  const setSearchTerm = useChatStore((state) => state.setSearchTerm);
 
   const filteredConversations = useMemo(() => {
     if (!searchTerm) return conversations;
@@ -79,9 +82,11 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
     });
   }, [conversations, searchTerm]);
 
-  const [isSearching, setIsSearching] = useState(false);
+  const isSearching = useChatStore((state) => state.isSearching);
+  const setIsSearching = useChatStore((state) => state.setIsSearching);
   const [activeTab, setActiveTab] = useState<TabType>('All');
   const [recentSearches, setRecentSearches] = useState<Contact[]>([]);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -101,6 +106,13 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
   };
 
   const handleContactSelect = (id: string) => {
+    // Prevent activating if we are already in the direct conversation with this contact
+    const currentActiveConv = conversations.find(c => c.id === activeId);
+    if (currentActiveConv?.type === 'direct' && currentActiveConv.otherParticipant?.id === id) {
+      window.dispatchEvent(new CustomEvent('focusMessageInput'));
+      return;
+    }
+
     const contact = allContacts.find((c) => c.id === id) || recentSearches.find((c) => c.id === id);
     if (contact) {
       saveRecentSearch(contact);
@@ -111,24 +123,19 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
   };
 
   const { contacts, loading: contactsLoading, search: searchContacts } = useContactSearch();
+  const { conversations: searchedConversations, loading: searchedConversationsLoading, search: searchRoomChats } = useConversationSearch();
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   useEffect(() => {
     if (isSearching) {
       searchContacts(debouncedSearchTerm);
+      searchRoomChats(debouncedSearchTerm);
     }
-  }, [debouncedSearchTerm, isSearching, searchContacts]);
+  }, [debouncedSearchTerm, isSearching, searchContacts, searchRoomChats]);
 
   const globalContacts = useMemo(() => {
-    return contacts.filter(
-      (c) =>
-        !conversations.some(
-          (conv) =>
-            conv.type === 'direct' &&
-            (conv.otherParticipant?.id === c.cui || conv.otherParticipant?.id === c.id)
-        )
-    );
-  }, [contacts, conversations]);
+    return contacts;
+  }, [contacts]);
 
   const allContacts = useMemo<Contact[]>(() => {
     return globalContacts;
@@ -192,6 +199,7 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
           onSearchClose={handleSearchClose}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          onOpenCreateGroup={() => setIsCreateGroupOpen(true)}
         />
       )}
 
@@ -236,10 +244,16 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
                         conversation={conv}
                         isActive={conv.id === activeId}
                         onClick={() => {
+                          if (conv.id === activeId) {
+                            window.dispatchEvent(new CustomEvent('focusMessageInput'));
+                            return;
+                          }
                           if (onSelect) onSelect(conv.id);
                         }}
                         isDropdownOpen={openDropdownId === conv.id}
-                        onDropdownOpenChange={(isOpen) => setOpenDropdownId(isOpen ? conv.id : null)}
+                        onDropdownOpenChange={(isOpen) =>
+                          setOpenDropdownId(isOpen ? conv.id : null)
+                        }
                       />
                     )}
                   </div>
@@ -274,8 +288,18 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
             activeTab={activeTab}
             contacts={allContacts}
             contactsLoading={contactsLoading}
+            conversations={searchedConversations}
+            conversationsLoading={searchedConversationsLoading}
             onContactSelect={handleContactSelect}
             onSeeAllContacts={() => setActiveTab('Contacts')}
+            onConversationSelect={(id) => {
+              if (id === activeId) {
+                window.dispatchEvent(new CustomEvent('focusMessageInput'));
+                return;
+              }
+              if (onSelect) onSelect(id);
+            }}
+            onSeeAllConversations={() => setActiveTab('Conversation')}
           />
         )}
 
@@ -285,6 +309,8 @@ export const ConversationList: React.FC<ConversationListProps> = React.memo((pro
           </div>
         )}
       </div>
+
+      <CreateGroupModal isOpen={isCreateGroupOpen} onClose={() => setIsCreateGroupOpen(false)} />
     </div>
   );
 });

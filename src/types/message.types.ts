@@ -52,6 +52,8 @@ export interface ChatMessage {
   editedAt?: Date;
   /** Deletion timestamp if message was deleted */
   deletedAt?: Date;
+  /** Recall timestamp if message was recalled */
+  recalledAt?: Date;
   /** Current delivery/read status */
   status: MessageStatus;
   /** Custom key-value metadata attached to message */
@@ -83,6 +85,20 @@ export interface SendMessageOptions {
   attachments?: FileAttachment[];
   /** Optional explicit sender display name for optimistic UI updates */
   senderDisplayName?: string;
+}
+
+/**
+ * Represents a pinned message returned from the backend API
+ */
+export interface PinnedMessage {
+  messageId: string;
+  type: string;
+  content: string;
+  createdDate: string;
+  creator: string;
+  attachmentType: string;
+  attachmentUrl: string;
+  thumbUrl: string;
 }
 
 /**

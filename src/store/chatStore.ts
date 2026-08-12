@@ -20,6 +20,14 @@ export interface ChatState {
   setInitializing: (initializing: boolean) => void;
   /** Action to set initialization error */
   setInitError: (initError: ChatError | null) => void;
+  /** Global search state for conversation list */
+  isSearching: boolean;
+  /** Action to set global search state */
+  setIsSearching: (isSearching: boolean) => void;
+  /** Global search term for conversation list */
+  searchTerm: string;
+  /** Action to set global search term */
+  setSearchTerm: (searchTerm: string) => void;
   /** Reset chat store state back to initial state */
   reset: () => void;
 }
@@ -29,6 +37,8 @@ export const initialChatState = {
   connectionState: 'disconnected' as ConnectionState,
   initializing: false,
   initError: null,
+  isSearching: false,
+  searchTerm: '',
 };
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -38,5 +48,7 @@ export const useChatStore = create<ChatState>((set) => ({
   setConnectionState: (connectionState: ConnectionState) => set({ connectionState }),
   setInitializing: (initializing: boolean) => set({ initializing }),
   setInitError: (initError: ChatError | null) => set({ initError }),
+  setIsSearching: (isSearching: boolean) => set({ isSearching }),
+  setSearchTerm: (searchTerm: string) => set({ searchTerm }),
   reset: () => set(initialChatState),
 }));

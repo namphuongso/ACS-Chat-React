@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ChatMessage } from '../types/message.types';
+import type { ChatMessage, PinnedMessage } from '../types/message.types';
 
 export interface ConversationMessages {
   /** Ordered array of messages (oldest to newest) */
@@ -11,7 +11,14 @@ export interface ConversationMessages {
   /** Indicates if older messages exist for pagination */
   hasMore: boolean;
   /** ID of the oldest loaded message for cursor reference */
+  /** ID of the oldest loaded message for cursor reference */
   oldestLoadedMessageId?: string;
+  /** Pinned messages for this conversation */
+  pinnedMessages?: PinnedMessage[];
+  /** Loading flag for pinned messages */
+  loadingPinned?: boolean;
+  /** Indicates if pinned messages have been fetched */
+  hasFetchedPinned?: boolean;
 }
 
 export interface MessageState {
@@ -34,6 +41,12 @@ export interface MessageState {
   setLoadingMore: (conversationId: string, loadingMore: boolean) => void;
   /** Set hasMore pagination flag for a conversation */
   setHasMore: (conversationId: string, hasMore: boolean) => void;
+  /** Set pinned messages for a conversation */
+  setPinnedMessages: (conversationId: string, messages: PinnedMessage[]) => void;
+  /** Set loading flag for pinned messages */
+  setLoadingPinned: (conversationId: string, loading: boolean) => void;
+  /** Set fetched flag for pinned messages */
+  setHasFetchedPinned: (conversationId: string, hasFetched: boolean) => void;
   /** Trim messages for inactive conversations to a limit to save memory */
   trimInactiveConversations: (activeConversationId: string | null, keepLimit?: number) => void;
   /** Reset message store state back to initial state */
@@ -45,6 +58,9 @@ export const initialConversationMessages: ConversationMessages = {
   loading: false,
   loadingMore: false,
   hasMore: true,
+  pinnedMessages: [],
+  loadingPinned: false,
+  hasFetchedPinned: false,
 };
 
 export const initialMessageState = {
@@ -271,6 +287,39 @@ export const useMessageStore = create<MessageState>((set) => ({
             ...convData,
             hasMore,
           },
+        },
+      };
+    }),
+
+  setPinnedMessages: (conversationId, pinnedMessages) =>
+    set((state) => {
+      const conv = state.messagesByConversation[conversationId] || { ...initialConversationMessages };
+      return {
+        messagesByConversation: {
+          ...state.messagesByConversation,
+          [conversationId]: { ...conv, pinnedMessages, hasFetchedPinned: true },
+        },
+      };
+    }),
+
+  setLoadingPinned: (conversationId, loadingPinned) =>
+    set((state) => {
+      const conv = state.messagesByConversation[conversationId] || { ...initialConversationMessages };
+      return {
+        messagesByConversation: {
+          ...state.messagesByConversation,
+          [conversationId]: { ...conv, loadingPinned },
+        },
+      };
+    }),
+
+  setHasFetchedPinned: (conversationId, hasFetchedPinned) =>
+    set((state) => {
+      const conv = state.messagesByConversation[conversationId] || { ...initialConversationMessages };
+      return {
+        messagesByConversation: {
+          ...state.messagesByConversation,
+          [conversationId]: { ...conv, hasFetchedPinned },
         },
       };
     }),

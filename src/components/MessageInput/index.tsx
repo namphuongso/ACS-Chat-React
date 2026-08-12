@@ -19,6 +19,7 @@ export interface MessageInputProps {
   maxLength?: number;
   renderSendButton?: (props: { onClick: () => void; disabled: boolean }) => ReactNode;
   renderToolbar?: () => ReactNode;
+  autoFocus?: boolean;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = React.memo(
@@ -30,6 +31,7 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(
     maxLength,
     renderSendButton,
     renderToolbar,
+    autoFocus = false,
   }) => {
     const [content, setContent] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -46,6 +48,24 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(
     useEffect(() => {
       resizeTextarea();
     }, [content, resizeTextarea]);
+
+    useEffect(() => {
+      if (autoFocus && textareaRef.current && !disabled) {
+        textareaRef.current.focus();
+      }
+    }, [autoFocus, disabled]);
+
+    useEffect(() => {
+      const handleFocusEvent = () => {
+        if (textareaRef.current && !disabled) {
+          textareaRef.current.focus();
+        }
+      };
+      window.addEventListener('focusMessageInput', handleFocusEvent);
+      return () => {
+        window.removeEventListener('focusMessageInput', handleFocusEvent);
+      };
+    }, [disabled]);
 
     const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
       setContent(e.target.value);
@@ -87,6 +107,7 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(
             disabled={disabled}
             maxLength={maxLength}
             rows={1}
+            autoFocus={autoFocus}
           />
           <div className={styles.actions}>
             {renderSendButton ? (
