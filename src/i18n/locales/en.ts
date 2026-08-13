@@ -73,7 +73,7 @@ export const en = {
     searchGroupContact: 'Enter name, phone number, or list of phone number here',
     selectedContacts: 'Selected',
     creating: 'Creating...',
-    formatMessageHint: 'Press Cmd + Shift + X to format message',
+    formatMessageHint: 'Press {{shortcut}} to format message',
     emojiInInput: 'Emoji in input',
     toolbar: {
       emoji: 'Emoji',

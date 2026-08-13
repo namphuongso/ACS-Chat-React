@@ -28,6 +28,7 @@
 
 .inputRow {
   display: flex;
+  position: relative;
   align-items: flex-end;
   padding: 8px 12px;
   gap: var(--chat-spacing-md, 12px);
@@ -51,9 +52,10 @@
   font-size: 15px;
   line-height: 20px;
   color: #111827;
-  max-height: 120px;
+  min-height: 50px;
+  max-height: 178px;
   overflow-y: auto;
-  padding: 8px 0;
+  padding: 8px 80px 8px 0;
   margin: 0;
 
   b,
@@ -63,6 +65,26 @@
     * {
       font-weight: 700 !important;
     }
+  }
+
+  ul {
+    list-style-type: disc;
+    padding-left: 24px;
+    margin: 4px 0;
+  }
+
+  ol {
+    list-style-type: decimal;
+    padding-left: 24px;
+    margin: 4px 0;
+  }
+
+  li {
+    margin-bottom: 2px;
+  }
+
+  blockquote {
+    margin: 0 0 0 10px !important;
   }
 
   &::placeholder {
@@ -78,6 +100,16 @@
 
   &:disabled {
     cursor: not-allowed;
+  }
+
+  &.formatMode {
+    min-height: 178px;
+    padding-right: 0;
+    
+    &.expanded {
+      min-height: 537px;
+      max-height: 537px;
+    }
   }
 }
 
@@ -98,6 +130,14 @@
   align-items: center;
   gap: 8px;
   padding-bottom: 4px;
+}
+
+.actionsAbsolute {
+  position: absolute;
+  right: 28px;
+  bottom: 8px;
+  padding-bottom: 4px;
+  z-index: 10;
 }
 
 .sendButton {

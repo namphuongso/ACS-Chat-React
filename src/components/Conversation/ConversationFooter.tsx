@@ -22,6 +22,8 @@ export const ConversationFooter: React.FC<ConversationFooterProps> = React.memo(
     const {
       isFormatMode,
       setIsFormatMode,
+      isExpanded,
+      setIsExpanded,
       isFontSizeMenuOpen,
       setIsFontSizeMenuOpen,
       fontSizeMenuRef,
@@ -36,6 +38,8 @@ export const ConversationFooter: React.FC<ConversationFooterProps> = React.memo(
       handleFileAttachmentChange,
       executeCommand,
       resetFormatState,
+      clearHistory,
+      saveHistory,
     } = useConversationFooter({
       conversationId,
       onSend,
@@ -86,9 +90,12 @@ export const ConversationFooter: React.FC<ConversationFooterProps> = React.memo(
           executeCommand={executeCommand}
           isFontSizeMenuOpen={isFontSizeMenuOpen}
           setIsFontSizeMenuOpen={setIsFontSizeMenuOpen}
+          isExpanded={isExpanded}
+          setIsExpanded={setIsExpanded}
           fontSizeMenuRef={fontSizeMenuRef}
           updateFormatState={updateFormatState}
           messageEditorRef={messageEditorRef}
+          saveHistory={saveHistory}
         />
       );
     }, [
@@ -98,9 +105,12 @@ export const ConversationFooter: React.FC<ConversationFooterProps> = React.memo(
       disabled,
       isFontSizeMenuOpen,
       setIsFontSizeMenuOpen,
+      isExpanded,
+      setIsExpanded,
       fontSizeMenuRef,
       updateFormatState,
       messageEditorRef,
+      saveHistory,
     ]);
 
     return (
@@ -125,6 +135,7 @@ export const ConversationFooter: React.FC<ConversationFooterProps> = React.memo(
           onSend={(content, options) => {
             onSend(content, { ...options, type: 'html' });
             resetFormatState();
+            clearHistory();
           }}
           onTyping={onTyping}
           disabled={disabled}
@@ -132,10 +143,14 @@ export const ConversationFooter: React.FC<ConversationFooterProps> = React.memo(
           renderSendButton={renderSendButton}
           renderBottomToolbar={isFormatMode ? renderBottomToolbar : undefined}
           placeholder={
-            isFormatMode ? t('chat.formatMessageHint') : t('chat.typeMessage')
+            isFormatMode 
+              ? t('chat.formatMessageHint', { shortcut: typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac') ? 'Cmd + Shift + X' : 'Ctrl + Shift + X' }) 
+              : t('chat.typeMessage')
           }
           autoFocus={autoFocus}
           editorRef={messageEditorRef}
+          isFormatMode={isFormatMode}
+          isExpanded={isExpanded}
         />
       </div>
     );

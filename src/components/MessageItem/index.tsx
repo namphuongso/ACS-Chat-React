@@ -214,7 +214,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
         );
       }
 
-      if (message.type === 'html') {
+      if (message.type === 'html' || message.metadata?.type === 'html') {
         return <div dangerouslySetInnerHTML={{ __html: message.content }} />;
       }
       return <div>{message.content}</div>;

@@ -6,7 +6,6 @@ import {
   Underline,
   Strikethrough,
   Baseline,
-  PaintBucket,
   Eraser,
   List,
   ListOrdered,
@@ -15,6 +14,7 @@ import {
   Undo,
   Redo,
   Maximize2,
+  Minimize2,
   ALargeSmall,
   Check,
 } from 'lucide-react';
@@ -38,6 +38,9 @@ export interface ConversationFooterBottomToolbarProps {
   fontSizeMenuRef: React.RefObject<HTMLDivElement>;
   updateFormatState: () => void;
   messageEditorRef: React.RefObject<HTMLDivElement>;
+  saveHistory: () => void;
+  isExpanded: boolean;
+  setIsExpanded: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export const ConversationFooterBottomToolbar: React.FC<ConversationFooterBottomToolbarProps> = ({
@@ -49,6 +52,9 @@ export const ConversationFooterBottomToolbar: React.FC<ConversationFooterBottomT
   fontSizeMenuRef,
   updateFormatState,
   messageEditorRef,
+  saveHistory,
+  isExpanded,
+  setIsExpanded,
 }) => {
   const { t } = useTranslation();
   const [isTextColorMenuOpen, setIsTextColorMenuOpen] = useState(false);
@@ -66,6 +72,36 @@ export const ConversationFooterBottomToolbar: React.FC<ConversationFooterBottomT
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const handleClearFormat = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (disabled) return;
+    const editor = messageEditorRef.current;
+    if (!editor) return;
+
+    editor.focus();
+    const selection = window.getSelection();
+
+    saveHistory();
+    if (selection && selection.isCollapsed) {
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      document.execCommand('removeFormat');
+
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else {
+      document.execCommand('removeFormat');
+    }
+
+    setActiveColor('#0f172a');
+    updateFormatState();
+    saveHistory();
+  };
 
   const TEXT_COLORS = [
     { label: 'Red', value: '#ef4444' },
@@ -125,11 +161,9 @@ export const ConversationFooterBottomToolbar: React.FC<ConversationFooterBottomT
                 <button
                   key={item.value}
                   className={styles.fontSizeMenuItem}
-                  onClick={() => {
-                    document.execCommand('fontSize', false, item.value);
+                  onClick={(e) => {
+                    executeCommand(e as React.MouseEvent, 'fontSize', item.value);
                     setIsFontSizeMenuOpen(false);
-                    updateFormatState();
-                    messageEditorRef.current?.focus();
                   }}
                 >
                   <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
@@ -166,18 +200,10 @@ export const ConversationFooterBottomToolbar: React.FC<ConversationFooterBottomT
             </div>
           )}
         </div>
-        {/* Red for example */}
-        <ToolbarButton
-          icon={<PaintBucket size={18} />}
-          label={t('chat.format.backgroundColor')}
-          onMouseDown={(e) => executeCommand(e, 'hiliteColor', '#fef08a')}
-          disabled={disabled}
-        />{' '}
-        {/* Yellow for example */}
         <ToolbarButton
           icon={<Eraser size={18} />}
           label={t('chat.format.clearFormat')}
-          onMouseDown={(e) => executeCommand(e, 'removeFormat')}
+          onMouseDown={handleClearFormat}
           disabled={disabled}
         />
         <div
@@ -228,13 +254,12 @@ export const ConversationFooterBottomToolbar: React.FC<ConversationFooterBottomT
           style={{ width: '1px', height: '24px', backgroundColor: '#e5e7eb', margin: '0 4px' }}
         />
         <ToolbarButton
-          icon={<Maximize2 size={18} />}
-          label={t('chat.format.expand')}
+          icon={isExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+          label={t(isExpanded ? 'chat.format.collapse' : 'chat.format.expand')}
           disabled={disabled}
+          isActive={isExpanded}
+          onClick={() => setIsExpanded((prev) => !prev)}
         />
-      </div>
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        {/* Extra actions if any */}
       </div>
     </>
   );

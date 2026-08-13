@@ -73,7 +73,7 @@ export const vi = {
     searchGroupContact: 'Nhập tên, số điện thoại, hoặc danh sách số điện thoại...',
     selectedContacts: 'Đã chọn',
     creating: 'Đang tạo...',
-    formatMessageHint: 'Nhấn Cmd + Shift + X để định dạng tin nhắn',
+    formatMessageHint: 'Nhấn {{shortcut}} để định dạng tin nhắn',
     emojiInInput: 'Biểu tượng cảm xúc',
     toolbar: {
       emoji: 'Cảm xúc',

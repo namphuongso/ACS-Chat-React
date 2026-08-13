@@ -17,6 +17,8 @@ export interface MessageInputProps {
   renderBottomToolbar?: () => ReactNode;
   autoFocus?: boolean;
   editorRef?: React.RefObject<HTMLDivElement>;
+  isFormatMode?: boolean;
+  isExpanded?: boolean;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = React.memo(
@@ -31,6 +33,8 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(
     renderBottomToolbar,
     autoFocus = false,
     editorRef,
+    isFormatMode = false,
+    isExpanded = false,
   }) => {
     const [content, setContent] = useState('');
     const internalEditorRef = useRef<HTMLDivElement>(null);
@@ -69,6 +73,12 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(
       const textContent = removeCaretMarkers(e.currentTarget.textContent || '');
       if (textContent.trim() === '' && !html.includes('<img')) {
         setContent('');
+        const cleanHtml = html.trim().toLowerCase();
+        if (cleanHtml === '<br>' || cleanHtml === '<div><br></div>' || cleanHtml === '<p><br></p>' || cleanHtml === '') {
+          if (e.currentTarget.innerHTML !== '') {
+            e.currentTarget.innerHTML = '';
+          }
+        }
       } else {
         setContent(removeCaretMarkers(html));
       }
@@ -91,10 +101,43 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleSend();
+      } else if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        // Force a new block element (div/p/li) instead of a <br>
+        // This allows each line to be indented independently.
+        document.execCommand('insertParagraph', false);
+      }
+    };
+
+    const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+      const text = e.clipboardData.getData('text/plain');
+      if (text) {
+        e.preventDefault();
+        document.execCommand('insertText', false, text);
       }
     };
 
     const isSendDisabled = disabled || content.trim().length === 0;
+
+    const textareaClasses = `${styles.textarea} ${isFormatMode ? styles.formatMode : ''} ${isExpanded ? styles.expanded : ''}`;
+
+    const actionsContent = (
+      <div className={`${styles.actions} ${!isFormatMode ? styles.actionsAbsolute : ''}`}>
+        {renderSendButton ? (
+          renderSendButton({ onClick: handleSend, disabled: isSendDisabled })
+        ) : (
+          <button
+            type="button"
+            className={content.trim() ? styles.sendButtonFilled : styles.sendButton}
+            onClick={handleSend}
+            disabled={isSendDisabled}
+            aria-label="Send message"
+          >
+            <SendIcon />
+          </button>
+        )}
+      </div>
+    );
 
     return (
       <div className={styles.container}>
@@ -102,38 +145,30 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(
         <div className={`${styles.inputRow} ${disabled ? styles.disabled : ''}`}>
           <div
             ref={contentEditableRef}
-            className={styles.textarea}
+            className={textareaClasses}
             contentEditable={!disabled}
             role="textbox"
             aria-multiline="true"
             aria-placeholder={resolvedPlaceholder}
             onInput={handleInput}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             data-placeholder={resolvedPlaceholder}
             suppressContentEditableWarning={true}
           />
-          <div className={styles.actions}>
-            {renderSendButton ? (
-              renderSendButton({ onClick: handleSend, disabled: isSendDisabled })
-            ) : (
-              <button
-                type="button"
-                className={content.trim() ? styles.sendButtonFilled : styles.sendButton}
-                onClick={handleSend}
-                disabled={isSendDisabled}
-                aria-label="Send message"
-              >
-                <SendIcon />
-              </button>
-            )}
-          </div>
+          {!isFormatMode && actionsContent}
         </div>
         {maxLength && (
           <div className={styles.footer}>
             <div className={styles.characterCount}>{`${content.length}/${maxLength}`}</div>
           </div>
         )}
-        {renderBottomToolbar && <div className={styles.bottomToolbar}>{renderBottomToolbar()}</div>}
+        {renderBottomToolbar && isFormatMode && (
+          <div className={styles.bottomToolbar}>
+            {renderBottomToolbar()}
+            {actionsContent}
+          </div>
+        )}
       </div>
     );
   }

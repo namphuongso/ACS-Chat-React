@@ -17,11 +17,16 @@ export function useConversationFooter({
   disabled,
 }: UseConversationFooterProps) {
   const [isFormatMode, setIsFormatMode] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isFontSizeMenuOpen, setIsFontSizeMenuOpen] = useState(false);
   const fontSizeMenuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileAttachmentInputRef = useRef<HTMLInputElement>(null);
   const messageEditorRef = useRef<HTMLDivElement>(null);
+
+  const historyRef = useRef<string[]>(['']);
+  const historyIndexRef = useRef<number>(0);
+  const isUndoRedoAction = useRef(false);
 
   const [formatState, setFormatState] = useState({
     bold: false,
@@ -76,6 +81,26 @@ export function useConversationFooter({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, []);
+
+  useEffect(() => {
+    const editor = messageEditorRef.current;
+    if (!editor) return;
+
+    const handleInput = () => {
+      if (isUndoRedoAction.current) {
+        isUndoRedoAction.current = false;
+        return;
+      }
+    };
+
+    editor.addEventListener('input', handleInput);
+    return () => editor.removeEventListener('input', handleInput);
+  }, []);
+
+  const clearHistory = useCallback(() => {
+    historyRef.current = [''];
+    historyIndexRef.current = 0;
   }, []);
 
   const handleSendImageClick = useCallback(() => {
@@ -257,6 +282,21 @@ export function useConversationFooter({
     [conversationId, onSend]
   );
 
+  const saveHistory = useCallback(() => {
+    const editor = messageEditorRef.current;
+    if (!editor) return;
+    const currentHtml = editor.innerHTML;
+    const history = historyRef.current;
+    const currentIndex = historyIndexRef.current;
+    if (history[currentIndex] !== currentHtml) {
+      const newHistory = history.slice(0, currentIndex + 1);
+      newHistory.push(currentHtml);
+      if (newHistory.length > 50) newHistory.shift();
+      historyRef.current = newHistory;
+      historyIndexRef.current = newHistory.length - 1;
+    }
+  }, []);
+
   const executeCommand = useCallback(
     (e: React.MouseEvent, command: string, value?: string) => {
       e.preventDefault();
@@ -280,6 +320,21 @@ export function useConversationFooter({
         (editor.textContent ?? '').replace(/\u200B/g, '').trim() === '' &&
         !editor.querySelector('img');
 
+      if (command === 'indent') {
+        let depth = 0;
+        let node = selection?.anchorNode;
+        while (node && node !== editor) {
+          if (node.nodeName === 'BLOCKQUOTE' || node.nodeName === 'UL' || node.nodeName === 'OL') {
+            depth++;
+          }
+          node = node.parentNode;
+        }
+        // Limit max indent to 6 levels
+        if (depth >= 5) {
+          return;
+        }
+      }
+
       if (command === 'bold' && isEmptyEditor && !document.queryCommandState('bold')) {
         const strong = document.createElement('strong');
         const caretMarker = document.createTextNode('\u200B');
@@ -291,14 +346,62 @@ export function useConversationFooter({
         range.collapse(true);
         selection?.removeAllRanges();
         selection?.addRange(range);
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
         updateFormatState();
         return;
       }
 
+      if (command === 'undo') {
+        if (historyIndexRef.current === historyRef.current.length - 1) {
+          const currentHtml = editor.innerHTML;
+          if (currentHtml !== historyRef.current[historyIndexRef.current]) {
+            historyRef.current.push(currentHtml);
+            historyIndexRef.current += 1;
+          }
+        }
+
+        if (historyIndexRef.current > 0) {
+          historyIndexRef.current -= 1;
+          editor.innerHTML = historyRef.current[historyIndexRef.current];
+          isUndoRedoAction.current = true;
+
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          range.collapse(false);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+
+          editor.dispatchEvent(new Event('input', { bubbles: true }));
+          updateFormatState();
+        }
+        return;
+      }
+
+      if (command === 'redo') {
+        if (historyIndexRef.current < historyRef.current.length - 1) {
+          historyIndexRef.current += 1;
+          editor.innerHTML = historyRef.current[historyIndexRef.current];
+          isUndoRedoAction.current = true;
+
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          range.collapse(false);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+
+          editor.dispatchEvent(new Event('input', { bubbles: true }));
+          updateFormatState();
+        }
+        return;
+      }
+
+      saveHistory();
       document.execCommand(command, false, value);
+      saveHistory();
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
       updateFormatState();
     },
-    [disabled, updateFormatState]
+    [disabled, saveHistory, updateFormatState]
   );
 
   const resetFormatState = useCallback(() => {
@@ -316,6 +419,8 @@ export function useConversationFooter({
   return {
     isFormatMode,
     setIsFormatMode,
+    isExpanded,
+    setIsExpanded,
     isFontSizeMenuOpen,
     setIsFontSizeMenuOpen,
     fontSizeMenuRef,
@@ -330,5 +435,7 @@ export function useConversationFooter({
     handleFileAttachmentChange,
     executeCommand,
     resetFormatState,
+    clearHistory,
+    saveHistory,
   };
 }

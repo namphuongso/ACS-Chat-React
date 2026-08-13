@@ -102,6 +102,25 @@
       font-weight: 700 !important;
     }
   }
+
+  blockquote {
+    margin: 0 0 0 10px !important;
+  }
+
+  ul,
+  ol {
+    margin-top: 4px;
+    margin-bottom: 4px;
+    padding-left: 20px;
+  }
+
+  li {
+    margin-bottom: 2px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
 }
 
 .ownBubble {
