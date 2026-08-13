@@ -1,25 +1,22 @@
-import React, {
-  useRef,
-  useState,
-  useCallback,
-  KeyboardEvent,
-  ChangeEvent,
-  ReactNode,
-  useEffect,
-} from 'react';
+import React, { useRef, useState, useCallback, KeyboardEvent, ReactNode, useEffect } from 'react';
 import { SendIcon } from '../Icons';
 import { useTranslation } from 'react-i18next';
 import styles from './MessageInput.module.scss';
+import { SendMessageOptions } from '../../types';
+
+const removeCaretMarkers = (value: string) => value.replace(/\u200B/g, '');
 
 export interface MessageInputProps {
-  onSend: (content: string) => void;
+  onSend: (content: string, options?: SendMessageOptions) => void;
   onTyping: () => void;
   placeholder?: string;
   disabled?: boolean;
   maxLength?: number;
   renderSendButton?: (props: { onClick: () => void; disabled: boolean }) => ReactNode;
   renderToolbar?: () => ReactNode;
+  renderBottomToolbar?: () => ReactNode;
   autoFocus?: boolean;
+  editorRef?: React.RefObject<HTMLDivElement>;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = React.memo(
@@ -31,60 +28,66 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(
     maxLength,
     renderSendButton,
     renderToolbar,
+    renderBottomToolbar,
     autoFocus = false,
+    editorRef,
   }) => {
     const [content, setContent] = useState('');
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const internalEditorRef = useRef<HTMLDivElement>(null);
+    const contentEditableRef = editorRef ?? internalEditorRef;
     const { t } = useTranslation();
     const resolvedPlaceholder = placeholder || t('chat.typeMessage');
 
     const resizeTextarea = useCallback(() => {
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-      }
+      // contentEditable automatically resizes, no need for manual height adjustment unless we want max-height which is handled by CSS
     }, []);
 
     useEffect(() => {
-      resizeTextarea();
+      // We don't need manual resize
     }, [content, resizeTextarea]);
 
     useEffect(() => {
-      if (autoFocus && textareaRef.current && !disabled) {
-        textareaRef.current.focus();
+      if (autoFocus && contentEditableRef.current && !disabled) {
+        contentEditableRef.current.focus();
       }
-    }, [autoFocus, disabled]);
+    }, [autoFocus, contentEditableRef, disabled]);
 
     useEffect(() => {
       const handleFocusEvent = () => {
-        if (textareaRef.current && !disabled) {
-          textareaRef.current.focus();
+        if (contentEditableRef.current && !disabled) {
+          contentEditableRef.current.focus();
         }
       };
       window.addEventListener('focusMessageInput', handleFocusEvent);
       return () => {
         window.removeEventListener('focusMessageInput', handleFocusEvent);
       };
-    }, [disabled]);
+    }, [contentEditableRef, disabled]);
 
-    const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-      setContent(e.target.value);
+    const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
+      const html = e.currentTarget.innerHTML;
+      const textContent = removeCaretMarkers(e.currentTarget.textContent || '');
+      if (textContent.trim() === '' && !html.includes('<img')) {
+        setContent('');
+      } else {
+        setContent(removeCaretMarkers(html));
+      }
       onTyping();
     };
 
     const handleSend = () => {
-      const trimmed = content.trim();
-      if (trimmed && !disabled) {
-        onSend(trimmed);
+      const textContent = removeCaretMarkers(contentEditableRef.current?.textContent || '');
+      const currentHtml = removeCaretMarkers(contentEditableRef.current?.innerHTML || '');
+      if ((textContent.trim() || currentHtml.includes('<img')) && !disabled) {
+        onSend(currentHtml);
         setContent('');
-        // Reset height after clearing content
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto';
+        if (contentEditableRef.current) {
+          contentEditableRef.current.innerHTML = '';
         }
       }
     };
 
-    const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleSend();
@@ -97,17 +100,17 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(
       <div className={styles.container}>
         {renderToolbar && <div className={styles.toolbar}>{renderToolbar()}</div>}
         <div className={`${styles.inputRow} ${disabled ? styles.disabled : ''}`}>
-          <textarea
-            ref={textareaRef}
+          <div
+            ref={contentEditableRef}
             className={styles.textarea}
-            value={content}
-            onChange={handleChange}
+            contentEditable={!disabled}
+            role="textbox"
+            aria-multiline="true"
+            aria-placeholder={resolvedPlaceholder}
+            onInput={handleInput}
             onKeyDown={handleKeyDown}
-            placeholder={resolvedPlaceholder}
-            disabled={disabled}
-            maxLength={maxLength}
-            rows={1}
-            autoFocus={autoFocus}
+            data-placeholder={resolvedPlaceholder}
+            suppressContentEditableWarning={true}
           />
           <div className={styles.actions}>
             {renderSendButton ? (
@@ -130,6 +133,7 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(
             <div className={styles.characterCount}>{`${content.length}/${maxLength}`}</div>
           </div>
         )}
+        {renderBottomToolbar && <div className={styles.bottomToolbar}>{renderBottomToolbar()}</div>}
       </div>
     );
   }

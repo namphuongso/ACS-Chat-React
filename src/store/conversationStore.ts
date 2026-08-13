@@ -82,10 +82,15 @@ const sortConversationIds = (ids: string[], conversations: Record<string, Conver
     if (convA.pin && !convB.pin) return -1;
     if (!convA.pin && convB.pin) return 1;
 
-    // 2. Sort by updatedAt (or createdAt)
-    const timeA = convA.updatedAt ? new Date(convA.updatedAt).getTime() : (convA.createdAt ? new Date(convA.createdAt).getTime() : 0);
-    const timeB = convB.updatedAt ? new Date(convB.updatedAt).getTime() : (convB.createdAt ? new Date(convB.createdAt).getTime() : 0);
-    
+    const getTime = (val?: string | Date) => {
+      if (!val) return 0;
+      const time = new Date(val).getTime();
+      return isNaN(time) ? 0 : time;
+    };
+
+    // 2. Sort by lastMessageTime || updatedAt || createdAt
+    const timeA = getTime(convA.lastMessageTime || convA.updatedAt || convA.createdAt);
+    const timeB = getTime(convB.lastMessageTime || convB.updatedAt || convB.createdAt);
     return timeB - timeA;
   });
 };

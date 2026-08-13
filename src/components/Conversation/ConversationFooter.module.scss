@@ -9,15 +9,29 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--chat-footer-icon-color, #6b7280);
   padding: 4px;
   border-radius: 4px;
   transition: background-color 0.2s, color 0.2s;
 
   &:hover {
-    background-color: #f3f4f6;
-    color: #374151;
+    background-color: var(--chat-footer-icon-bg-hover, #f3f4f6);
+    color: var(--chat-footer-icon-color-hover, #374151);
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    &:hover {
+      background: none;
+      color: var(--chat-footer-icon-color, #6b7280);
+    }
+  }
+}
+
+.active {
+  background-color: var(--chat-footer-active-bg, #e0e7ff) !important;
+  color: var(--chat-footer-active-color, #4f46e5) !important;
 }
 
 .thumbsUpButton {
@@ -34,7 +48,7 @@
   flex-shrink: 0;
 
   &:hover {
-    background-color: #f3f4f6;
+    background-color: var(--chat-footer-icon-bg-hover, #f3f4f6);
   }
 
   &:active {
@@ -49,15 +63,15 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background-color: #3b82f6;
-  color: white;
+  background-color: var(--chat-footer-send-bg, #3b82f6);
+  color: var(--chat-footer-send-color, #ffffff);
   border: none;
   cursor: pointer;
   transition: background-color 0.2s, transform 0.1s;
   flex-shrink: 0;
 
   &:hover {
-    background-color: #2563eb;
+    background-color: var(--chat-footer-send-bg-hover, #2563eb);
   }
 
   &:active {

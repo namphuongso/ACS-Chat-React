@@ -245,7 +245,9 @@ export class MessageService {
       });
     }
 
-    if (!content || content.trim() === '') {
+    const msgType = options?.metadata?.type;
+    const isMediaOrFile = msgType === 'image' || msgType === 'video' || msgType === 'file';
+    if (!isMediaOrFile && (!content || content.trim() === '')) {
       throw new AcsChatError('INVALID_INPUT', 'Message content cannot be empty.', {
         operation: 'sendMessage',
       });
@@ -262,7 +264,7 @@ export class MessageService {
     }
 
     // Generate temporary client ID for optimistic update
-    const clientMessageId = generateId();
+    const clientMessageId = options?.clientMessageId || generateId();
     const tempId = `temp-${clientMessageId}`;
 
     // Create optimistic message
@@ -294,26 +296,25 @@ export class MessageService {
           operation: 'sendMessage',
         });
       }
-      
+
       if (!config.backendUrl) {
         throw new AcsChatError('INVALID_INPUT', 'Backend URL is not configured.', {
           operation: 'sendMessage',
         });
       }
 
-      const roomId = useConversationStore.getState().conversations[conversationId]?.conversationId || conversationId;
+      const roomId =
+        useConversationStore.getState().conversations[conversationId]?.conversationId ||
+        conversationId;
 
-      const responseData = await fetchBackend<string>(
-        config,
-        '/api/chat/send-message',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            roomId,
-            content
-          })
-        }
-      );
+      const responseData = await fetchBackend<string>(config, '/api/chat/send-message', {
+        method: 'POST',
+        body: JSON.stringify({
+          roomId,
+          content,
+          metaData: options?.metadata,
+        }),
+      });
 
       const serverMessageId = responseData.data;
 
@@ -398,27 +399,25 @@ export class MessageService {
           operation: 'editMessage',
         });
       }
-      
+
       if (!config.backendUrl) {
         throw new AcsChatError('INVALID_INPUT', 'Backend URL is not configured.', {
           operation: 'editMessage',
         });
       }
 
-      const roomId = useConversationStore.getState().conversations[conversationId]?.conversationId || conversationId;
+      const roomId =
+        useConversationStore.getState().conversations[conversationId]?.conversationId ||
+        conversationId;
 
-      await fetchBackend<boolean>(
-        config,
-        '/api/chat/update-message',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            roomId,
-            content: newContent,
-            messageId
-          })
-        }
-      );
+      await fetchBackend<boolean>(config, '/api/chat/update-message', {
+        method: 'POST',
+        body: JSON.stringify({
+          roomId,
+          content: newContent,
+          messageId,
+        }),
+      });
 
       logger.info(`Message ${messageId} edited in conversation ${conversationId}`);
       return {
@@ -491,26 +490,24 @@ export class MessageService {
           operation: 'deleteMessage',
         });
       }
-      
+
       if (!config.backendUrl) {
         throw new AcsChatError('INVALID_INPUT', 'Backend URL is not configured.', {
           operation: 'deleteMessage',
         });
       }
 
-      const roomId = useConversationStore.getState().conversations[conversationId]?.conversationId || conversationId;
+      const roomId =
+        useConversationStore.getState().conversations[conversationId]?.conversationId ||
+        conversationId;
 
-      await fetchBackend<boolean>(
-        config,
-        '/api/chat/delete-message',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            roomId,
-            messageId
-          })
-        }
-      );
+      await fetchBackend<boolean>(config, '/api/chat/delete-message', {
+        method: 'POST',
+        body: JSON.stringify({
+          roomId,
+          messageId,
+        }),
+      });
 
       logger.info(`Message ${messageId} deleted from conversation ${conversationId}`);
       return {};
@@ -585,7 +582,11 @@ export class MessageService {
   /**
    * Pin or unpin a message.
    */
-  public async pinMessage(conversationId: string, messageId: string, pin: boolean): Promise<MessageResult> {
+  public async pinMessage(
+    conversationId: string,
+    messageId: string,
+    pin: boolean
+  ): Promise<MessageResult> {
     if (!conversationId || conversationId.trim() === '') {
       throw new AcsChatError('INVALID_INPUT', 'conversationId is required.', {
         operation: 'pinMessage',
@@ -605,7 +606,7 @@ export class MessageService {
           operation: 'pinMessage',
         });
       }
-      
+
       if (!config.backendUrl) {
         throw new AcsChatError('INVALID_INPUT', 'Backend URL is not configured.', {
           operation: 'pinMessage',
@@ -616,11 +617,13 @@ export class MessageService {
         config,
         `/api/chat/pin-message?messageId=${messageId}&pin=${pin}`,
         {
-          method: 'POST'
+          method: 'POST',
         }
       );
 
-      logger.info(`Message ${messageId} pin status updated to ${pin} in conversation ${conversationId}`);
+      logger.info(
+        `Message ${messageId} pin status updated to ${pin} in conversation ${conversationId}`
+      );
       return {};
     } catch (error) {
       const chatError = mapAcsErrorToChatError(error, 'pinMessage', { messageId });
@@ -632,12 +635,14 @@ export class MessageService {
   /**
    * Fetch pinned messages for a conversation
    */
-  public async getPinnedMessages(conversationId: string): Promise<{ data?: PinnedMessage[], error?: AcsChatError }> {
+  public async getPinnedMessages(
+    conversationId: string
+  ): Promise<{ data?: PinnedMessage[]; error?: AcsChatError }> {
     if (!conversationId || conversationId.trim() === '') {
       return {
         error: new AcsChatError('INVALID_INPUT', 'conversationId is required.', {
           operation: 'getPinnedMessages',
-        })
+        }),
       };
     }
 

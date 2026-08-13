@@ -85,6 +85,8 @@ export interface SendMessageOptions {
   attachments?: FileAttachment[];
   /** Optional explicit sender display name for optimistic UI updates */
   senderDisplayName?: string;
+  /** Optional pre-generated client message ID for optimistic updates */
+  clientMessageId?: string;
 }
 
 /**

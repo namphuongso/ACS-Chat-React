@@ -3,6 +3,7 @@
   --chat-primary-hover: #106ebe;
   --chat-bg: #ffffff;
   --chat-bg-secondary: #f5f5f5;
+  --chat-bg-color: #ecebf0;
   --chat-text: #242424;
   --chat-text-secondary: #616161;
   --chat-border: #e0e0e0;
@@ -15,4 +16,23 @@
   --chat-spacing-xs: 4px;
   --chat-spacing-sm: 8px;
   --chat-spacing-md: 16px;
+
+  /* Message Item */
+  --chat-spacing-lg: 24px;
+  --chat-text-primary: var(--chat-text);
+  --chat-error: #ef4444;
+  --chat-bg-hover: var(--chat-bg-secondary);
+  --chat-shadow-color: rgba(0, 0, 0, 0.15);
+  --chat-image-shadow: rgba(21, 39, 71, 0.25);
+  --chat-badge-bg: rgba(0, 0, 0, 0.5);
+
+  /* Conversation Footer */
+  --chat-footer-icon-color: var(--chat-text-secondary);
+  --chat-footer-icon-bg-hover: var(--chat-bg-secondary);
+  --chat-footer-icon-color-hover: var(--chat-text);
+  --chat-footer-active-bg: var(--chat-message-own-bg);
+  --chat-footer-active-color: var(--chat-primary);
+  --chat-footer-send-bg: var(--chat-primary);
+  --chat-footer-send-bg-hover: var(--chat-primary-hover);
+  --chat-footer-send-color: var(--chat-bg);
 }

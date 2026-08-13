@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useEffect, useState } from 'react';
+import type { SendMessageOptions } from '../../types/message.types';
 import { useConversations } from '../../hooks/useConversations';
 import { useMessages } from '../../hooks/useMessages';
 import { useChat } from '../../hooks/useChat';
@@ -49,7 +50,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
     }, [idToUse, loadMessages, messages.length, loading]);
 
     const handleSend = useCallback(
-      (content: string) => {
+      (content: string, options?: SendMessageOptions) => {
         if (idToUse) {
           let senderDisplayName = currentUser?.displayName;
           if ((!senderDisplayName || senderDisplayName === 'Unknown') && currentUser?.id) {
@@ -58,7 +59,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
               senderDisplayName = member.contactName;
             }
           }
-          sendMessage(content, { senderDisplayName });
+          sendMessage(content, { senderDisplayName, ...options });
           setIsSearching(false);
           setSearchTerm('');
         }
@@ -153,6 +154,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
           conversationId={idToUse}
           backendConversationId={conversation.conversationId}
           pinnedMessageIds={pinnedMessageIds}
+          isGroup={roomType === 'group' || conversation.type === 'group'}
           onUnpinMessage={handlePinMessage}
         />
 
@@ -176,6 +178,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
 
         <ConversationFooter
           key={idToUse}
+          conversationId={idToUse}
           onSend={handleSend}
           onTyping={handleTyping}
           disabled={loading || connectionState !== 'connected'}

@@ -168,15 +168,23 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
       );
     }
 
+    const isImageMessage = message.metadata?.type === 'image' && !!message.metadata?.url;
+
     // Handle standard messages
     const messageClass = isOwn ? styles.ownMessage : styles.otherMessage;
-    const bubbleClass = isOwn ? styles.ownBubble : styles.otherBubble;
+    const bubbleClass = `${isOwn ? styles.ownBubble : styles.otherBubble} ${isImageMessage ? styles.imageBubble : ''}`;
+
+    const senderId = message.sender?.id;
+    const senderMember = roomMembers?.find((m) => m.cui === senderId || m.userId === senderId);
 
     const senderName =
+      senderMember?.contactName ||
       message.senderDisplayName ||
       message.sender?.displayName ||
-      message.sender?.id ||
+      senderId ||
       t('chat.unknownSender');
+
+    const senderAvatarUrl = senderMember?.avatarUrl;
 
     const defaultRenderContent = () => {
       if (message.deletedAt) {
@@ -186,6 +194,26 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
           </div>
         );
       }
+
+      if (isImageMessage) {
+        return (
+          <div className={styles.imageContainer}>
+            <div className={styles.hdBadge}>HD</div>
+            <img
+              src={message.metadata!.url}
+              alt={message.metadata!.fileName || 'image'}
+              className={styles.imageContent}
+              style={{
+                aspectRatio:
+                  message.metadata!.width && message.metadata!.height
+                    ? `${message.metadata!.width} / ${message.metadata!.height}`
+                    : 'auto',
+              }}
+            />
+          </div>
+        );
+      }
+
       if (message.type === 'html') {
         return <div dangerouslySetInnerHTML={{ __html: message.content }} />;
       }
@@ -206,7 +234,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
         {/* Avatar for other users */}
         {!isOwn && showSender && (
           <div className={styles.avatarWrapper}>
-            <Avatar name={senderName} />
+            <Avatar name={senderName} url={senderAvatarUrl} />
           </div>
         )}
         {!isOwn && !showSender && <div className={styles.avatarPlaceholder} />}
