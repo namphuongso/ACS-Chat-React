@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-08-14
+
+### Added
+
+- Added rich text formatting support in the chat input (Bold, Italic, Underline, Strikethrough, Text color, Font size, Lists, Indent/Outdent).
+- Added `PinnedMessageBanner` and `PinDropdownMenu` UI components to view and manage pinned messages.
+- Added multiple file upload support via `uploadFiles` in `fileService`.
+- Added support for sending metadata (like image, video, file types) along with messages in `messageService`.
+- Added new toolbar components for formatting options (`ToolbarButton`, `ConversationFooterBottomToolbar`, `ConversationFooterToolbar`, `ConversationFooterSendButton`).
+
+### Changed
+
+- Refactored `ConversationFooter` and `MessageInput` components to support rich text (contentEditable) and improve maintainability.
+- Updated `MessageItem` and `MessageList` to support rendering formatted HTML messages.
+- Updated UI translations (English and Vietnamese) for new formatting features.
+- Relaxed empty message validation in `acsThreadAdapter` and `messageService` to allow media-only messages.
+- Updated CSS variables (`variables.scss`) for formatting menus and toolbars.
+
+### Removed
+
+- Removed `replace-vars.cjs` build script.
+
 ## [1.1.0] - 2026-08-12
 
 ### Added
