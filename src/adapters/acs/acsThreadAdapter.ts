@@ -60,6 +60,11 @@ export class AcsThreadAdapter {
    * Send a new chat message to the thread.
    */
   public async sendMessage(content: string, options?: SendMessageOptions): Promise<string> {
+    if (typeof content !== 'string' || content.trim() === '') {
+      throw new AcsChatError('INVALID_INPUT', 'Message content cannot be empty.', {
+        operation: 'sendMessage',
+      });
+    }
 
     try {
       const response = await this.chatThreadClient.sendMessage(

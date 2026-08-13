@@ -1,8 +1,12 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeAll } from 'vitest';
 import { MessageInput } from '../index';
 
 describe('MessageInput Component', () => {
+  beforeAll(() => {
+    document.execCommand = vi.fn();
+  });
+
   it('should render correctly with default placeholder', () => {
     render(<MessageInput onSend={vi.fn()} onTyping={vi.fn()} />);
     expect(screen.getByRole('textbox')).toBeInTheDocument();
