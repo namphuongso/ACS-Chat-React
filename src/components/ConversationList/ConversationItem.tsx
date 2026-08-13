@@ -98,8 +98,30 @@ export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
     const avatarUrl = conversation.avatarUrl;
 
     console.log('conversation', conversation);
-    const lastMessage = conversation.lastMessage;
-    const previewText: string = lastMessage ?? '';
+    const lastMessage = conversation.lastMessage ?? '';
+    let previewText: string = lastMessage;
+
+    if (lastMessage) {
+      const colonIndex = lastMessage.indexOf(':');
+      let prefix = '';
+      let content = lastMessage;
+
+      if (colonIndex !== -1) {
+        prefix = lastMessage.substring(0, colonIndex);
+        content = lastMessage.substring(colonIndex + 1).trim();
+      }
+
+      if (/<\/?[a-z][\s\S]*>/i.test(content)) {
+        if (typeof DOMParser !== 'undefined') {
+          const doc = new DOMParser().parseFromString(content, 'text/html');
+          content = doc.body.textContent || '';
+        } else {
+          content = content.replace(/<[^>]*>?/gm, '');
+        }
+      }
+
+      previewText = colonIndex !== -1 ? `${prefix}: ${content}` : content;
+    }
 
     // Extract metadata (mocking the features from the image like pin and verified)
     const isVerified = conversation.metadata?.verified === 'true';

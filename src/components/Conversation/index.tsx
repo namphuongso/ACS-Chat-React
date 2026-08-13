@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useEffect, useState } from 'react';
+import type { SendMessageOptions } from '../../types/message.types';
 import { useConversations } from '../../hooks/useConversations';
 import { useMessages } from '../../hooks/useMessages';
 import { useChat } from '../../hooks/useChat';
@@ -37,8 +38,18 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
     const { roomMembers, roomType } = useRoomMembers(conversation);
 
     // Call hooks unconditionally
-    const { messages, loading, loadingMore, hasMore, loadMore, loadMessages, sendMessage, editMessage, deleteMessage, pinMessage } =
-      useMessages(idToUse || '');
+    const {
+      messages,
+      loading,
+      loadingMore,
+      hasMore,
+      loadMore,
+      loadMessages,
+      sendMessage,
+      editMessage,
+      deleteMessage,
+      pinMessage,
+    } = useMessages(idToUse || '');
 
     useEffect(() => {
       if (idToUse && messages.length === 0 && !loading) {
@@ -49,16 +60,25 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
     }, [idToUse, loadMessages, messages.length, loading]);
 
     const handleSend = useCallback(
-      (content: string) => {
+      (content: string, options?: SendMessageOptions) => {
         if (idToUse) {
           let senderDisplayName = currentUser?.displayName;
           if ((!senderDisplayName || senderDisplayName === 'Unknown') && currentUser?.id) {
-            const member = roomMembers?.find(m => m.cui === currentUser.id);
+            const member = roomMembers?.find((m) => m.cui === currentUser.id);
             if (member && member.contactName) {
               senderDisplayName = member.contactName;
             }
           }
-          sendMessage(content, { senderDisplayName });
+
+          let metadata = options?.metadata;
+          if (options?.type === 'html') {
+            metadata = {
+              ...metadata,
+              type: 'html',
+            };
+          }
+
+          sendMessage(content, { senderDisplayName, ...options, metadata });
           setIsSearching(false);
           setSearchTerm('');
         }
@@ -80,11 +100,10 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
       (messageId: string) => {
         const message = messages.find((m) => m.id === messageId);
         if (!message) return;
-        
+
         // Strip HTML if message is HTML type before prompting
-        const contentToEdit = message.type === 'html' 
-          ? message.content.replace(/<[^>]*>?/gm, '') 
-          : message.content;
+        const contentToEdit =
+          message.type === 'html' ? message.content.replace(/<[^>]*>?/gm, '') : message.content;
 
         setEditDialog({
           isOpen: true,
@@ -95,12 +114,15 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
       [messages]
     );
 
-    const handleSaveEdit = useCallback((newContent: string) => {
-      if (editDialog.messageId) {
-        editMessage(editDialog.messageId, newContent);
-      }
-      setEditDialog({ isOpen: false, messageId: '', initialContent: '' });
-    }, [editDialog.messageId, editMessage]);
+    const handleSaveEdit = useCallback(
+      (newContent: string) => {
+        if (editDialog.messageId) {
+          editMessage(editDialog.messageId, newContent);
+        }
+        setEditDialog({ isOpen: false, messageId: '', initialContent: '' });
+      },
+      [editDialog.messageId, editMessage]
+    );
 
     const handleCancelEdit = useCallback(() => {
       setEditDialog({ isOpen: false, messageId: '', initialContent: '' });
@@ -111,12 +133,9 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
       messageId: '',
     });
 
-    const handleDeleteMessage = useCallback(
-      (messageId: string) => {
-        setDeleteDialog({ isOpen: true, messageId });
-      },
-      []
-    );
+    const handleDeleteMessage = useCallback((messageId: string) => {
+      setDeleteDialog({ isOpen: true, messageId });
+    }, []);
 
     const handleConfirmDelete = useCallback(() => {
       if (deleteDialog.messageId) {
@@ -140,9 +159,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
       if (loading && conversations.length === 0) {
         return <LoadingState />;
       }
-      return (
-        <EmptyState type="no-conversations" message={t('chat.selectConversation')} />
-      );
+      return <EmptyState type="no-conversations" message={t('chat.selectConversation')} />;
     }
 
     return (
@@ -153,6 +170,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
           conversationId={idToUse}
           backendConversationId={conversation.conversationId}
           pinnedMessageIds={pinnedMessageIds}
+          isGroup={roomType === 'group' || conversation.type === 'group'}
           onUnpinMessage={handlePinMessage}
         />
 
@@ -176,6 +194,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
 
         <ConversationFooter
           key={idToUse}
+          conversationId={idToUse}
           onSend={handleSend}
           onTyping={handleTyping}
           disabled={loading || connectionState !== 'connected'}

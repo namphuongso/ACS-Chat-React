@@ -25,8 +25,7 @@ export interface MessageListProps {
 }
 
 type ListItem =
-  | { type: 'message'; data: ChatMessage }
-  | { type: 'date-separator'; id: string; date: Date };
+  { type: 'message'; data: ChatMessage } | { type: 'date-separator'; id: string; date: Date };
 
 export const MessageList: React.FC<MessageListProps> = React.memo(
   ({
@@ -95,9 +94,10 @@ export const MessageList: React.FC<MessageListProps> = React.memo(
     const firstItemIndex = React.useMemo(() => {
       const prevItems = itemsRef.current;
       if (prevItems.length > 0 && items.length > 0) {
-        const oldFirstItemId = prevItems[0].type === 'message' ? prevItems[0].data.id : prevItems[0].id;
-        const newIndexOfOldFirstItem = items.findIndex((item) =>
-          (item.type === 'message' ? item.data.id : item.id) === oldFirstItemId
+        const oldFirstItemId =
+          prevItems[0].type === 'message' ? prevItems[0].data.id : prevItems[0].id;
+        const newIndexOfOldFirstItem = items.findIndex(
+          (item) => (item.type === 'message' ? item.data.id : item.id) === oldFirstItemId
         );
 
         if (newIndexOfOldFirstItem > 0) {
@@ -114,11 +114,7 @@ export const MessageList: React.FC<MessageListProps> = React.memo(
     // Determine if we are appending our own message during this render cycle
     if (items.length > prevItemsLengthRef.current) {
       const lastItem = items[items.length - 1];
-      if (
-        lastItem &&
-        lastItem.type === 'message' &&
-        lastItem.data.sender.id === currentUserId
-      ) {
+      if (lastItem && lastItem.type === 'message' && lastItem.data.sender.id === currentUserId) {
         isAppendingOwnMessageRef.current = true;
       } else {
         isAppendingOwnMessageRef.current = false;
@@ -141,7 +137,7 @@ export const MessageList: React.FC<MessageListProps> = React.memo(
       const formattedDate = date.toLocaleDateString('en-GB', {
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric'
+        year: 'numeric',
       });
       return (
         <div className={styles.dateSeparator}>
@@ -176,10 +172,14 @@ export const MessageList: React.FC<MessageListProps> = React.memo(
       }
 
       const senderMember = roomMembers?.find((m) => m.cui === message.sender.id);
-      
+
       const displayMessage = {
         ...message,
-        senderDisplayName: senderMember?.contactName || message.senderDisplayName || message.sender?.displayName || message.sender?.id,
+        senderDisplayName:
+          senderMember?.contactName ||
+          message.senderDisplayName ||
+          message.sender?.displayName ||
+          message.sender?.id,
       };
 
       return (
@@ -189,7 +189,13 @@ export const MessageList: React.FC<MessageListProps> = React.memo(
           isOwn={isOwn}
           showSender={isFirstInGroup}
           isLastInGroup={isLastInGroup}
-          isPinned={pinnedMessageIds instanceof Set ? pinnedMessageIds.has(message.id) : Array.isArray(pinnedMessageIds) ? pinnedMessageIds.includes(message.id) : false}
+          isPinned={
+            pinnedMessageIds instanceof Set
+              ? pinnedMessageIds.has(message.id)
+              : Array.isArray(pinnedMessageIds)
+                ? pinnedMessageIds.includes(message.id)
+                : false
+          }
           onEdit={onEditMessage}
           onDelete={onDeleteMessage}
           onPin={onPinMessage}

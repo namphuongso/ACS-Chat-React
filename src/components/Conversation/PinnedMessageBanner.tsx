@@ -2,12 +2,14 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePinnedMessages } from '../../hooks';
 import { MessageIcon, MoreHorizontalIcon, ChevronDownIcon, ChevronUpIcon } from '../Icons';
+import { PinDropdownMenu } from './PinDropdownMenu';
 import styles from './PinnedMessageBanner.module.scss';
 
 export interface PinnedMessageBannerProps {
   conversationId: string;
   backendConversationId?: string;
   pinnedMessageIds?: Set<string> | string[];
+  isGroup?: boolean;
   onUnpinMessage: (messageId: string, pin: boolean) => void;
 }
 
@@ -15,14 +17,17 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
   conversationId,
   backendConversationId,
   pinnedMessageIds,
+  isGroup,
   onUnpinMessage,
 }) => {
   const { t } = useTranslation();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; right: number } | null>(
+    null
+  );
   const [isPinboardOpen, setIsPinboardOpen] = useState(false);
 
   const bannerRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Convert string[] | Set<string> to array for dependency checking
   const pinnedMessageIdsArray = Array.from(pinnedMessageIds || []);
@@ -37,11 +42,12 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        isDropdownOpen &&
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        openDropdownId &&
+        !(event.target as Element).closest(`.${styles.dropdownMenu}`) &&
+        !(event.target as Element).closest(`.${styles.moreButton}`)
       ) {
-        setIsDropdownOpen(false);
+        setOpenDropdownId(null);
+        setDropdownPosition(null);
       }
 
       if (
@@ -57,13 +63,28 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isDropdownOpen, isPinboardOpen]);
+  }, [openDropdownId, isPinboardOpen]);
 
   if (pinnedMessages.length === 0) return null;
 
+  const toggleDropdown = (e: React.MouseEvent, id: string) => {
+    if (openDropdownId === id) {
+      setOpenDropdownId(null);
+      setDropdownPosition(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      });
+      setOpenDropdownId(id);
+    }
+  };
+
   const handleUnpin = (messageId: string) => {
     onUnpinMessage(messageId, false);
-    setIsDropdownOpen(false);
+    setOpenDropdownId(null);
+    setDropdownPosition(null);
     // Optimistic update
     setPinnedMessages(pinnedMessages.filter((m) => m.messageId !== messageId));
     if (pinnedMessages.length === 1) {
@@ -73,12 +94,14 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
 
   const handleCopy = (content: string) => {
     navigator.clipboard.writeText(content);
-    setIsDropdownOpen(false);
+    setOpenDropdownId(null);
+    setDropdownPosition(null);
   };
 
   const handleOpenGroupBoard = () => {
     // Integration point for opening group board
-    setIsDropdownOpen(false);
+    setOpenDropdownId(null);
+    setDropdownPosition(null);
     setIsPinboardOpen(false);
   };
 
@@ -86,7 +109,41 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
 
   return (
     <div className={styles.bannerContainer} ref={bannerRef}>
-      {isPinboardOpen ? (
+      {/* Keep the static content in DOM but visually hidden when open to preserve height and prevent layout shift */}
+      <div className={styles.leftSection} style={{ visibility: isPinboardOpen ? 'hidden' : 'visible', opacity: isPinboardOpen ? 0 : 1, transition: 'opacity 0.2s' }}>
+        <div className={styles.iconWrapper}>
+          <MessageIcon width={16} height={16} />
+        </div>
+        <div className={styles.contentWrapper}>
+          <div className={styles.headerTitle}>{t('chat.message')}</div>
+          <div className={styles.messageContent}>
+            {firstMessage.creator}: {firstMessage.content}
+          </div>
+        </div>
+      </div>
+      <div className={styles.rightSection} style={{ visibility: isPinboardOpen ? 'hidden' : 'visible', opacity: isPinboardOpen ? 0 : 1, transition: 'opacity 0.2s' }}>
+        {pinnedMessages.length > 1 && (
+          <button className={styles.pinCountButton} onClick={() => setIsPinboardOpen(true)}>
+            {t('chat.pinCount', { count: pinnedMessages.length - 1 })}{' '}
+            <ChevronDownIcon width={16} height={16} />
+          </button>
+        )}
+        <div style={{ position: 'relative' }}>
+          <button className={styles.moreButton} onClick={(e) => toggleDropdown(e, 'banner')}>
+            <MoreHorizontalIcon width={20} height={20} />
+          </button>
+          {openDropdownId === 'banner' && dropdownPosition && (
+            <PinDropdownMenu
+              position={dropdownPosition}
+              onCopy={() => handleCopy(firstMessage.content)}
+              onOpenGroupBoard={isGroup ? handleOpenGroupBoard : undefined}
+              onUnpin={() => handleUnpin(firstMessage.messageId)}
+            />
+          )}
+        </div>
+      </div>
+
+      {isPinboardOpen && (
         <div className={styles.pinboardOverlay}>
           <div className={styles.pinboardHeader}>
             <div className={styles.pinboardTitle}>
@@ -96,7 +153,13 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
               {t('chat.collapse')} <ChevronUpIcon width={16} height={16} />
             </button>
           </div>
-          <div className={styles.pinboardList}>
+          <div
+            className={styles.pinboardList}
+            onScroll={() => {
+              setOpenDropdownId(null);
+              setDropdownPosition(null);
+            }}
+          >
             {pinnedMessages.map((msg) => (
               <div key={msg.messageId} className={styles.pinboardItem}>
                 <div className={styles.leftSection}>
@@ -110,77 +173,32 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
                     </div>
                   </div>
                 </div>
-                <div className={styles.rightSection} style={{ position: 'relative' }}>
-                  {/* Each item could have its own dropdown if needed, but for now just showing simple list as requested */}
+                <div className={styles.rightSection}>
                   <button
                     className={styles.moreButton}
-                    onClick={() => {
-                      setIsDropdownOpen(true);
-                      // In a real implementation you'd track which item's dropdown is open
-                      // But the requirement mostly shows it for the banner
-                    }}
+                    onClick={(e) => toggleDropdown(e, msg.messageId)}
                   >
                     <MoreHorizontalIcon width={16} height={16} />
                   </button>
+                  {openDropdownId === msg.messageId && dropdownPosition && (
+                    <PinDropdownMenu
+                      position={dropdownPosition}
+                      onCopy={() => handleCopy(msg.content)}
+                      onUnpin={() => handleUnpin(msg.messageId)}
+                    />
+                  )}
                 </div>
               </div>
             ))}
           </div>
-          <div className={styles.pinboardFooter}>
-            <button className={styles.viewAllButton} onClick={handleOpenGroupBoard}>
-              {t('chat.viewAllInGroupBoard')}
-            </button>
-          </div>
+          {isGroup && (
+            <div className={styles.pinboardFooter}>
+              <button className={styles.viewAllButton} onClick={handleOpenGroupBoard}>
+                {t('chat.viewAllInGroupBoard')}
+              </button>
+            </div>
+          )}
         </div>
-      ) : (
-        <>
-          <div className={styles.leftSection}>
-            <div className={styles.iconWrapper}>
-              <MessageIcon width={16} height={16} />
-            </div>
-            <div className={styles.contentWrapper}>
-              <div className={styles.headerTitle}>{t('chat.message')}</div>
-              <div className={styles.messageContent}>
-                {firstMessage.creator}: {firstMessage.content}
-              </div>
-            </div>
-          </div>
-          <div className={styles.rightSection}>
-            {pinnedMessages.length > 1 && (
-              <button className={styles.pinCountButton} onClick={() => setIsPinboardOpen(true)}>
-                {t('chat.pinCount', { count: pinnedMessages.length - 1 })}{' '}
-                <ChevronDownIcon width={16} height={16} />
-              </button>
-            )}
-            <div style={{ position: 'relative' }} ref={dropdownRef}>
-              <button
-                className={styles.moreButton}
-                onClick={() => setIsDropdownOpen((prev) => !prev)}
-              >
-                <MoreHorizontalIcon width={20} height={20} />
-              </button>
-              {isDropdownOpen && (
-                <div className={styles.dropdownMenu}>
-                  <button
-                    className={styles.dropdownItem}
-                    onClick={() => handleCopy(firstMessage.content)}
-                  >
-                    {t('chat.copy')}
-                  </button>
-                  <button className={styles.dropdownItem} onClick={handleOpenGroupBoard}>
-                    {t('chat.openGroupBoard')}
-                  </button>
-                  <button
-                    className={`${styles.dropdownItem} ${styles.danger}`}
-                    onClick={() => handleUnpin(firstMessage.messageId)}
-                  >
-                    {t('chat.unpin')}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
       )}
     </div>
   );
