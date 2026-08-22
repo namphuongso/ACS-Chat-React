@@ -2,7 +2,6 @@ import type { ChatClient } from '@azure/communication-chat';
 import { AzureCommunicationTokenCredential } from '@azure/communication-common';
 import { unstable_batchedUpdates } from 'react-dom';
 import { AcsClientAdapter } from '../adapters/acs/acsClientAdapter';
-import { AcsEventAdapter } from '../adapters/acs/acsEventAdapter';
 import type { ReadReceipt } from '../models/ReadReceipt';
 import { useChatStore } from '../store/chatStore';
 import { useConversationStore } from '../store/conversationStore';
@@ -13,8 +12,14 @@ import type { ChatConfig } from '../types/config.types';
 import type { Conversation } from '../types/conversation.types';
 import { AcsChatError } from '../types/errors.types';
 import type { ChatDomainEvent } from '../types/events.types';
-import type { ChatMessage } from '../types/message.types';
+import type { ChatMessage, PinnedMessage } from '../types/message.types';
 import type { ConversationParticipant } from '../types/participant.types';
+import { findConversationKey, resolveConversationKeys } from '../utils/conversationKeys';
+import { websocketService } from './websocketService';
+import { messageService } from './messageService';
+import { readReceiptService } from './readReceiptService';
+import { linkPreviewService } from './linkPreviewService';
+import { logger, setLogger } from '../utils';
 
 export type EventListenerFn = (event: ChatDomainEvent) => void;
 
@@ -24,14 +29,13 @@ export type EventListenerFn = (event: ChatDomainEvent) => void;
  */
 export class ChatService {
   private clientAdapter: AcsClientAdapter | null = null;
-  private eventAdapter: AcsEventAdapter | null = null;
   private config: ChatConfig | null = null;
   private initialized = false;
   private isInitializingFlag = false;
   private listeners = new Set<EventListenerFn>();
 
   /**
-   * Initialize ACS Chat client, start real-time notifications, and subscribe to events.
+   * Initialize ACS Chat client, start WebSocket connection, and configure stores.
    */
   public async initialize(config: ChatConfig): Promise<void> {
     this.validateConfig(config);
@@ -46,6 +50,10 @@ export class ChatService {
 
     if (this.initialized) {
       await this.dispose();
+    }
+
+    if (config.logger) {
+      setLogger(config.logger);
     }
 
     this.isInitializingFlag = true;
@@ -86,34 +94,43 @@ export class ChatService {
       }
 
       this.clientAdapter = new AcsClientAdapter(config.endpoint, credential);
-      this.eventAdapter = new AcsEventAdapter(
-        this.clientAdapter.getChatClient(),
-        (event: ChatDomainEvent) => this.handleDomainEvent(event),
-        config
-      );
 
-      await this.clientAdapter.startRealtimeNotifications();
-      this.eventAdapter.subscribeAll();
+      linkPreviewService.setChatService(this);
+      websocketService.setChatService(this);
+      try {
+        websocketService.initialize(config);
+      } catch (err) {
+        logger.warn('[ChatService] WebSocket initialization error (non-fatal):', err);
+      }
+
+      const hasWebSocket =
+        config.enableWebSocket !== false && Boolean(config.websocketUrl || config.backendUrl);
+
+      if (!hasWebSocket) {
+        logger.warn(
+          '[ChatService] Realtime is DISABLED: WebSocket is turned off or no websocketUrl/backendUrl ' +
+            'was provided. The chat will only update via manual refresh — the removed ACS signaling ' +
+            'realtime adapter is not available as a fallback.'
+        );
+      }
 
       chatStore.setCurrentUser({
         id: config.userId,
         displayName: config.displayName,
       });
-      chatStore.setConnectionState('connected');
+
+      // If WebSocket is not used, connection is immediately considered connected;
+      // otherwise, connectionState transitions to 'connected' upon ws:connected event.
+      if (!hasWebSocket) {
+        chatStore.setConnectionState('connected');
+      } else if (websocketService.isConnected()) {
+        chatStore.setConnectionState('connected');
+      }
       chatStore.setInitializing(false);
 
       this.config = config;
       this.initialized = true;
     } catch (error) {
-      if (this.eventAdapter) {
-        try {
-          this.eventAdapter.unsubscribeAll();
-        } catch {
-          // Silent catch on error cleanup
-        }
-        this.eventAdapter = null;
-      }
-
       if (this.clientAdapter) {
         try {
           this.clientAdapter.dispose();
@@ -121,6 +138,12 @@ export class ChatService {
           // Silent catch on error cleanup
         }
         this.clientAdapter = null;
+      }
+
+      try {
+        websocketService.dispose();
+      } catch {
+        // Silent catch on error cleanup
       }
 
       const chatError =
@@ -144,26 +167,12 @@ export class ChatService {
   }
 
   /**
-   * Stop notifications, unsubscribe events, dispose adapters, and reset all store states.
+   * Stop WebSocket notifications, dispose adapters, and reset all store states.
    */
   public async dispose(): Promise<void> {
     useChatStore.getState().setConnectionState('disconnected');
 
-    if (this.eventAdapter) {
-      try {
-        this.eventAdapter.unsubscribeAll();
-      } catch {
-        // Ignore error during cleanup
-      }
-      this.eventAdapter = null;
-    }
-
     if (this.clientAdapter) {
-      try {
-        await this.clientAdapter.stopRealtimeNotifications();
-      } catch {
-        // Ignore error during cleanup
-      }
       try {
         this.clientAdapter.dispose();
       } catch {
@@ -172,6 +181,19 @@ export class ChatService {
       this.clientAdapter = null;
     }
 
+    try {
+      websocketService.dispose();
+    } catch {
+      // Ignore error during cleanup
+    }
+
+    try {
+      readReceiptService.dispose();
+    } catch {
+      // Ignore error during cleanup
+    }
+
+    setLogger(null);
     this.config = null;
     this.initialized = false;
     this.listeners.clear();
@@ -199,18 +221,6 @@ export class ChatService {
       });
     }
     return this.clientAdapter;
-  }
-
-  /**
-   * Get the initialized AcsEventAdapter instance.
-   */
-  public getEventAdapter(): AcsEventAdapter {
-    if (!this.eventAdapter || !this.initialized) {
-      throw new AcsChatError('INVALID_INPUT', 'ChatService is not initialized.', {
-        operation: 'getEventAdapter',
-      });
-    }
-    return this.eventAdapter;
   }
 
   /**
@@ -257,7 +267,13 @@ export class ChatService {
         const msg = event.payload as ChatMessage;
         msgStore.addMessage(event.conversationId, msg);
         convStore.updateLastMessage(event.conversationId, msg);
-        if (convStore.activeConversationId !== event.conversationId) {
+        const currentUserId = chatStore.currentUser?.id;
+        const activeKey = convStore.activeConversationId
+          ? findConversationKey(convStore.activeConversationId, convStore.conversations) || convStore.activeConversationId
+          : null;
+        const eventKey =
+          findConversationKey(event.conversationId, convStore.conversations) || event.conversationId;
+        if (activeKey !== eventKey && msg.sender?.id !== currentUserId) {
           convStore.incrementUnreadCount(event.conversationId, 1);
         }
         if (msg.sender?.id) {
@@ -269,11 +285,17 @@ export class ChatService {
       case 'message:edited': {
         const msg = event.payload as ChatMessage;
         msgStore.updateMessage(event.conversationId, msg.id, msg);
-        const conv = convStore.conversations[event.conversationId];
-        if (conv?.lastMessage === msg.id) {
-          convStore.updateConversation(event.conversationId, {
-            lastMessage: msg.content,
-          });
+
+        // Refresh the conversation preview only if the edited message was
+        // the most recent message in the conversation (sorted by sequenceId
+        // then createdAt), instead of relying on content heuristics.
+        const keys = resolveConversationKeys(event.conversationId, convStore.conversations);
+        const isLastMessage = keys.some((k) => {
+          const messages = useMessageStore.getState().messagesByConversation[k]?.messages;
+          return !!messages?.length && messages[messages.length - 1].id === msg.id;
+        });
+        if (isLastMessage) {
+          convStore.updateLastMessage(event.conversationId, msg);
         }
         break;
       }
@@ -283,6 +305,107 @@ export class ChatService {
         msgStore.updateMessage(event.conversationId, payload.id, {
           deletedAt: payload.deletedAt,
         });
+        break;
+      }
+
+      case 'message:pinned': {
+        const payload = event.payload as {
+          messageId: string;
+          actorId?: string;
+          actorName?: string;
+          actionAtUtc?: string;
+        };
+        if (!payload?.messageId) break;
+
+        const keys = resolveConversationKeys(event.conversationId, convStore.conversations);
+        const convState = useMessageStore.getState().messagesByConversation;
+        const isCachedAndFetched = keys.some((k) => convState[k]?.hasFetchedPinned === true);
+
+        // Handling flow:
+        // 1. If the get-pinned-messages API has been called and the data is cached,
+        //    process the event against that cached set.
+        // 2. If the API was never called or the data is not cached yet,
+        //    skip the event entirely.
+        if (!isCachedAndFetched) {
+          break;
+        }
+
+        let foundMsg: ChatMessage | undefined;
+        for (const key of keys) {
+          const conv = convState[key];
+          if (conv?.messages) {
+            foundMsg = conv.messages.find(
+              (m) => m.id === payload.messageId || m.clientMessageId === payload.messageId
+            );
+            if (foundMsg) break;
+          }
+        }
+
+        const attachment = foundMsg?.attachments?.[0];
+        const pinnedMsg: PinnedMessage = {
+          messageId: payload.messageId,
+          type: foundMsg?.type || 'text',
+          content: foundMsg?.content || '',
+          createdDate:
+            foundMsg?.createdAt instanceof Date
+              ? foundMsg.createdAt.toISOString()
+              : (foundMsg?.createdAt
+                ? String(foundMsg.createdAt)
+                : payload.actionAtUtc || new Date().toISOString()),
+          creator:
+            foundMsg?.senderDisplayName ||
+            foundMsg?.sender?.displayName ||
+            payload.actorName ||
+            '',
+          attachmentType: attachment?.mimeType || '',
+          attachmentUrl: attachment?.url || '',
+          thumbUrl: attachment?.thumbnailUrl || '',
+        };
+
+        msgStore.addPinnedMessage(event.conversationId, pinnedMsg);
+
+        // If the full message wasn't in cache, we can also fetch getPinnedMessages in background to ensure accurate content
+        if (!foundMsg) {
+          messageService
+            .getPinnedMessages(event.conversationId)
+            .then(({ data }) => {
+              if (data) {
+                msgStore.setPinnedMessages(event.conversationId, data);
+              }
+            })
+            .catch((err) => {
+              logger.warn(
+                `Failed to sync pinned messages for conversation ${event.conversationId}`,
+                err
+              );
+            });
+        }
+        break;
+      }
+
+      case 'message:unpinned': {
+        const payload = event.payload as {
+          messageId: string;
+          actorId?: string;
+          actorName?: string;
+          actionAtUtc?: string;
+        };
+        if (!payload?.messageId) break;
+
+        const keys = resolveConversationKeys(event.conversationId, convStore.conversations);
+        const convState = useMessageStore.getState().messagesByConversation;
+        const isCachedAndFetched = keys.some((k) => convState[k]?.hasFetchedPinned === true);
+
+        // Handling flow:
+        // 1. If the get-pinned-messages API has been called and the data is cached,
+        //    process the event against that cached set.
+        // 2. If the API was never called or the data is not cached yet,
+        //    skip the event entirely.
+        if (!isCachedAndFetched) {
+          break;
+        }
+
+        msgStore.removePinnedMessage(event.conversationId, payload.messageId);
         break;
       }
 
@@ -313,22 +436,29 @@ export class ChatService {
 
       case 'conversation:deleted': {
         const payload = event.payload as { id: string };
-        convStore.removeConversation(payload.id);
+        convStore.removeConversation(payload.id || event.conversationId);
         break;
       }
 
       case 'conversation:updated': {
         const payload = event.payload as {
           id: string;
-          name: string;
+          name?: string;
+          avatarUrl?: string;
+          roomType?: string;
           metadata?: Record<string, string>;
-          updatedAt: Date;
+          updatedAt?: Date;
         };
-        convStore.updateConversation(payload.id, {
-          name: payload.name,
-          metadata: payload.metadata,
-          updatedAt: payload.updatedAt,
-        });
+        // Only merge fields actually present in the payload. Backend events
+        // (e.g. RoomUpdated) may omit optional fields, and merging undefined
+        // would overwrite existing data with undefined via object spread.
+        const updates: Partial<Conversation> = {};
+        if (payload.name !== undefined) updates.name = payload.name;
+        if (payload.avatarUrl !== undefined) updates.avatarUrl = payload.avatarUrl;
+        if (payload.roomType !== undefined) updates.roomType = payload.roomType;
+        if (payload.metadata !== undefined) updates.metadata = payload.metadata;
+        if (payload.updatedAt !== undefined) updates.updatedAt = payload.updatedAt;
+        convStore.updateConversation(payload.id || event.conversationId, updates);
         break;
       }
 
@@ -341,22 +471,72 @@ export class ChatService {
       }
 
       case 'participant:removed': {
-        const payload = event.payload as { participants: ConversationParticipant[] };
-        if (payload.participants?.length > 0) {
+        const payload = event.payload as { participants?: ConversationParticipant[]; userId?: string; removedUserId?: string };
+        const currentUserId = chatStore.currentUser?.id;
+        const targetUserId = payload.userId || payload.removedUserId || payload.participants?.[0]?.id;
+        if (targetUserId && targetUserId === currentUserId) {
+          convStore.removeConversation(event.conversationId);
+        } else if (payload.participants?.length) {
           for (const p of payload.participants) {
             partStore.removeParticipant(event.conversationId, p.id);
           }
+        } else if (targetUserId) {
+          partStore.removeParticipant(event.conversationId, targetUserId);
         }
         break;
       }
 
+      case 'ws:connected':
       case 'connection:connected': {
         chatStore.setConnectionState('connected');
         break;
       }
 
+      case 'ws:disconnected':
       case 'connection:disconnected': {
         chatStore.setConnectionState('disconnected');
+        break;
+      }
+
+      case 'room:pinned': {
+        const payload = event.payload as { roomId?: string; pin?: boolean };
+        const convId = payload?.roomId || event.conversationId;
+        if (convId) {
+          convStore.updateConversation(convId, { pin: true });
+        }
+        break;
+      }
+
+      case 'room:unpinned': {
+        const payload = event.payload as { roomId?: string; pin?: boolean };
+        const convId = payload?.roomId || event.conversationId;
+        if (convId) {
+          convStore.updateConversation(convId, { pin: false });
+        }
+        break;
+      }
+
+      case 'room:disbanded': {
+        const convId = event.conversationId;
+        if (convId) {
+          convStore.removeConversation(convId);
+        }
+        break;
+      }
+
+      // TODO(message-reactions): wire up reaction store when reactions UI ships.
+      case 'message:reacted':
+      case 'message:reactionRemoved': {
+        // Intentionally not handled yet; mapped by wsMappers but has no store
+        // consumer. Kept explicit to avoid silent drops through default.
+        break;
+      }
+
+      // TODO(room-roles): wire up owner/member-role store when role UI ships.
+      case 'room:roleChanged':
+      case 'room:ownershipTransferred': {
+        // Intentionally not handled yet; mapped by wsMappers but has no store
+        // consumer. Kept explicit to avoid silent drops through default.
         break;
       }
 

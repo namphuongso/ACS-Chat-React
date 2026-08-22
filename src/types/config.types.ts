@@ -40,10 +40,26 @@ export interface ChatConfig {
   backendUrl?: string;
   /** Optional custom headers for backend API requests */
   backendHeaders?: Record<string, string>;
+  /** Optional custom headers for file upload API requests */
+  uploadHeaders?: Record<string, string>;
+  /** Optional custom headers for file download requests */
+  downloadHeaders?: Record<string, string>;
   /** Optional reconnection policy configuration */
   reconnectPolicy?: ReconnectPolicy;
   /** Optional custom logger implementation */
   logger?: ChatLogger;
   /** Optional callback to handle file uploads, returning metadata for attachment */
   onFileUpload?: (file: File) => Promise<import('./message.types').FileAttachment>;
+  /** Optional callback to handle file downloads */
+  onFileDownload?: (url: string, fileName?: string) => Promise<void> | void;
+  /** Optional explicit WebSocket server URL (e.g. wss://<host>/ws/chat/view) */
+  websocketUrl?: string;
+  /** Optional device ID for multi-device/multi-tab WebSocket session identification */
+  deviceId?: string;
+  /** Optional initial room ID to join upon opening WebSocket connection */
+  initialRoomId?: string;
+  /** Optional flag to enable/disable WebSocket realtime connection (default: true if backendUrl/websocketUrl present) */
+  enableWebSocket?: boolean;
+  /** Optional JWT access token specifically for WebSocket/Backend if distinct from ACS token */
+  accessToken?: string;
 }

@@ -100,6 +100,7 @@ export const ConversationFooterBottomToolbar: React.FC<ConversationFooterBottomT
 
     setActiveColor('#0f172a');
     updateFormatState();
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
     saveHistory();
   };
 

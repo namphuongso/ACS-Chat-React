@@ -4,6 +4,7 @@ import { useConversations } from '../../hooks/useConversations';
 import { useMessages } from '../../hooks/useMessages';
 import { useChat } from '../../hooks/useChat';
 import { useChatStore } from '../../store/chatStore';
+import { useMessageStore } from '../../store/messageStore';
 import { useRoomMembers } from '../../hooks/useRoomMembers';
 import { MessageList } from '../MessageList';
 import { ConversationFooter } from './ConversationFooter';
@@ -32,10 +33,31 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
     const idToUse = conversationId || activeConversation?.id;
 
     const conversation = useMemo(() => {
-      return conversations.find((c) => c.id === idToUse);
-    }, [conversations, idToUse]);
+      if (!idToUse) return undefined;
+      return (
+        conversations.find(
+          (c) =>
+            c.id === idToUse ||
+            c.conversationId === idToUse ||
+            (c as unknown as Record<string, unknown>).threadId === idToUse ||
+            (c as unknown as Record<string, unknown>).roomId === idToUse
+        ) || activeConversation
+      );
+    }, [conversations, idToUse, activeConversation]);
 
     const { roomMembers, roomType } = useRoomMembers(conversation);
+
+    const pinnedMessagesFromStore = useMessageStore((state) =>
+      idToUse ? state.messagesByConversation[idToUse]?.pinnedMessages : undefined
+    );
+
+    const effectivePinnedMessageIds = useMemo(() => {
+      if (pinnedMessageIds) return pinnedMessageIds;
+      if (pinnedMessagesFromStore) {
+        return new Set(pinnedMessagesFromStore.map((m) => m.messageId));
+      }
+      return undefined;
+    }, [pinnedMessageIds, pinnedMessagesFromStore]);
 
     // Call hooks unconditionally
     const {
@@ -43,21 +65,23 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
       loading,
       loadingMore,
       hasMore,
+      hasFetched,
       loadMore,
       loadMessages,
       sendMessage,
       editMessage,
       deleteMessage,
       pinMessage,
+      jumpToMessage,
     } = useMessages(idToUse || '');
 
     useEffect(() => {
-      if (idToUse && messages.length === 0 && !loading) {
+      if (idToUse && !hasFetched && !loading) {
         loadMessages().catch((err) => {
           console.warn('Failed to load messages', err);
         });
       }
-    }, [idToUse, loadMessages, messages.length, loading]);
+    }, [idToUse, loadMessages, hasFetched, loading]);
 
     const handleSend = useCallback(
       (content: string, options?: SendMessageOptions) => {
@@ -168,15 +192,17 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
 
         <PinnedMessageBanner
           conversationId={idToUse}
-          backendConversationId={conversation.conversationId}
-          pinnedMessageIds={pinnedMessageIds}
+          backendConversationId={conversation.conversationId || conversation.id}
+          pinnedMessageIds={effectivePinnedMessageIds}
           isGroup={roomType === 'group' || conversation.type === 'group'}
           onUnpinMessage={handlePinMessage}
+          onJumpToMessage={jumpToMessage}
         />
 
         <div className={styles.messageListWrapper}>
           <MessageList
             key={idToUse}
+            conversationId={idToUse}
             messages={messages}
             currentUserId={currentUser?.id || ''}
             loading={loading}
@@ -188,7 +214,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
             onEditMessage={handleEditMessage}
             onDeleteMessage={handleDeleteMessage}
             onPinMessage={handlePinMessage}
-            pinnedMessageIds={pinnedMessageIds}
+            pinnedMessageIds={effectivePinnedMessageIds}
           />
         </div>
 

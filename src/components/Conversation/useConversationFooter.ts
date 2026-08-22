@@ -4,6 +4,9 @@ import { uploadFile } from '../../services/fileService';
 import { useMessageStore } from '../../store/messageStore';
 import { useChatStore } from '../../store/chatStore';
 import { generateId } from '../../utils/id';
+import { safeNormalizeFormattingElement } from '../../utils/htmlUtils';
+import { isLargeImage } from '../../utils/imageUtils';
+import { logger } from '../../utils/logger';
 
 export interface UseConversationFooterProps {
   conversationId?: string;
@@ -39,24 +42,19 @@ export function useConversationFooter({
   });
 
   const updateFormatState = useCallback(() => {
-    const editor = messageEditorRef.current;
-    const selection = window.getSelection();
-    const anchorNode = selection?.anchorNode;
-
-    if (!editor || !anchorNode || (anchorNode !== editor && !editor.contains(anchorNode))) {
-      return;
+    try {
+      setFormatState({
+        bold: document.queryCommandState('bold'),
+        italic: document.queryCommandState('italic'),
+        underline: document.queryCommandState('underline'),
+        strikeThrough: document.queryCommandState('strikeThrough'),
+        insertUnorderedList: document.queryCommandState('insertUnorderedList'),
+        insertOrderedList: document.queryCommandState('insertOrderedList'),
+        fontSize: document.queryCommandValue('fontSize') || '3',
+      });
+    } catch (e) {
+      // Ignore if queryCommand fails
     }
-
-    const state = {
-      bold: document.queryCommandState('bold'),
-      italic: document.queryCommandState('italic'),
-      underline: document.queryCommandState('underline'),
-      strikeThrough: document.queryCommandState('strikeThrough'),
-      insertUnorderedList: document.queryCommandState('insertUnorderedList'),
-      insertOrderedList: document.queryCommandState('insertOrderedList'),
-      fontSize: document.queryCommandValue('fontSize') || '3',
-    };
-    setFormatState(state);
   }, []);
 
   useEffect(() => {
@@ -116,26 +114,102 @@ export function useConversationFooter({
       const files = event.target.files;
       if (!files || files.length === 0) return;
 
-      const uploadPromises = Array.from(files).map(async (file) => {
-        try {
-          const dimensions = await new Promise<{ width: number; height: number }>(
-            (resolve, reject) => {
+      const fileList = Array.from(files);
+      const messageGroups: Array<{
+        items: Array<{
+          file: File;
+          url: string;
+          fileName: string;
+          mimeType: string;
+          size: number;
+          width: number;
+          height: number;
+          isLarge: boolean;
+          originalIndex: number;
+        }>;
+        minOriginalIndex: number;
+        clientMessageId: string;
+        tempId: string;
+      }> = [];
+
+      try {
+        const localFilesMeta = await Promise.all(
+          fileList.map(async (file, index) => {
+            const dimensions = await new Promise<{ width: number; height: number }>((resolve) => {
               const img = new Image();
               img.onload = () => resolve({ width: img.width, height: img.height });
-              img.onerror = reject;
+              img.onerror = () => resolve({ width: 0, height: 0 });
               img.src = URL.createObjectURL(file);
-            }
-          );
+            });
 
+            return {
+              file,
+              url: URL.createObjectURL(file),
+              fileName: file.name,
+              mimeType: file.type,
+              size: file.size,
+              width: dimensions.width,
+              height: dimensions.height,
+              isLarge: isLargeImage(file),
+              originalIndex: index,
+            };
+          })
+        );
+
+        if (localFilesMeta.length === 1) {
           const clientMessageId = generateId();
-          const tempId = `temp-${clientMessageId}`;
+          messageGroups.push({
+            items: localFilesMeta,
+            minOriginalIndex: 0,
+            clientMessageId,
+            tempId: `temp-${clientMessageId}`,
+          });
+        } else {
+          const normalItems = localFilesMeta.filter((item) => !item.isLarge);
+          const largeItems = localFilesMeta.filter((item) => item.isLarge);
 
-          if (conversationId) {
-            const currentUser = useChatStore.getState().currentUser;
-            if (currentUser) {
+          if (normalItems.length > 0) {
+            const clientMessageId = generateId();
+            messageGroups.push({
+              items: normalItems,
+              minOriginalIndex: Math.min(...normalItems.map((i) => i.originalIndex)),
+              clientMessageId,
+              tempId: `temp-${clientMessageId}`,
+            });
+          }
+
+          for (const item of largeItems) {
+            const clientMessageId = generateId();
+            messageGroups.push({
+              items: [item],
+              minOriginalIndex: item.originalIndex,
+              clientMessageId,
+              tempId: `temp-${clientMessageId}`,
+            });
+          }
+
+          // Sort groups by original selection order
+          messageGroups.sort((a, b) => a.minOriginalIndex - b.minOriginalIndex);
+        }
+
+        logger.info(
+          `[handleFileChange] Partitioned ${localFilesMeta.length} file(s) into ${messageGroups.length} message(s):`,
+          messageGroups.map((g) => ({
+            count: g.items.length,
+            files: g.items.map((i) => `${i.fileName} (${(i.size / (1024 * 1024)).toFixed(2)} MB, isLarge=${i.isLarge})`),
+          }))
+        );
+
+        if (conversationId) {
+          const currentUser = useChatStore.getState().currentUser;
+          if (currentUser) {
+            for (const group of messageGroups) {
+              const localFiles = group.items.map(
+                ({ file: _, isLarge: __, originalIndex: ___, ...rest }) => rest
+              );
               useMessageStore.getState().addMessage(conversationId, {
-                id: tempId,
-                clientMessageId,
+                id: group.tempId,
+                clientMessageId: group.clientMessageId,
                 conversationId,
                 type: 'text',
                 content: '',
@@ -144,38 +218,75 @@ export function useConversationFooter({
                 status: 'sending',
                 metadata: {
                   type: 'image',
-                  url: URL.createObjectURL(file),
-                  fileName: file.name,
-                  mimeType: file.type,
-                  width: String(dimensions.width),
-                  height: String(dimensions.height),
+                  files: localFiles,
+                  ...(localFiles.length === 1
+                    ? {
+                        url: localFiles[0].url,
+                        fileName: localFiles[0].fileName,
+                        mimeType: localFiles[0].mimeType,
+                        size: localFiles[0].size,
+                        width: localFiles[0].width,
+                        height: localFiles[0].height,
+                      }
+                    : {}),
                 },
               });
             }
           }
+        }
 
-          const url = await uploadFile(file);
+        const uploadResultMap = new Map<File, string>();
+        await Promise.all(
+          localFilesMeta.map(async (item) => {
+            const url = await uploadFile(item.file);
+            uploadResultMap.set(item.file, url);
+          })
+        );
+
+        for (const group of messageGroups) {
+          const uploadedFiles = group.items.map((item) => {
+            const url = uploadResultMap.get(item.file) || item.url;
+            return {
+              url,
+              fileName: item.fileName,
+              mimeType: item.mimeType,
+              size: item.size,
+              width: item.width,
+              height: item.height,
+            };
+          });
 
           onSend('', {
             metadata: {
               type: 'image',
-              url,
-              fileName: file.name,
-              mimeType: file.type,
-              width: String(dimensions.width),
-              height: String(dimensions.height),
+              files: uploadedFiles,
+              ...(uploadedFiles.length === 1
+                ? {
+                    url: uploadedFiles[0].url,
+                    fileName: uploadedFiles[0].fileName,
+                    mimeType: uploadedFiles[0].mimeType,
+                    size: uploadedFiles[0].size,
+                    width: uploadedFiles[0].width,
+                    height: uploadedFiles[0].height,
+                  }
+                : {}),
             },
-            clientMessageId,
+            clientMessageId: group.clientMessageId,
           });
-        } catch (error) {
-          console.error('Failed to upload and send image:', error);
         }
-      });
-
-      await Promise.all(uploadPromises);
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      } catch (error) {
+        console.error('Failed to upload and send image:', error);
+        if (conversationId) {
+          for (const group of messageGroups) {
+            useMessageStore
+              .getState()
+              .updateMessage(conversationId, group.tempId, { status: 'failed' });
+          }
+        }
+      } finally {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       }
     },
     [conversationId, onSend]
@@ -187,10 +298,10 @@ export function useConversationFooter({
       if (!files || files.length === 0) return;
 
       const uploadPromises = Array.from(files).map(async (file) => {
-        try {
-          const clientMessageId = generateId();
-          const tempId = `temp-${clientMessageId}`;
+        const clientMessageId = generateId();
+        const tempId = `temp-${clientMessageId}`;
 
+        try {
           const baseMetadata: Record<string, string> = {
             fileName: file.name,
             mimeType: file.type,
@@ -203,7 +314,8 @@ export function useConversationFooter({
           };
           let finalMetadata: Record<string, string> = { ...baseMetadata };
 
-          if (file.type.startsWith('video/')) {
+          const isVideo = file.type.startsWith('video/') || /\.(mp4|mov)$/i.test(file.name);
+          if (isVideo) {
             const videoMeta = await new Promise<{
               width: number;
               height: number;
@@ -270,6 +382,9 @@ export function useConversationFooter({
           });
         } catch (error) {
           console.error('Failed to upload and send file:', error);
+          if (conversationId) {
+            useMessageStore.getState().updateMessage(conversationId, tempId, { status: 'failed' });
+          }
         }
       });
 
@@ -397,6 +512,10 @@ export function useConversationFooter({
 
       saveHistory();
       document.execCommand(command, false, value);
+      const currentSelection = window.getSelection();
+      if (currentSelection && !currentSelection.isCollapsed) {
+        safeNormalizeFormattingElement(editor);
+      }
       saveHistory();
       editor.dispatchEvent(new Event('input', { bubbles: true }));
       updateFormatState();

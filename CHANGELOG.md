@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added URL detection and linkification in text messages: http(s)/www. links are rendered as clickable anchors (`target="_blank"`, `rel="noopener noreferrer"`).
+- Added link preview support when sending messages (spec plan-p2 §19):
+  - New `LinkPreviewCard` component rendering title, description, image, site name and favicon.
+  - New `linkPreviewService` (`POST /api/link-preview` backend extraction, with client-side Open Graph fallback and in-memory cache).
+  - New `useLinkPreview` hook for lazy preview resolution in rendered messages.
+  - Message compose area now shows the preview of the first detected URL before sending; the preview is attached to the message as `metadata.linkPreview`.
+  - New `MessageInput.enableLinkPreview` prop (default `true`).
+- Added `LinkPreview` type exported from the package.
+
+### Changed
+
+- `sanitizeHtml` now preserves the `target` attribute (DOMPurify >= 3.3 drops it by default) so message links can open in a new tab.
+
 ## [1.2.0] - 2026-08-14
 
 ### Added
@@ -22,10 +39,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated UI translations (English and Vietnamese) for new formatting features.
 - Relaxed empty message validation in `acsThreadAdapter` and `messageService` to allow media-only messages.
 - Updated CSS variables (`variables.scss`) for formatting menus and toolbars.
+- **Breaking:** `uploadFiles` in `fileService` now returns `Promise<UploadFilesResult>` (`{ success: string[], failed: Array<{ file: File; error: unknown }> }`) instead of `Promise<string[]>`; `uploadFile` now throws when the server does not return a file URL (previously fell back to the `uploadId`).
 
 ### Removed
 
 - Removed `replace-vars.cjs` build script.
+- Removed ACS signaling realtime adapter (`AcsEventAdapter`); realtime updates now require WebSocket (`websocketUrl` or `backendUrl` with `enableWebSocket` not `false`). Deployments without WebSocket will only update via manual refresh — a warning is logged at startup in that case.
+
+### Fixed
+
+- Fixed optimistic message deduplication mistakenly dropping a new message when the same sender recently sent identical content (e.g., sending the same text twice within 60s); messages with distinct `clientMessageId`/`sequenceId` are no longer treated as duplicates, and a server confirmation must not predate its optimistic counterpart.
 
 ## [1.1.0] - 2026-08-12
 

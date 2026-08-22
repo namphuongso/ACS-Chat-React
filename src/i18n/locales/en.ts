@@ -35,6 +35,7 @@ export const en = {
     leaveGroup: 'Leave group',
     removeFromGroup: 'Remove from group',
     close: 'Close',
+    loadingLinkPreview: 'Loading preview...',
     tabs: {
       all: 'All',
       contacts: 'Contacts',
@@ -54,6 +55,10 @@ export const en = {
     delivered: 'Delivered',
     sending: 'Sending...',
     failedToLoad: 'Failed to load',
+    availableOnDevice: 'Available on device',
+    openFolder: 'Open folder',
+    download: 'Download',
+    downloading: 'Downloading...',
     you: 'You',
     justNow: 'Just now',
     minsAgo: '{{count}} mins',

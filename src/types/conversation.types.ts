@@ -16,6 +16,8 @@ export interface BaseConversation {
   conversationId?: string;
   /** Type of conversation ('direct' or 'group') */
   type: ConversationType;
+  /** Raw backend room type ('U' for direct, 'G' for group) if provided */
+  roomType?: string;
   /** Timestamp when conversation was created */
   createdAt: Date;
   /** Timestamp when conversation was last updated */

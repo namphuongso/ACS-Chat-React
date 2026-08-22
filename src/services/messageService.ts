@@ -1,5 +1,11 @@
-import type { ChatMessage, SendMessageOptions, PinnedMessage } from '../types/message.types';
-import { useMessageStore } from '../store/messageStore';
+import type {
+  ChatMessage,
+  SendMessageOptions,
+  PinnedMessage,
+  BackendGetMessagesData,
+  BackendChatMessageItem,
+} from '../types/message.types';
+import { useMessageStore, dedupAndSortMessages } from '../store/messageStore';
 import { useChatStore } from '../store/chatStore';
 import { useConversationStore } from '../store/conversationStore';
 import { mapAcsErrorToChatError, mapAcsMessageToMessage } from '../adapters/acs/acsMappers';
@@ -21,7 +27,7 @@ export interface MessageResult {
 
 /**
  * Service for managing message CRUD operations with pagination support.
- * Works with ACS ChatThreadClient adapters and Zustand message store.
+ * Uses backend API endpoints (/api/chat/...) and Zustand message store.
  */
 export class MessageService {
   private chatServiceRef: ChatService | null = null;
@@ -46,20 +52,33 @@ export class MessageService {
   }
 
   /**
-   * Get an ACS ChatThreadClient for a given conversation/thread ID.
+   * Helper to resolve the backend room ID from a conversation/thread ID.
    */
-  private getThreadClient(conversationId: string) {
-    const chatClient = this.getChatService().getChatClient();
-    return chatClient.getChatThreadClient(conversationId);
+  private getRoomId(conversationId: string): string {
+    const conversations = useConversationStore.getState().conversations;
+    const conv =
+      conversations[conversationId] ||
+      Object.values(conversations).find(
+        (c) =>
+          c.id === conversationId ||
+          c.conversationId === conversationId ||
+          (c as unknown as Record<string, unknown>).threadId === conversationId ||
+          (c as unknown as Record<string, unknown>).roomId === conversationId
+      );
+    return (
+      conv?.conversationId ||
+      ((conv as unknown as Record<string, unknown>)?.roomId as string) ||
+      conversationId
+    );
   }
 
   /**
-   * Load the initial page of messages for a conversation.
-   * Supports optional startTime for fetching messages from a specific point.
+   * Load the initial page of messages for a conversation via backend API.
+   * Supports optional continuationToken / maxPageSize.
    */
   public async loadMessages(
     conversationId: string,
-    options?: { maxPageSize?: number; startTime?: Date }
+    options?: { maxPageSize?: number; startTime?: Date; continuationToken?: string }
   ): Promise<MessageResult[]> {
     const msgStore = useMessageStore.getState();
 
@@ -72,36 +91,74 @@ export class MessageService {
     msgStore.setLoading(conversationId, true);
 
     try {
-      const threadClient = this.getThreadClient(conversationId);
-      const maxPageSize = options?.maxPageSize || 50;
-      const currentUserId = useChatStore.getState().currentUser?.id;
+      const config = this.getChatService().getConfig();
+      if (!config) {
+        throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
+          operation: 'loadMessages',
+        });
+      }
 
+      if (!config.backendUrl) {
+        throw new AcsChatError('INVALID_INPUT', 'Backend URL is not configured.', {
+          operation: 'loadMessages',
+        });
+      }
+
+      const currentUserId = useChatStore.getState().currentUser?.id;
       if (!currentUserId) {
         throw new AcsChatError('AUTH_UNAUTHORIZED', 'Current user is not set.', {
           operation: 'loadMessages',
         });
       }
 
-      const messages: ChatMessage[] = [];
-      const iterable = threadClient.listMessages({
-        maxPageSize,
-        startTime: options?.startTime,
-      });
-
-      for await (const page of iterable.byPage()) {
-        for (const acsMsg of page) {
-          const { mapAcsMessageToMessage } = await import('../adapters/acs/acsMappers');
-          const mapped = mapAcsMessageToMessage(acsMsg, conversationId, currentUserId);
-          messages.push(mapped);
-        }
-        break; // Only first page for initial load
+      const roomId = this.getRoomId(conversationId);
+      const pageSize = options?.maxPageSize || 50;
+      let endpoint = `/api/chat/get-messages?roomId=${encodeURIComponent(roomId)}&pageSize=${pageSize}`;
+      if (options?.continuationToken) {
+        endpoint += `&continuationToken=${encodeURIComponent(options.continuationToken)}`;
+      }
+      if (options?.startTime) {
+        endpoint += `&startTime=${encodeURIComponent(options.startTime.toISOString())}`;
       }
 
-      const hasMore = messages.length >= maxPageSize;
-      msgStore.setMessages(conversationId, messages, hasMore);
+      const response = await fetchBackend<BackendGetMessagesData>(config, endpoint, {
+        method: 'GET',
+      });
+
+      const responseData = response.data;
+      const items = responseData?.items || [];
+      const messages: ChatMessage[] = [];
+
+      for (const item of items) {
+        const rawMsg = (item as BackendChatMessageItem).data || item;
+        const mapped = mapAcsMessageToMessage(rawMsg, conversationId, currentUserId);
+        messages.push(mapped);
+      }
+
+      const nextContinuationToken = responseData?.continuationToken || null;
+      const hasMore =
+        responseData?.hasMore !== undefined
+          ? responseData.hasMore
+          : Boolean(nextContinuationToken && messages.length >= pageSize);
+
+      const convState = msgStore.messagesByConversation[conversationId];
+      const currentMessages = convState?.messages || [];
+      const isInitialFetchBeforeOpen = !convState?.hasFetched;
+
+      // If this is a subsequent refresh (hasFetched === true and no continuation token),
+      // only keep pending optimistic messages so server-side recalled/deleted messages vanish.
+      // If this is the first load (hasFetched === false), preserve any realtime messages
+      // received via WebSocket before opening the room.
+      const baseMessages =
+        options?.continuationToken || isInitialFetchBeforeOpen
+          ? currentMessages
+          : currentMessages.filter((m) => m.status === 'sending' || m.id.startsWith('temp-'));
+      const mergedMessages = dedupAndSortMessages(baseMessages, messages);
+
+      msgStore.setMessages(conversationId, mergedMessages, hasMore, nextContinuationToken);
       msgStore.setLoading(conversationId, false);
 
-      return messages.map((message) => ({ message }));
+      return mergedMessages.map((message) => ({ message }));
     } catch (error) {
       const chatError = mapAcsErrorToChatError(error, 'loadMessages');
       msgStore.setLoading(conversationId, false);
@@ -110,7 +167,7 @@ export class MessageService {
   }
 
   /**
-   * Fetch only the latest message for a conversation, primarily used for state resync.
+   * Fetch only the latest message for a conversation via backend API, primarily used for state resync.
    * Does not replace the entire message list in the store, just adds/updates the latest.
    */
   public async loadLatestMessage(conversationId: string): Promise<MessageResult> {
@@ -121,29 +178,43 @@ export class MessageService {
     }
 
     try {
-      const threadClient = this.getThreadClient(conversationId);
-      const currentUserId = useChatStore.getState().currentUser?.id;
+      const config = this.getChatService().getConfig();
+      if (!config) {
+        throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
+          operation: 'loadLatestMessage',
+        });
+      }
 
+      if (!config.backendUrl) {
+        throw new AcsChatError('INVALID_INPUT', 'Backend URL is not configured.', {
+          operation: 'loadLatestMessage',
+        });
+      }
+
+      const currentUserId = useChatStore.getState().currentUser?.id;
       if (!currentUserId) {
         throw new AcsChatError('AUTH_UNAUTHORIZED', 'Current user is not set.', {
           operation: 'loadLatestMessage',
         });
       }
 
-      // Fetch just the last 1 message
-      const iterable = threadClient.listMessages({ maxPageSize: 1 });
+      const roomId = this.getRoomId(conversationId);
+      const endpoint = `/api/chat/get-messages?roomId=${encodeURIComponent(roomId)}&pageSize=1`;
+
+      const response = await fetchBackend<BackendGetMessagesData>(config, endpoint, {
+        method: 'GET',
+      });
+
+      const responseData = response.data;
+      const items = responseData?.items || [];
       let latestMessage: ChatMessage | undefined;
 
-      for await (const page of iterable.byPage()) {
-        if (page.length > 0) {
-          const { mapAcsMessageToMessage } = await import('../adapters/acs/acsMappers');
-          latestMessage = mapAcsMessageToMessage(page[0], conversationId, currentUserId);
-        }
-        break; // Only need the very first message returned (which is the latest)
+      if (items.length > 0) {
+        const rawMsg = (items[0] as BackendChatMessageItem).data || items[0];
+        latestMessage = mapAcsMessageToMessage(rawMsg, conversationId, currentUserId);
       }
 
       if (latestMessage) {
-        // Add to message store
         const msgStore = useMessageStore.getState();
         msgStore.addMessage(conversationId, latestMessage);
       }
@@ -156,7 +227,7 @@ export class MessageService {
   }
 
   /**
-   * Load older messages for pagination (prepend before the oldest loaded message).
+   * Load older messages for pagination via backend API (prepend before the oldest loaded message).
    */
   public async loadMore(
     conversationId: string,
@@ -183,43 +254,59 @@ export class MessageService {
     msgStore.setLoadingMore(conversationId, true);
 
     try {
-      const threadClient = this.getThreadClient(conversationId);
-      const maxPageSize = options?.maxPageSize || 50;
-      const currentUserId = useChatStore.getState().currentUser?.id;
+      const config = this.getChatService().getConfig();
+      if (!config) {
+        throw new AcsChatError('INVALID_INPUT', 'Chat config not initialized', {
+          operation: 'loadMore',
+        });
+      }
 
+      if (!config.backendUrl) {
+        throw new AcsChatError('INVALID_INPUT', 'Backend URL is not configured.', {
+          operation: 'loadMore',
+        });
+      }
+
+      const currentUserId = useChatStore.getState().currentUser?.id;
       if (!currentUserId) {
         throw new AcsChatError('AUTH_UNAUTHORIZED', 'Current user is not set.', {
           operation: 'loadMore',
         });
       }
 
-      // Use the oldest message timestamp as the end boundary for fetching older messages
-      const oldestMsg = convData.messages[0];
-      const endTime = oldestMsg?.createdAt
-        ? new Date(oldestMsg.createdAt.getTime() - 1)
-        : undefined;
+      const roomId = this.getRoomId(conversationId);
+      const pageSize = options?.maxPageSize || 50;
+      const continuationToken = convData.continuationToken;
 
-      // List messages with startTime before the oldest message
-      const olderMessages: ChatMessage[] = [];
-      const pages = threadClient.listMessages({
-        maxPageSize,
-        startTime: endTime,
-      });
-
-      for await (const page of pages.byPage()) {
-        // Filter out any messages that are already loaded (by ID)
-        const existingIds = new Set(convData.messages.map((m) => m.id));
-        for (const acsMsg of page) {
-          const mapped = mapAcsMessageToMessage(acsMsg, conversationId, currentUserId);
-          if (!existingIds.has(mapped.id)) {
-            olderMessages.push(mapped);
-          }
-        }
-        if (olderMessages.length > 0) break; // Only take first batch of new older messages
+      let endpoint = `/api/chat/get-messages?roomId=${encodeURIComponent(roomId)}&pageSize=${pageSize}`;
+      if (continuationToken) {
+        endpoint += `&continuationToken=${encodeURIComponent(continuationToken)}`;
       }
 
-      const hasMore = olderMessages.length >= maxPageSize;
-      msgStore.prependMessages(conversationId, olderMessages, hasMore);
+      const response = await fetchBackend<BackendGetMessagesData>(config, endpoint, {
+        method: 'GET',
+      });
+
+      const responseData = response.data;
+      const items = responseData?.items || [];
+      const olderMessages: ChatMessage[] = [];
+
+      const existingIds = new Set(convData.messages.map((m) => m.id));
+      for (const item of items) {
+        const rawMsg = (item as BackendChatMessageItem).data || item;
+        const mapped = mapAcsMessageToMessage(rawMsg, conversationId, currentUserId);
+        if (!existingIds.has(mapped.id)) {
+          olderMessages.push(mapped);
+        }
+      }
+
+      const nextContinuationToken = responseData?.continuationToken || null;
+      const hasMore =
+        responseData?.hasMore !== undefined
+          ? responseData.hasMore
+          : Boolean(nextContinuationToken);
+
+      msgStore.prependMessages(conversationId, olderMessages, hasMore, nextContinuationToken);
       msgStore.setLoadingMore(conversationId, false);
 
       return olderMessages.map((message) => ({ message }));
@@ -303,33 +390,49 @@ export class MessageService {
         });
       }
 
-      const roomId =
-        useConversationStore.getState().conversations[conversationId]?.conversationId ||
-        conversationId;
+      const roomId = this.getRoomId(conversationId);
 
       const responseData = await fetchBackend<string>(config, '/api/chat/send-message', {
         method: 'POST',
         body: JSON.stringify({
           roomId,
           content,
-          metaData: options?.metadata,
+          metaData: {
+            ...options?.metadata,
+            clientMessageId,
+          },
+          attachments: options?.attachments,
         }),
       });
 
-      const serverMessageId = responseData.data;
+      let serverMessageId: string = '';
+      if (typeof responseData.data === 'string') {
+        serverMessageId = responseData.data;
+      } else if (responseData.data && typeof responseData.data === 'object') {
+        const d = responseData.data as Record<string, unknown>;
+        serverMessageId = String(d.messageId ?? d.MessageId ?? d.id ?? d.Id ?? '');
+      }
 
-      // Replace optimistic message with server-confirmed message
-      const confirmedMessage: ChatMessage = {
-        ...optimisticMessage,
-        id: serverMessageId,
-        clientMessageId,
-        status: 'sent',
+      if (serverMessageId && serverMessageId !== '[object Object]' && serverMessageId !== 'null' && serverMessageId !== 'undefined') {
+        // Replace optimistic message with server-confirmed message
+        const confirmedMessage: ChatMessage = {
+          ...optimisticMessage,
+          id: serverMessageId,
+          clientMessageId,
+          status: 'sent',
+        };
+
+        msgStore.addMessage(conversationId, confirmedMessage);
+      }
+
+      logger.info(`Message sent to conversation ${conversationId}: ${serverMessageId || 'ok'}`);
+      return {
+        message: {
+          ...optimisticMessage,
+          id: serverMessageId || tempId,
+          status: 'sent',
+        },
       };
-
-      msgStore.addMessage(conversationId, confirmedMessage);
-
-      logger.info(`Message sent to conversation ${conversationId}: ${serverMessageId}`);
-      return { message: confirmedMessage };
     } catch (error) {
       // Optimistic update failed - mark message as failed
       msgStore.updateMessage(conversationId, tempId, { status: 'failed' });
@@ -406,9 +509,7 @@ export class MessageService {
         });
       }
 
-      const roomId =
-        useConversationStore.getState().conversations[conversationId]?.conversationId ||
-        conversationId;
+      const roomId = this.getRoomId(conversationId);
 
       await fetchBackend<boolean>(config, '/api/chat/update-message', {
         method: 'POST',
@@ -497,9 +598,7 @@ export class MessageService {
         });
       }
 
-      const roomId =
-        useConversationStore.getState().conversations[conversationId]?.conversationId ||
-        conversationId;
+      const roomId = this.getRoomId(conversationId);
 
       await fetchBackend<boolean>(config, '/api/chat/delete-message', {
         method: 'POST',

@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import type { ConversationParticipant } from '../types/participant.types';
 import type { ChatUser } from '../types/chat.types';
 import type { ReadReceipt } from '../models/ReadReceipt';
+import { findConversationKey } from '../utils/conversationKeys';
+import { useConversationStore } from './conversationStore';
+import { getConversationKeys } from './messageStore';
 
 export interface TypingUser {
   /** User object / ID of the typing participant */
@@ -53,11 +56,14 @@ export const initialParticipantState = {
 const typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function clearTimer(conversationId: string, userId: string) {
-  const key = `${conversationId}:${userId}`;
-  const existingTimer = typingTimers.get(key);
-  if (existingTimer) {
-    clearTimeout(existingTimer);
-    typingTimers.delete(key);
+  const keys = getConversationKeys(conversationId);
+  for (const k of keys) {
+    const key = `${k}:${userId}`;
+    const existingTimer = typingTimers.get(key);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      typingTimers.delete(key);
+    }
   }
 }
 
@@ -76,40 +82,58 @@ export const useParticipantStore = create<ParticipantState>((set, get) => ({
   /* -------------------------------------------------------------------------- */
 
   setParticipants: (conversationId: string, participants: ConversationParticipant[]) =>
-    set((state) => ({
-      participantsByConversation: {
-        ...state.participantsByConversation,
-        [conversationId]: participants,
-      },
-    })),
+    set((state) => {
+      const keys = getConversationKeys(conversationId);
+      const newPartByConv = { ...state.participantsByConversation };
+      for (const k of keys) {
+        newPartByConv[k] = [...participants];
+      }
+      return {
+        participantsByConversation: newPartByConv,
+      };
+    }),
 
   addParticipants: (conversationId: string, newParticipants: ConversationParticipant[]) =>
     set((state) => {
-      const existing = state.participantsByConversation[conversationId] || [];
-      const existingMap = new Map(existing.map((p) => [p.id, p]));
+      const keys = getConversationKeys(conversationId);
+      const newPartByConv = { ...state.participantsByConversation };
 
-      for (const p of newParticipants) {
-        existingMap.set(p.id, { ...existingMap.get(p.id), ...p });
+      for (const k of keys) {
+        const existing = newPartByConv[k] || [];
+        const existingMap = new Map(existing.map((p) => [p.id, p]));
+
+        for (const p of newParticipants) {
+          existingMap.set(p.id, { ...existingMap.get(p.id), ...p });
+        }
+        newPartByConv[k] = Array.from(existingMap.values());
       }
 
       return {
-        participantsByConversation: {
-          ...state.participantsByConversation,
-          [conversationId]: Array.from(existingMap.values()),
-        },
+        participantsByConversation: newPartByConv,
       };
     }),
 
   removeParticipant: (conversationId: string, userId: string) =>
     set((state) => {
-      const existing = state.participantsByConversation[conversationId];
-      if (!existing) return state;
+      const keys = getConversationKeys(conversationId);
+      const newPartByConv = { ...state.participantsByConversation };
+      let changed = false;
+
+      for (const k of keys) {
+        const existing = newPartByConv[k];
+        if (existing) {
+          const filtered = existing.filter((p) => p.id !== userId);
+          if (filtered.length !== existing.length) {
+            newPartByConv[k] = filtered;
+            changed = true;
+          }
+        }
+      }
+
+      if (!changed) return state;
 
       return {
-        participantsByConversation: {
-          ...state.participantsByConversation,
-          [conversationId]: existing.filter((p) => p.id !== userId),
-        },
+        participantsByConversation: newPartByConv,
       };
     }),
 
@@ -122,64 +146,94 @@ export const useParticipantStore = create<ParticipantState>((set, get) => ({
     clearTimer(conversationId, user.id);
 
     set((state) => {
-      const convTyping = state.typingUsers[conversationId] || {};
-      return {
-        typingUsers: {
-          ...state.typingUsers,
-          [conversationId]: {
-            ...convTyping,
-            [user.id]: {
-              user,
-              startedAt: new Date(),
-            },
+      const keys = getConversationKeys(conversationId);
+      const newTypingUsers = { ...state.typingUsers };
+
+      for (const k of keys) {
+        const convTyping = newTypingUsers[k] || {};
+        newTypingUsers[k] = {
+          ...convTyping,
+          [user.id]: {
+            user,
+            startedAt: new Date(),
           },
-        },
+        };
+      }
+
+      return {
+        typingUsers: newTypingUsers,
       };
     });
 
-    // Schedule auto-removal after timeoutMs (default 8 seconds per ACS spec)
-    const key = `${conversationId}:${user.id}`;
+    // Schedule auto-removal after timeoutMs (default 8 seconds per ACS spec).
+    // Register the timer under the CANONICAL conversation key so a stop event
+    // arriving via any alias (roomId/threadId/conversationId) clears it.
+    const canonicalKey =
+      findConversationKey(
+        conversationId,
+        useConversationStore.getState().conversations
+      ) || conversationId;
+    const timerKey = `${canonicalKey}:${user.id}`;
+    const existingTimer = typingTimers.get(timerKey);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
     const timer = setTimeout(() => {
       get().removeTypingUser(conversationId, user.id);
     }, timeoutMs);
 
-    typingTimers.set(key, timer);
+    typingTimers.set(timerKey, timer);
   },
 
   removeTypingUser: (conversationId: string, userId: string) => {
     clearTimer(conversationId, userId);
 
     set((state) => {
-      const convTyping = state.typingUsers[conversationId];
-      if (!convTyping || !convTyping[userId]) return state;
+      const keys = getConversationKeys(conversationId);
+      const newTypingUsers = { ...state.typingUsers };
+      let changed = false;
 
-      const updated = { ...convTyping };
-      delete updated[userId];
+      for (const k of keys) {
+        const convTyping = newTypingUsers[k];
+        if (convTyping && convTyping[userId]) {
+          const updated = { ...convTyping };
+          delete updated[userId];
+          newTypingUsers[k] = updated;
+          changed = true;
+        }
+      }
+
+      if (!changed) return state;
 
       return {
-        typingUsers: {
-          ...state.typingUsers,
-          [conversationId]: updated,
-        },
+        typingUsers: newTypingUsers,
       };
     });
   },
 
   clearTypingUsers: (conversationId: string) => {
-    const convTyping = get().typingUsers[conversationId];
-    if (convTyping) {
-      for (const userId of Object.keys(convTyping)) {
-        clearTimer(conversationId, userId);
+    const keys = getConversationKeys(conversationId);
+    let changed = false;
+    for (const k of keys) {
+      const convTyping = get().typingUsers[k];
+      if (convTyping && Object.keys(convTyping).length > 0) {
+        changed = true;
+        for (const userId of Object.keys(convTyping)) {
+          clearTimer(k, userId);
+        }
       }
     }
 
+    if (!changed) return;
+
     set((state) => {
-      if (!state.typingUsers[conversationId]) return state;
-      const updated = { ...state.typingUsers };
-      delete updated[conversationId];
+      const newTypingUsers = { ...state.typingUsers };
+      for (const k of keys) {
+        delete newTypingUsers[k];
+      }
 
       return {
-        typingUsers: updated,
+        typingUsers: newTypingUsers,
       };
     });
   },
@@ -188,28 +242,30 @@ export const useParticipantStore = create<ParticipantState>((set, get) => ({
     const now = Date.now();
 
     set((state) => {
-      const convTyping = state.typingUsers[conversationId];
-      if (!convTyping) return state;
-
+      const keys = getConversationKeys(conversationId);
+      const newTypingUsers = { ...state.typingUsers };
       let changed = false;
-      const updated = { ...convTyping };
 
-      for (const [userId, item] of Object.entries(convTyping)) {
-        const age = now - item.startedAt.getTime();
-        if (age >= maxAgeMs) {
-          clearTimer(conversationId, userId);
-          delete updated[userId];
-          changed = true;
+      for (const k of keys) {
+        const convTyping = newTypingUsers[k];
+        if (!convTyping) continue;
+
+        const updated = { ...convTyping };
+        for (const [userId, item] of Object.entries(convTyping)) {
+          const age = now - item.startedAt.getTime();
+          if (age >= maxAgeMs) {
+            clearTimer(k, userId);
+            delete updated[userId];
+            changed = true;
+          }
         }
+        newTypingUsers[k] = updated;
       }
 
       if (!changed) return state;
 
       return {
-        typingUsers: {
-          ...state.typingUsers,
-          [conversationId]: updated,
-        },
+        typingUsers: newTypingUsers,
       };
     });
   },
@@ -220,6 +276,7 @@ export const useParticipantStore = create<ParticipantState>((set, get) => ({
 
   setReadReceipts: (conversationId: string, receipts: ReadReceipt[]) =>
     set((state) => {
+      const keys = getConversationKeys(conversationId);
       const receiptMap: Record<string, ReadReceipt> = {};
       for (const r of receipts) {
         if (r.user?.id) {
@@ -227,11 +284,13 @@ export const useParticipantStore = create<ParticipantState>((set, get) => ({
         }
       }
 
+      const newReadReceipts = { ...state.readReceipts };
+      for (const k of keys) {
+        newReadReceipts[k] = receiptMap;
+      }
+
       return {
-        readReceipts: {
-          ...state.readReceipts,
-          [conversationId]: receiptMap,
-        },
+        readReceipts: newReadReceipts,
       };
     }),
 
@@ -240,22 +299,24 @@ export const useParticipantStore = create<ParticipantState>((set, get) => ({
       const userId = receipt.user?.id;
       if (!userId) return state;
 
-      const convReceipts = state.readReceipts[conversationId] || {};
-      const existing = convReceipts[userId];
+      const keys = getConversationKeys(conversationId);
+      const newReadReceipts = { ...state.readReceipts };
 
-      // Update if no existing receipt or if new readOn date is newer/equal
-      if (existing && existing.readOn.getTime() > receipt.readOn.getTime()) {
-        return state;
+      for (const k of keys) {
+        const convReceipts = newReadReceipts[k] || {};
+        const existing = convReceipts[userId];
+
+        // Update if no existing receipt or if new readOn date is newer/equal
+        if (!existing || existing.readOn.getTime() <= receipt.readOn.getTime()) {
+          newReadReceipts[k] = {
+            ...convReceipts,
+            [userId]: receipt,
+          };
+        }
       }
 
       return {
-        readReceipts: {
-          ...state.readReceipts,
-          [conversationId]: {
-            ...convReceipts,
-            [userId]: receipt,
-          },
-        },
+        readReceipts: newReadReceipts,
       };
     }),
 

@@ -4,6 +4,7 @@ import { chatService } from './chatService';
 import { conversationService } from './conversationService';
 import { messageService } from './messageService';
 import { readReceiptService } from './readReceiptService';
+import { websocketService } from './websocketService';
 import type { ReconnectPolicy } from '../types/config.types';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -22,9 +23,12 @@ export class ConnectionService {
 
   private handleOnline = () => {
     // Attempt reconnect when network is restored
-    if (!this.reconnecting && useChatStore.getState().connectionState !== 'connected') {
+    if (
+      !this.reconnecting &&
+      (useChatStore.getState().connectionState !== 'connected' || !websocketService.isConnected())
+    ) {
       const config = chatService.getConfig();
-      this.reconnect(config?.reconnectPolicy);
+      this.reconnect(config?.reconnectPolicy).catch(console.error);
     }
   };
 
@@ -42,7 +46,10 @@ export class ConnectionService {
     }
 
     this.chatServiceUnsubscribe = chatService.subscribe((event) => {
-      if (event.type === 'connection:disconnected' && !this.reconnecting) {
+      if (
+        (event.type === 'connection:disconnected' || event.type === 'ws:disconnected') &&
+        !this.reconnecting
+      ) {
         const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
         if (isOnline) {
           const config = chatService.getConfig();
@@ -93,14 +100,6 @@ export class ConnectionService {
       attempt++;
       
       try {
-        // Attempt to restart realtime notifications
-        const clientAdapter = chatService.getClientAdapter();
-        await clientAdapter.startRealtimeNotifications();
-
-        // Ensure subscriptions are active
-        const eventAdapter = chatService.getEventAdapter();
-        eventAdapter.subscribeAll();
-
         // Refresh conversation list to catch any new conversations while disconnected
         await conversationService.loadConversations();
         
@@ -136,6 +135,15 @@ export class ConnectionService {
 
         // Fire and forget to not block the connected state
         Promise.allSettled(resyncPromises).catch(console.error);
+
+        // Reconnect WebSocket if not connected
+        try {
+          if (!websocketService.isConnected()) {
+            websocketService.scheduleReconnect().catch(console.error);
+          }
+        } catch {
+          // Ignore error
+        }
 
         chatStore.setConnectionState('connected');
         this.reconnecting = false;

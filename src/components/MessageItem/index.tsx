@@ -1,7 +1,18 @@
-import React, { ReactNode, useState, useRef, useEffect } from 'react';
+import React, { ReactNode, useState, useRef, useEffect, useMemo } from 'react';
 import type { ChatMessage, MessageStatus } from '../../types/message.types';
 import { Avatar } from '../Avatar';
 import { formatTime } from '../../utils/date';
+import { normalizeFormattingHtml, sanitizeHtml } from '../../utils/htmlUtils';
+import { isLargeImage } from '../../utils/imageUtils';
+import {
+  containsUrl,
+  extractUrls,
+  extractUrlsFromHtml,
+  isEmptyLinkPreview,
+  linkifyHtml,
+  parseLinkPreview,
+} from '../../utils/linkUtils';
+import { useLinkPreview } from '../../hooks/useLinkPreview';
 import { useTranslation, Trans } from 'react-i18next';
 import styles from './MessageItem.module.scss';
 import {
@@ -19,6 +30,9 @@ import {
   EditIcon,
   PinOffIcon,
 } from '../Icons';
+import { ChatImage } from './ChatImage';
+import { LargeImageCard } from './LargeImageCard';
+import { LinkPreviewCard } from './LinkPreviewCard';
 
 export interface MessageItemProps {
   message: ChatMessage;
@@ -26,6 +40,7 @@ export interface MessageItemProps {
   showSender?: boolean;
   isLastInGroup?: boolean;
   currentUserId?: string;
+  senderDisplayName?: string;
   roomMembers?: Array<{ userId?: string; contactName?: string; avatarUrl?: string; cui?: string }>;
   onEdit?: (messageId: string) => void;
   onDelete?: (messageId: string) => void;
@@ -35,14 +50,90 @@ export interface MessageItemProps {
   onCopy?: (messageId: string) => void;
   onPin?: (messageId: string, pin: boolean) => void;
   isPinned?: boolean;
+  isHighlighted?: boolean;
   onStar?: (messageId: string) => void;
   onSelect?: (messageId: string) => void;
   onViewDetails?: (messageId: string) => void;
   onRecall?: (messageId: string) => void;
+  onDownloadAttachment?: (url: string, fileName?: string) => void;
+  onOpenAttachment?: (url: string, fileName?: string) => void;
   renderContent?: (message: ChatMessage) => ReactNode;
   renderActions?: (message: ChatMessage) => ReactNode;
   renderStatus?: (status: MessageStatus) => ReactNode;
 }
+
+const getImageGridContainerStyle = (count: number): React.CSSProperties => {
+  if (count === 2) {
+    return {
+      gridTemplateColumns: 'repeat(2, 1fr)',
+      maxWidth: 420,
+    };
+  }
+  if (count === 3) {
+    return {
+      gridTemplateColumns: 'repeat(3, 1fr)',
+      maxWidth: 460,
+    };
+  }
+  if (count === 4) {
+    return {
+      gridTemplateColumns: 'repeat(4, 1fr)',
+      maxWidth: 480,
+    };
+  }
+  if (count === 5) {
+    return {
+      gridTemplateColumns: 'repeat(3, 1fr)',
+      maxWidth: 460,
+    };
+  }
+  // 6 or more
+  return {
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    maxWidth: 460,
+  };
+};
+
+const getImageGridItemStyle = (count: number, index: number): React.CSSProperties => {
+  if (count === 2) {
+    return {
+      height: 190,
+    };
+  }
+  if (count === 3) {
+    return {
+      height: 160,
+    };
+  }
+  if (count === 4) {
+    return {
+      height: 130,
+    };
+  }
+  if (count === 5) {
+    if (index < 3) {
+      return {
+        gridColumn: 'span 1',
+        height: 130,
+      };
+    }
+    if (index === 3) {
+      return {
+        gridColumn: 'span 1',
+        height: 170,
+      };
+    }
+    return {
+      gridColumn: 'span 2',
+      height: 170,
+    };
+  }
+  // 6 or more
+  return {
+    gridColumn: 'span 1',
+    height: 130,
+  };
+};
 
 export const MessageItem: React.FC<MessageItemProps> = React.memo(
   ({
@@ -51,6 +142,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
     showSender = false,
     isLastInGroup = true,
     currentUserId,
+    senderDisplayName,
     roomMembers,
     onEdit,
     onDelete,
@@ -59,10 +151,13 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
     onCopy,
     onPin,
     isPinned = false,
+    isHighlighted = false,
     onStar,
     onSelect,
     onViewDetails,
     onRecall,
+    onDownloadAttachment,
+    onOpenAttachment,
     renderContent,
     renderActions,
     renderStatus,
@@ -88,12 +183,107 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
       };
     }, [isDropdownOpen]);
 
+    const imageFiles = useMemo(() => {
+      if (message.metadata?.type !== 'image') return [];
+
+      if (message.metadata?.files) {
+        let files = message.metadata.files;
+        if (typeof files === 'string') {
+          try {
+            files = JSON.parse(files);
+          } catch {
+            files = [];
+          }
+        }
+        if (Array.isArray(files) && files.length > 0) {
+          return (files as unknown[])
+            .filter((f): f is Record<string, unknown> => typeof f === 'object' && f !== null)
+            .map((f) => ({
+              url: String(f.url || ''),
+              fileName: f.fileName ? String(f.fileName) : undefined,
+              size: f.size !== undefined ? Number(f.size) : undefined,
+              width: f.width as string | number | undefined,
+              height: f.height as string | number | undefined,
+              isLarge: f.isLarge === true || f.isLarge === 'true',
+            }))
+            .filter((f) => Boolean(f.url));
+        }
+      }
+
+      if (message.metadata?.url) {
+        return [
+          {
+            url: String(message.metadata.url),
+            fileName: message.metadata.fileName ? String(message.metadata.fileName) : undefined,
+            size: message.metadata.size !== undefined ? Number(message.metadata.size) : undefined,
+            width: message.metadata.width as string | number | undefined,
+            height: message.metadata.height as string | number | undefined,
+            isLarge: String(message.metadata.isLarge) === 'true',
+          },
+        ];
+      }
+
+      return [];
+    }, [message.metadata]);
+
+    const linkPreviewFromMetadata = useMemo(
+      () => parseLinkPreview(message.metadata?.linkPreview),
+      [message.metadata]
+    );
+
+    const linkPreviewUrlToFetch = useMemo(() => {
+      if (message.type === 'system' || message.deletedAt) return null;
+      if (linkPreviewFromMetadata && !isEmptyLinkPreview(linkPreviewFromMetadata)) {
+        return null;
+      }
+      const sourceUrl = linkPreviewFromMetadata?.url;
+      if (sourceUrl) return sourceUrl;
+      if (message.type === 'html' || message.metadata?.type === 'html') {
+        return extractUrlsFromHtml(message.content)[0] || null;
+      }
+      return extractUrls(message.content)[0] || null;
+    }, [
+      message.type,
+      message.content,
+      message.deletedAt,
+      message.metadata,
+      linkPreviewFromMetadata,
+    ]);
+
+    const fetchedLinkPreview = useLinkPreview(linkPreviewUrlToFetch);
+
+    const linkPreview = fetchedLinkPreview || linkPreviewFromMetadata;
+
+    const isSingleLargeImage = useMemo(() => {
+      if (imageFiles.length !== 1) return false;
+      const single = imageFiles[0];
+      const size =
+        single.size ?? (message.metadata?.size ? Number(message.metadata.size) : undefined);
+      return Boolean(
+        single.isLarge || isLargeImage(size) || String(message.metadata?.isLarge) === 'true'
+      );
+    }, [imageFiles, message.metadata]);
+
+    const isFileMessage = useMemo(() => {
+      if (message.metadata?.type === 'file' || message.metadata?.type === 'video') return true;
+      if (
+        message.metadata?.type !== 'image' &&
+        Boolean(message.metadata?.url) &&
+        Boolean(message.metadata?.fileName)
+      ) {
+        return true;
+      }
+      return false;
+    }, [message.metadata]);
+
+    const hasAttachments = Boolean(message.attachments && message.attachments.length > 0);
+
     // Handle System Messages
     if (message.type === 'system') {
       let systemNode: React.ReactNode = message.content;
       if (message.systemEvent) {
         const { type, initiator, participants, newTopic } = message.systemEvent;
-        
+
         const getMemberName = (id?: string, defaultName?: string) => {
           if (!id) return defaultName || 'System';
           if (id === currentUserId) return t('chat.you', 'You');
@@ -102,22 +292,25 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
         };
 
         const isInitiatorMe = initiator?.id === currentUserId;
-        const initiatorName = isInitiatorMe 
-          ? t('chat.you_lowercase', 'you') 
+        const initiatorName = isInitiatorMe
+          ? t('chat.you_lowercase', 'you')
           : getMemberName(initiator?.id, initiator?.displayName);
 
         if (type === 'topicUpdated') {
           const topicInitiator = isInitiatorMe ? t('chat.you', 'You') : initiatorName;
           systemNode = (
-            <Trans 
+            <Trans
               i18nKey="chat.system.topicUpdated"
-              defaults="<b>{{initiator}}</b> changed topic to <b>&quot;{{newTopic}}&quot;</b>"
+              defaults='<b>{{initiator}}</b> changed topic to <b>"{{newTopic}}"</b>'
               values={{ initiator: topicInitiator, newTopic }}
               components={{ b: <b /> }}
             />
           );
         } else if (type === 'participantAdded') {
-          const addedNames = participants?.filter((p) => p.id !== initiator?.id).map((p) => getMemberName(p.id, p.displayName))?.join(', ');
+          const addedNames = participants
+            ?.filter((p) => p.id !== initiator?.id)
+            .map((p) => getMemberName(p.id, p.displayName))
+            ?.join(', ');
           if (isInitiatorMe) {
             systemNode = (
               <Trans
@@ -138,7 +331,10 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
             );
           }
         } else if (type === 'participantRemoved') {
-          const removedNames = participants?.filter((p) => p.id !== initiator?.id).map((p) => getMemberName(p.id, p.displayName))?.join(', ');
+          const removedNames = participants
+            ?.filter((p) => p.id !== initiator?.id)
+            .map((p) => getMemberName(p.id, p.displayName))
+            ?.join(', ');
           if (isInitiatorMe) {
             systemNode = (
               <Trans
@@ -168,16 +364,22 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
       );
     }
 
-    const isImageMessage = message.metadata?.type === 'image' && !!message.metadata?.url;
+    const isImageMessage = imageFiles.length > 0;
+    const isNormalImageMessage = isImageMessage && !isSingleLargeImage;
 
     // Handle standard messages
     const messageClass = isOwn ? styles.ownMessage : styles.otherMessage;
-    const bubbleClass = `${isOwn ? styles.ownBubble : styles.otherBubble} ${isImageMessage ? styles.imageBubble : ''}`;
+    const bubbleClass = `${isOwn ? styles.ownBubble : styles.otherBubble} ${
+      isNormalImageMessage ? styles.imageBubble : ''
+    } ${isSingleLargeImage || isFileMessage || hasAttachments ? styles.largeImageBubble : ''} ${
+      isHighlighted ? styles.highlightedBubble : ''
+    }`;
 
     const senderId = message.sender?.id;
     const senderMember = roomMembers?.find((m) => m.cui === senderId || m.userId === senderId);
 
     const senderName =
+      senderDisplayName ||
       senderMember?.contactName ||
       message.senderDisplayName ||
       message.sender?.displayName ||
@@ -195,29 +397,127 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
         );
       }
 
-      if (isImageMessage) {
+      if (isSingleLargeImage) {
+        const singleImg = imageFiles[0];
+        const fileName =
+          singleImg.fileName || (message.metadata?.fileName as string) || 'image.jpg';
+        const size =
+          singleImg.size ?? (message.metadata?.size ? Number(message.metadata.size) : undefined);
+        const url = singleImg.url || (message.metadata?.url as string) || '';
+
         return (
-          <div className={styles.imageContainer}>
-            <div className={styles.hdBadge}>HD</div>
-            <img
-              src={message.metadata!.url}
-              alt={message.metadata!.fileName || 'image'}
-              className={styles.imageContent}
-              style={{
-                aspectRatio:
-                  message.metadata!.width && message.metadata!.height
-                    ? `${message.metadata!.width} / ${message.metadata!.height}`
-                    : 'auto',
-              }}
+          <LargeImageCard
+            fileName={fileName}
+            fileSize={size}
+            url={url}
+            onDownload={onDownloadAttachment}
+            onOpenFolder={onOpenAttachment}
+          />
+        );
+      }
+
+      if (isFileMessage) {
+        const fileName =
+          (message.metadata?.fileName as string) || (message.metadata?.name as string) || 'file';
+        const size = message.metadata?.size ? Number(message.metadata.size) : undefined;
+        const url = (message.metadata?.url as string) || '';
+
+        return (
+          <div>
+            <LargeImageCard
+              fileName={fileName}
+              fileSize={size}
+              url={url}
+              onDownload={onDownloadAttachment}
+              onOpenFolder={onOpenAttachment}
             />
+            {message.content ? (
+              <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{message.content}</div>
+            ) : null}
+          </div>
+        );
+      }
+
+      if (hasAttachments && message.attachments) {
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {message.attachments.map((att) => (
+              <LargeImageCard
+                key={att.id || att.url}
+                fileName={att.name}
+                fileSize={att.size}
+                url={att.url}
+                onDownload={onDownloadAttachment}
+                onOpenFolder={onOpenAttachment}
+              />
+            ))}
+            {message.content ? (
+              <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{message.content}</div>
+            ) : null}
+          </div>
+        );
+      }
+
+      if (isImageMessage) {
+        if (imageFiles.length === 1) {
+          const singleImg = imageFiles[0];
+          return (
+            <div className={styles.imageContainer}>
+              <div className={styles.hdBadge}>HD</div>
+              <ChatImage
+                src={singleImg.url}
+                alt={singleImg.fileName || 'image'}
+                className={styles.imageContent}
+                style={{
+                  aspectRatio:
+                    singleImg.width &&
+                    singleImg.height &&
+                    Number(singleImg.width) > 0 &&
+                    Number(singleImg.height) > 0
+                      ? `${singleImg.width} / ${singleImg.height}`
+                      : '4 / 3',
+                }}
+              />
+            </div>
+          );
+        }
+
+        const count = imageFiles.length;
+
+        return (
+          <div className={styles.imageGrid} style={getImageGridContainerStyle(count)}>
+            {imageFiles.map((img, idx) => (
+              <div
+                key={img.url || idx}
+                className={styles.imageGridItem}
+                style={getImageGridItemStyle(count, idx)}
+              >
+                <div className={styles.hdBadge}>HD</div>
+                <ChatImage
+                  src={img.url}
+                  alt={img.fileName || `image-${idx}`}
+                  className={styles.imageContent}
+                />
+              </div>
+            ))}
           </div>
         );
       }
 
       if (message.type === 'html' || message.metadata?.type === 'html') {
-        return <div dangerouslySetInnerHTML={{ __html: message.content }} />;
+        const sanitized = normalizeFormattingHtml(sanitizeHtml(message.content)) || '';
+        return <div dangerouslySetInnerHTML={{ __html: sanitized }} />;
       }
-      return <div>{message.content}</div>;
+      if (containsUrl(message.content)) {
+        const linkified = sanitizeHtml(linkifyHtml(message.content)) || '';
+        return (
+          <div
+            className={styles.linkifiedContent}
+            dangerouslySetInnerHTML={{ __html: linkified }}
+          />
+        );
+      }
+      return <div style={{ whiteSpace: 'pre-wrap' }}>{message.content}</div>;
     };
 
     const handleActionClick = (actionFn?: (id: string) => void) => {
@@ -229,7 +529,8 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
 
     return (
       <div
-        className={`${styles.messageItem} ${messageClass} ${!isLastInGroup ? styles.groupedMessage : ''}`}
+        id={`acs-msg-${message.id}`}
+        className={`${styles.messageItem} ${messageClass} ${!isLastInGroup ? styles.groupedMessage : ''} ${isImageMessage ? styles.imageMessageItem : ''} ${isHighlighted ? styles.highlighted : ''}`}
       >
         {/* Avatar for other users */}
         {!isOwn && showSender && (
@@ -245,6 +546,9 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
             {!isOwn && showSender && <div className={styles.senderName}>{senderName}</div>}
 
             {renderContent ? renderContent(message) : defaultRenderContent()}
+            {!renderContent && linkPreview && !message.deletedAt && !message.recalledAt && (
+              <LinkPreviewCard preview={linkPreview} />
+            )}
             {message.editedAt && !message.deletedAt && !message.recalledAt && (
               <span className={styles.edited}>{t('chat.edited')}</span>
             )}
@@ -399,3 +703,9 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
     );
   }
 );
+
+export { LargeImageCard } from './LargeImageCard';
+export type { LargeImageCardProps } from './LargeImageCard';
+export { ChatImage } from './ChatImage';
+export { LinkPreviewCard } from './LinkPreviewCard';
+export type { LinkPreviewCardProps } from './LinkPreviewCard';

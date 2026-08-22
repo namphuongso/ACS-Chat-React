@@ -31,6 +31,26 @@ export interface FileAttachment {
 }
 
 /**
+ * Preview metadata for a URL detected in a message.
+ * Extracted from Open Graph / meta tags by the backend (/api/link-preview)
+ * or client-side fallback.
+ */
+export interface LinkPreview {
+  /** The original URL this preview belongs to */
+  url: string;
+  /** Page title (og:title or <title>) */
+  title?: string;
+  /** Short description (og:description or meta description) */
+  description?: string;
+  /** Preview image URL (og:image) */
+  imageUrl?: string;
+  /** Site name (og:site_name) */
+  siteName?: string;
+  /** Favicon URL of the site */
+  favicon?: string;
+}
+
+/**
  * Represents a chat message in a conversation
  */
 export interface ChatMessage {
@@ -57,7 +77,7 @@ export interface ChatMessage {
   /** Current delivery/read status */
   status: MessageStatus;
   /** Custom key-value metadata attached to message */
-  metadata?: Record<string, string>;
+  metadata?: MessageMetadata;
   /** File attachments if any */
   attachments?: FileAttachment[];
   /** System event payload if type is 'system' */
@@ -74,13 +94,24 @@ export interface ChatMessage {
 }
 
 /**
+ * Custom metadata value type supporting primitives, nested objects, and arrays
+ */
+export type MessageMetadataValue =
+  | string
+  | number
+  | Record<string, string | number>
+  | Array<string | number | Record<string, string | number>>;
+
+export type MessageMetadata = Record<string, MessageMetadataValue>;
+
+/**
  * Options when sending a new message
  */
 export interface SendMessageOptions {
   /** Format of the message (text or html, defaults to text) */
   type?: 'text' | 'html';
   /** Custom metadata key-value pairs */
-  metadata?: Record<string, string>;
+  metadata?: MessageMetadata;
   /** Optional file attachments */
   attachments?: FileAttachment[];
   /** Optional explicit sender display name for optimistic UI updates */
@@ -103,12 +134,58 @@ export interface PinnedMessage {
   thumbUrl: string;
 }
 
-/**
- * Options when listing messages from a thread
- */
 export interface ListMessagesOptions {
   /** Maximum number of messages per page */
   maxPageSize?: number;
   /** Start time to fetch messages from */
   startTime?: Date;
+  /** Continuation token for pagination */
+  continuationToken?: string;
+}
+
+/**
+ * Raw chat message data inside backend response items
+ */
+export interface BackendChatMessageData {
+  id: string;
+  type: string;
+  sequenceId?: string;
+  version?: string;
+  content?: {
+    message?: string | null;
+    topic?: string | null;
+    participants?: Array<{ id?: unknown; displayName?: string }>;
+    attachments?: unknown[];
+    initiator?: unknown;
+  };
+  senderDisplayName?: string;
+  createdOn?: string;
+  editedOn?: string | null;
+  deletedOn?: string | null;
+  metadata?: Record<string, string>;
+  senderCommunicationIdentifier?: {
+    rawId?: string;
+    communicationUser?: {
+      id?: string;
+    };
+  };
+  sender?: unknown;
+}
+
+/**
+ * Single item in the backend get-messages response
+ */
+export interface BackendChatMessageItem {
+  itemType: string;
+  createdDate?: string;
+  data: BackendChatMessageData;
+}
+
+/**
+ * Data payload returned from /api/chat/get-messages
+ */
+export interface BackendGetMessagesData {
+  items: BackendChatMessageItem[];
+  continuationToken?: string | null;
+  hasMore?: boolean;
 }

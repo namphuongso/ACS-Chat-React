@@ -37,6 +37,7 @@ vi.mock('../../MessageInput', () => ({
 describe('ConversationView Component', () => {
   const mockSendMessage = vi.fn();
   const mockLoadMore = vi.fn();
+  const mockLoadMessages = vi.fn().mockResolvedValue([]);
   
   beforeEach(() => {
     vi.clearAllMocks();
@@ -59,7 +60,9 @@ describe('ConversationView Component', () => {
       loading: false,
       loadingMore: false,
       hasMore: true,
+      hasFetched: true,
       loadMore: mockLoadMore,
+      loadMessages: mockLoadMessages,
       sendMessage: mockSendMessage,
     } as unknown as ReturnType<typeof useMessages>);
   });
@@ -105,5 +108,21 @@ describe('ConversationView Component', () => {
     
     render(<ConversationView />);
     expect(screen.getByText('chat.send')).toBeDisabled();
+  });
+
+  it('should call loadMessages when hasFetched is false even if messages already contain a received message', () => {
+    vi.mocked(useMessages).mockReturnValue({
+      messages: [{ id: 'realtime-msg-1' }] as never,
+      loading: false,
+      loadingMore: false,
+      hasMore: true,
+      hasFetched: false,
+      loadMore: mockLoadMore,
+      loadMessages: mockLoadMessages,
+      sendMessage: mockSendMessage,
+    } as unknown as ReturnType<typeof useMessages>);
+
+    render(<ConversationView conversationId="conv-1" />);
+    expect(mockLoadMessages).toHaveBeenCalledTimes(1);
   });
 });

@@ -9,6 +9,7 @@ import { messageService } from '../services/messageService';
 import { participantService } from '../services/participantService';
 import { readReceiptService } from '../services/readReceiptService';
 import { typingService } from '../services/typingService';
+import { websocketService } from '../services/websocketService';
 import type { ChatConfig } from '../types/config.types';
 
 export interface ChatProviderProps {
@@ -42,6 +43,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = React.memo(({ config, l
         messageService.setChatService(chatService);
         readReceiptService.setChatService(chatService);
         typingService.setChatService(chatService);
+        websocketService.setChatService(chatService);
         
         await chatService.initialize(config);
         if (mounted) {
@@ -73,6 +75,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = React.memo(({ config, l
       participantService,
       readReceiptService,
       typingService,
+      websocketService,
     },
   }), []);
 

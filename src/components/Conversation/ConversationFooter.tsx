@@ -7,6 +7,8 @@ import { useConversationFooter } from './useConversationFooter';
 import { ConversationFooterToolbar } from './ConversationFooterToolbar';
 import { ConversationFooterBottomToolbar } from './ConversationFooterBottomToolbar';
 import { ConversationFooterSendButton } from './ConversationFooterSendButton';
+import { ACCEPTED_IMAGE_TYPES, ACCEPTED_ATTACHMENT_TYPES } from '../../constants';
+
 export interface ConversationFooterProps {
   conversationId?: string;
   onSend: (content: string, options?: SendMessageOptions) => void;
@@ -117,7 +119,7 @@ export const ConversationFooter: React.FC<ConversationFooterProps> = React.memo(
       <div className={styles.wrapper}>
         <input
           type="file"
-          accept=".jpg,.jpeg,.png"
+          accept={ACCEPTED_IMAGE_TYPES}
           multiple
           ref={fileInputRef}
           onChange={handleFileChange}
@@ -125,7 +127,7 @@ export const ConversationFooter: React.FC<ConversationFooterProps> = React.memo(
         />
         <input
           type="file"
-          accept=".pdf,.docx,.xlsx"
+          accept={ACCEPTED_ATTACHMENT_TYPES}
           multiple
           ref={fileAttachmentInputRef}
           onChange={handleFileAttachmentChange}
@@ -133,7 +135,10 @@ export const ConversationFooter: React.FC<ConversationFooterProps> = React.memo(
         />
         <MessageInput
           onSend={(content, options) => {
-            onSend(content, { ...options, type: 'html' });
+            onSend(content, {
+              ...options,
+              ...(isFormatMode ? { type: 'html' } : {}),
+            });
             resetFormatState();
             clearHistory();
           }}

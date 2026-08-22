@@ -14,7 +14,8 @@ export const vi = {
     noDataToDisplay: 'Không có dữ liệu',
     selectConversation: 'Chọn một cuộc hội thoại để bắt đầu nhắn tin',
     deleteMessage: 'Xoá tin nhắn',
-    confirmDeleteMessage: 'Bạn có chắc chắn muốn xoá tin nhắn này không? Hành động này không thể hoàn tác.',
+    confirmDeleteMessage:
+      'Bạn có chắc chắn muốn xoá tin nhắn này không? Hành động này không thể hoàn tác.',
     delete: 'Xoá',
     confirm: 'Xác nhận',
     cancel: 'Huỷ',
@@ -35,6 +36,7 @@ export const vi = {
     leaveGroup: 'Rời nhóm',
     removeFromGroup: 'Xoá khỏi nhóm',
     close: 'Đóng',
+    loadingLinkPreview: 'Đang tải xem trước...',
     tabs: {
       all: 'Tất cả',
       contacts: 'Danh bạ',
@@ -54,6 +56,10 @@ export const vi = {
     delivered: 'Đã nhận',
     sending: 'Đang gửi...',
     failedToLoad: 'Tải thất bại',
+    availableOnDevice: 'Available on device',
+    openFolder: 'Mở thư mục',
+    download: 'Tải về',
+    downloading: 'Đang tải về...',
     you: 'Bạn',
     justNow: 'Vừa xong',
     minsAgo: '{{count}} phút trước',
