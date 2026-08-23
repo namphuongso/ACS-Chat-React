@@ -18,10 +18,31 @@ vi.mock('../../../hooks/useRoomMembers', () => ({
 }));
 
 vi.mock('../../MessageList', () => ({
-  MessageList: (props: { messages?: unknown[]; onLoadMore?: () => void }) => (
+  MessageList: (props: {
+    messages?: unknown[];
+    onLoadMore?: () => void;
+    onOpenAttachment?: (url: string, fileName?: string) => void;
+    onDownloadAttachment?: (url: string, fileName?: string) => void;
+  }) => (
     <div data-testid="mock-message-list">
       {props.messages?.length || 0} messages
       <button onClick={props.onLoadMore}>Load More</button>
+      {props.onOpenAttachment && (
+        <button
+          onClick={() => props.onOpenAttachment?.('https://example.com/test.pdf', 'test.pdf')}
+          data-testid="open-attach-btn"
+        >
+          Open
+        </button>
+      )}
+      {props.onDownloadAttachment && (
+        <button
+          onClick={() => props.onDownloadAttachment?.('https://example.com/test.pdf', 'test.pdf')}
+          data-testid="download-attach-btn"
+        >
+          Download
+        </button>
+      )}
     </div>
   ),
 }));
@@ -124,5 +145,23 @@ describe('ConversationView Component', () => {
 
     render(<ConversationView conversationId="conv-1" />);
     expect(mockLoadMessages).toHaveBeenCalledTimes(1);
+  });
+
+  it('should forward onOpenAttachment and onDownloadAttachment to MessageList', () => {
+    const onOpenAttachment = vi.fn();
+    const onDownloadAttachment = vi.fn();
+
+    render(
+      <ConversationView
+        onOpenAttachment={onOpenAttachment}
+        onDownloadAttachment={onDownloadAttachment}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('open-attach-btn'));
+    expect(onOpenAttachment).toHaveBeenCalledWith('https://example.com/test.pdf', 'test.pdf');
+
+    fireEvent.click(screen.getByTestId('download-attach-btn'));
+    expect(onDownloadAttachment).toHaveBeenCalledWith('https://example.com/test.pdf', 'test.pdf');
   });
 });

@@ -352,8 +352,8 @@ export const CheckCircleIcon: React.FC<SVGProps<SVGSVGElement>> = React.memo((pr
     strokeLinejoin="round"
     {...props}
   >
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-    <polyline points="22 4 12 14.01 9 11.01" />
+    <circle cx="12" cy="12" r="10" />
+    <path d="m9 12 2 2 4-4" />
   </svg>
 ));
 
@@ -381,3 +381,7 @@ export const PlayIcon: React.FC<SVGProps<SVGSVGElement>> = React.memo((props) =>
     <polygon points="5 3 19 12 5 21 5 3" />
   </svg>
 ));
+
+export { DocumentIcon, getDocumentFileType } from '../MessageItem/DocumentIcon';
+export type { DocumentIconProps, DocumentFileType } from '../MessageItem/DocumentIcon';
+

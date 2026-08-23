@@ -158,6 +158,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
     onViewDetails,
     onRecall,
     onDownloadAttachment,
+    onOpenAttachment,
     renderContent,
     renderActions,
     renderStatus,
@@ -451,10 +452,13 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
 
         return (
           <LargeImageCard
+            showStatus={false}
+            showOpenFolder={false}
             fileName={fileName}
             fileSize={size}
             url={url}
             onDownload={onDownloadAttachment}
+            onOpen={onOpenAttachment}
           />
         );
       }
@@ -464,14 +468,19 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
           (message.metadata?.fileName as string) || (message.metadata?.name as string) || 'file';
         const size = message.metadata?.size ? Number(message.metadata.size) : undefined;
         const url = (message.metadata?.url as string) || '';
+        const mimeType = message.metadata?.mimeType as string | undefined;
 
         return (
           <div>
             <LargeImageCard
+              showStatus={false}
+              showOpenFolder={false}
               fileName={fileName}
               fileSize={size}
               url={url}
+              mimeType={mimeType}
               onDownload={onDownloadAttachment}
+              onOpen={onOpenAttachment}
             />
             {message.content ? (
               <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{message.content}</div>
@@ -501,11 +510,15 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
               }
               return (
                 <LargeImageCard
+                  showStatus={false}
+                  showOpenFolder={false}
                   key={att.id || att.url}
                   fileName={att.name}
                   fileSize={att.size}
                   url={att.url}
+                  mimeType={att.mimeType}
                   onDownload={onDownloadAttachment}
+                  onOpen={onOpenAttachment}
                 />
               );
             })}
@@ -762,8 +775,10 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
   }
 );
 
-export { LargeImageCard } from './LargeImageCard';
-export type { LargeImageCardProps } from './LargeImageCard';
+export { LargeImageCard, FileCard } from './LargeImageCard';
+export type { LargeImageCardProps, FileCardProps } from './LargeImageCard';
+export { DocumentIcon, getDocumentFileType } from './DocumentIcon';
+export type { DocumentIconProps, DocumentFileType } from './DocumentIcon';
 export { ChatImage } from './ChatImage';
 export { LinkPreviewCard } from './LinkPreviewCard';
 export type { LinkPreviewCardProps } from './LinkPreviewCard';

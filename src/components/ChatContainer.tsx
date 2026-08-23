@@ -19,10 +19,20 @@ export interface ChatContainerProps {
   renderConversationList?: (props: ConversationListRenderProps) => ReactNode;
   renderConversation?: (props: ConversationRenderProps) => ReactNode;
   renderEmpty?: () => ReactNode;
+  onOpenAttachment?: (url: string, fileName?: string) => void;
+  onDownloadAttachment?: (url: string, fileName?: string) => void;
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = React.memo(
-  ({ className, style, renderConversationList, renderConversation, renderEmpty }) => {
+  ({
+    className,
+    style,
+    renderConversationList,
+    renderConversation,
+    renderEmpty,
+    onOpenAttachment,
+    onDownloadAttachment,
+  }) => {
     const { activeConversation, openingConversation } = useConversations();
     const { loading: loadingPinnedMessages } = usePinnedMessages(
       activeConversation?.id || '',
@@ -70,7 +80,10 @@ export const ChatContainer: React.FC<ChatContainerProps> = React.memo(
             renderConversation ? (
               renderConversation({ conversationId: activeConversation.id })
             ) : (
-              <ConversationView /> // Assuming it reads from store internally
+              <ConversationView
+                onOpenAttachment={onOpenAttachment}
+                onDownloadAttachment={onDownloadAttachment}
+              />
             )
           ) : renderEmpty ? (
             renderEmpty()

@@ -447,4 +447,49 @@ describe('MessageList Component', () => {
     // For own new message appended at bottom, it should return 'auto'
     expect(followOutput(false)).toBe('auto');
   });
+
+  it('should forward onOpenAttachment and onDownloadAttachment to MessageItem', () => {
+    const onOpenAttachment = vi.fn();
+    const onDownloadAttachment = vi.fn();
+
+    const fileMessage: ChatMessage = {
+      id: 'm-file',
+      content: '',
+      type: 'text',
+      sender: { id: 'u2', displayName: 'Bob' },
+      createdAt: new Date('2023-01-01T10:00:00Z'),
+      sequenceId: '10',
+      conversationId: 'c1',
+      status: 'sent',
+      metadata: {
+        type: 'file',
+        url: 'https://example.com/document.docx',
+        fileName: 'document.docx',
+        size: 1024,
+      },
+    };
+
+    render(
+      <MessageList
+        messages={[fileMessage]}
+        currentUserId="u1"
+        loading={false}
+        loadingMore={false}
+        hasMore={false}
+        onLoadMore={mockLoadMore}
+        onOpenAttachment={onOpenAttachment}
+        onDownloadAttachment={onDownloadAttachment}
+      />
+    );
+
+    expect(screen.getByText('document.docx')).toBeInTheDocument();
+
+    const openBtn = screen.getByTitle('chat.openFolder');
+    fireEvent.click(openBtn);
+    expect(onOpenAttachment).toHaveBeenCalledWith('https://example.com/document.docx', 'document.docx');
+
+    const downloadBtn = screen.getByTitle('chat.download');
+    fireEvent.click(downloadBtn);
+    expect(onDownloadAttachment).toHaveBeenCalledWith('https://example.com/document.docx', 'document.docx');
+  });
 });

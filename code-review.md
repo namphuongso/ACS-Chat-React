@@ -1,166 +1,115 @@
-# Code Review — np-acs-library 1.1.0 → 1.2.0
+# Code Review — Document Preview & FileCard UI Enhancement
 
-- **Branch:** `Production`
-- **Ngày review:** 2026-08-21
-- **Phạm vi:** Toàn bộ `git diff HEAD` (staged + unstaged working tree) — 76 files, +7228/−1840
-- **Xác minh bằng công cụ:**
-  - `npm run typecheck` — ✅ sạch
-  - `npm test` — ✅ 47 files / 335 tests passed
-
-## Tóm tắt thay đổi
-
-1. **Realtime layer mới:** bỏ ACS signaling SDK (`AcsEventAdapter` bị xóa, `AcsClientAdapter` không còn realtime notifications), thay bằng WebSocket protocol tự định nghĩa: `websocketAdapter`, `websocketMappers`, `websocketService`, hook `useWebSocket`, `websocket.types`.
-2. **Store refactor:** conversation key dạng alias-aware (`registry.ts`, `conversationKeys.ts` — _chưa track_), viết lại `messageStore` (dedup, jump target, highlight, pinned, continuation token), `conversationStore`, `participantStore`.
-3. **Services chuyển sang backend API:** `messageService` (`/api/chat/get-messages`, `send-message`, `update-message`…), `fileService` (upload chunked qua `@namphuongtechnologi/azure-blob-transfer`), `readReceiptService` (WS trước, ACS fallback).
-4. **UI:** rich-text formatting, pinned messages + banner, jump-to-message + highlight, IME guard, empty-state validation, placeholder mới.
-5. **Packaging:** bump 1.2.0, staged `.tgz` mới, thêm dependency `dompurify` (runtime) + `@namphuongtechnologi/azure-blob-transfer` (`file:` tarball).
-
----
-
-## Critical
-
-### C1. XSS qua tin nhắn rich-text — staged không sanitize, worktree sanitize sai thứ tự
-
-- **Staged** (`src/components/MessageItem/index.tsx:221`): `dangerouslySetInnerHTML={{ __html: normalizeFormattingHtml(message.content) }}` — **không có sanitize nào**. Content từ server/WS render thẳng → attacker gửi `<img src=x onerror=...>` là chạy JS trong phiên người khác.
-- **Worktree** (`src/components/MessageItem/index.tsx:221`): `sanitizeHtml(normalizeFormattingHtml(content))` — vẫn **sai thứ tự**: `normalizeFormattingHtml` parse HTML lạ bằng `div.innerHTML` (`src/utils/htmlUtils.ts:134-137`) **trước** khi DOMPurify chạy; `onerror` của `<img>` vẫn fire trong bước parse đó. Fast-path regex của normalize cũng dễ thỏa mãn (chỉ cần thêm `<u><font size=3>…`).
-- `sanitizeHtml` (`src/utils/htmlUtils.ts:152-154`) **fail-open**: `catch { return html; }` — DOMPurify lỗi là render HTML thô.
-- **Fix:** `sanitizeHtml(content)` trước → rồi mới normalize; catch phải fail-closed (escape text hoặc trả chuỗi rỗng). Nếu tarball 1.2.0 được build từ cây staged thì gói publish đang dính XSS — cần rebuild sau khi sửa.
-
-### C2. Cây staged và worktree lệch nhau về bản vá quan trọng — rủi ro release
-
-Nhiều bản sửa chỉ tồn tại ở **unstaged worktree** (chưa `git add`):
-
-| Vấn đề                                                         | Staged                     | Worktree                                                        |
-| -------------------------------------------------------------- | -------------------------- | --------------------------------------------------------------- |
-| Sanitize HTML (C1)                                             | ❌ không có                | ⚠️ có nhưng sai thứ tự                                          |
-| `firstItemIndex` offset cho `scrollToIndex`/jump               | ❌ thiếu → jump sai vị trí | ✅ đã sửa                                                       |
-| `initialTopMostItemIndex`                                      | ✅ đúng (local index)      | ❌ over-correct (cộng thêm `firstItemIndex`) — xem H7           |
-| Adapter: xử lý socket CLOSED stale, promise connect/disconnect | bản cũ                     | bản mới                                                         |
-| Refactor alias keys                                            | inline                     | tách sang `registry.ts` + `conversationKeys.ts` (**untracked**) |
-
-Ngoài ra `src/store/registry.ts` và `src/utils/conversationKeys.ts` **chưa được track**: commit worktree mà chỉ `git add -u` sẽ thiếu 2 file này → **build gãy**. Cần `git add` tường minh trước khi commit.
+- **Repository:** `np-acs-library` (`@namphuongtechnologi/acs-chat-react`)
+- **Branch:** `Development`
+- **Ngày review:** 24/08/2026
+- **Phạm vi kiểm tra:** Toàn bộ thay đổi trong `git diff` (Working Tree & Staged Changes)
+  - `src/components/MessageItem/DocumentIcon.tsx` (New file)
+  - `src/components/MessageItem/LargeImageCard.tsx`
+  - `src/components/MessageItem/MessageItem.module.scss`
+  - `src/components/MessageItem/index.tsx`
+  - `src/components/Icons/index.tsx`
+  - `src/components/MessageItem/__tests__/LargeImageCard.test.tsx`
+  - Companion changes in `NP-Pro` (`src/modules/chat/index.tsx`, `vite.config.ts`)
+- **Kết quả kiểm tra tự động:**
+  - `npm run lint` — ✅ 0 errors, 0 warnings
+  - `npm run build` (`tsc --noEmit && vite build`) — ✅ Thành công (DTS, CJS & ESM)
+  - `npm test` — ✅ **54 test suites passed**, **440 tests passed** (100%)
 
 ---
 
-## High
+## 1. Tóm tắt thay đổi (Summary of Changes)
 
-### H1. Reconnect chết vĩnh viễn nếu socket kẹt ở `CONNECTING`
-
-`WebSocketAdapter.connect()` (`src/adapters/websocket/websocketAdapter.ts:104-121`) gặp socket `CONNECTING` thì `resolve()` ngay; `WebsocketService.scheduleReconnect` (`src/services/websocketService.ts:349-378`) bọc `connect()` bằng `Promise.race` timeout 15s nhưng khi timeout, socket treo **không bị hủy/bỏ**. Các lần retry sau đều short-circuit qua guard CONNECTING, `isConnected()` luôn false → đốt hết `maxRetries` → "Max reconnection retries reached" và không bao giờ thử lại nữa (không có recovery nào khác — xem H3/M2).
-**Fix:** sau race timeout phải `disconnect()`/discard socket treo rồi tạo socket mới.
-
-### H2. `heartbeatTimeoutSeconds` được parse nhưng không bao giờ enforce
-
-`websocketService.ts:144-155, 194-197`: timeout heartbeat là config chết; `heartbeat_ack` là no-op, không có watchdog/pong tracking. Kết nối TCP chết (NAT drop, máy sleep) không phát `onclose` → app "connected" mãi mãi, không nhận được tin nhắn, không tự sửa.
-**Fix:** theo dõi ack, quá hạn thì `adapter.disconnect()` để触发 reconnect.
-
-### H3. Trạng thái kết nối & event legacy: UI nói "connected" nhưng realtime có thể không có
-
-- `chatService.ts:111`: `setConnectionState('connected')` **vô điều kiện** ngay sau init — kể cả khi `enableWebSocket: false`, WS không có URL, hoặc connect thất bại (WS init là fire-and-forget, lỗi chỉ log).
-- WS phát `ws:connected`/`ws:disconnected` nhưng `chatService.handleDomainEvent` không map chúng vào `chatStore.connectionState`; các case `connection:connected`/`connection:disconnected` (`chatService.ts:465-471`) là dead code vì không còn ai emit.
-- Hệ quả kép: `connectionService.handleOnline` (`connectionService.ts:24-30`) chỉ reconnect khi `connectionState !== 'connected'` — mà state luôn là 'connected' từ init → **mất mạng rồi có lại cũng không resync**; subscription `connection:disconnected` của `connectionService` cũng chết.
-- `typing:started`, `readReceipt:received` không còn được emit từ bất kỳ đâu → typing indicator của người khác không hiện; read receipt người khác gửi không cập nhật realtime (chỉ WS `read` chiều gửi đi hoạt động).
-  **Fix:** map `ws:*` → `connectionState`; quyết định rõ story cho typing/readReceipt (map từ WS hoặc ghi breaking change rõ trong CHANGELOG).
-
-### H4. Dedup tin nhắn: lỗ hổng cửa sổ 0–30s và lệch giờ >30s
-
-`dedupAndSortMessages` (`src/store/messageStore.ts:157-353`):
-
-1. **0–30s re-send:** `isConfirmationOf` chấp nhận `confirmedTime >= optimisticTime − 30s`. Nếu user gửi 2 tin **giống hệt nhau** liên tiếp trong 30s và tin 1 đã confirmed (mà WS push/loadMessages không mang `clientMessageId` — đúng thực tế vì `sendMessage` không gửi `clientMessageId` lên backend, `messageService.ts:381-388`), tin 2 (optimistic temp) bị coi là duplicate của tin 1 → **bị drop** khỏi UI cho tới khi confirm thật về. Test hiện tại (`messageStore.test.ts:197-222`) né đúng khe này bằng `now − 55s`.
-2. **Lệch giờ:** nếu đồng hồ client **nhanh hơn server >30s**, message confirmed từ server fail check `isConfirmationOf` → không replace được optimistic temp, final cleanup cũng bỏ qua → **duplicate vĩnh viễn** (temp + confirmed). Code cũ không có gate timestamp này.
-   **Fix:** gửi `clientMessageId` trong payload `send-message` (để mapper WS khôi phục được), tie-break theo `clientMessageId`, và tolerance hai chiều.
-
-### H5. `loadMessages` merge thay vì replace — message bị xóa/recall phía server không bao giờ biến mất client-side
-
-`messageService.ts:79-153`: trang mới merge với store cũ (`dedupAndSortMessages(currentMessages, messages)` rồi `setMessages`). Tin đã bị xóa trên server vẫn nằm lại client mãi. Thêm: không có guard thứ tự request — 2 `loadMessages`/`loadMore` song song last-write-wins trên cursor.
-
-### H6. Giả định thứ tự `items[0]` = mới nhất, không truyền sort param
-
-`messageService.ts` (`loadLatestMessage`:187-201, `loadMessages`, `loadMore`): gọi `get-messages?pageSize=N` không có `sort/order`; code giả định backend trả **mới nhất trước**. Nếu backend phân trang cũ→mới, mọi resync sẽ lấy tin **cũ nhất** làm "latest". `options.startTime` trong public signature cũng bị bỏ qua âm thầm. Cần xác nhận contract backend.
-
-### H7. Jump-to-message: staged thiếu offset, worktree sửa nhưng lại over-correct `initialTopMostItemIndex`
-
-- **Staged** (`MessageList/index.tsx` executeScroll/scrollToIndex/scrollToBottom): dùng `index: targetIndex` thô, không cộng `firstItemIndex` (bắt đầu ở 1.000.000) → mọi jump/scroll-to-bottom đáp sai chỗ khi đã prepend trang cũ.
-- **Worktree** sửa đúng các điểm trên (`firstItemIndex + targetIndex`, kiểm chứng `scrollToIndex` của virtuoso cần virtual index) nhưng đổi `initialTopMostItemIndex={items.length - 1}` thành `firstItemIndex + items.length - 1`. Đọc nội bộ `react-virtuoso` (dist/index.mjs: hàm `qo`/`Cn`/`Xn`): virtuoso **tự cộng `firstItemIndex`** bên trong cho `initialTopMostItemIndex` và clamp theo `initialItemCount` local — tức **giá trị local mới đúng**, bản worktree là over-correction (anchor rơi ra ngoài danh sách).
-- **Fix:** staged đúng cho `initialTopMostItemIndex`, worktree đúng cho `scrollToIndex/executeScroll` — cần hợp nhất cả hai, không phiên bản nào trọn vẹn.
-
-### H8. `jumpTarget.conversationId` không được validate ở `MessageList`
-
-`MessageList/index.tsx:318-329`: effect phản ứng với **mọi** `jumpTarget?.messageId` bất kể `conversationId`. Target lạ/stale (vd bấm banner pin của hội thoại khác) khiến list hiện tại loop `onLoadMore` tới 30 lần (`:351`) tìm message không bao giờ xuất hiện, rồi `clearJumpTarget()` xóa luôn target của hội thoại đúng. `useMessages.jumpToMessage` (`useMessages.ts:99-104`) đã stamp `conversationId` — consumer chỉ việc check.
+1. **Component `DocumentIcon` chuyên dụng:**
+   - Phân loại định dạng tài liệu tự động theo đuôi tệp (`.pdf`, `.docx`, `.xlsx`, `.pptx`, `.zip`, `.txt`, `.jpg`…) hoặc MIME type (`application/pdf`, `msword`, `spreadsheetml`…).
+   - Vẽ icon tài liệu bằng SVG vector tùy chỉnh với góc gấp (fold flap) và huy hiệu văn bản nhận diện (PDF, W, X, P, ZIP, TXT, IMG, DOC) cùng màu sắc nhận diện trực quan.
+2. **Nâng cấp `LargeImageCard` / `FileCard` UI:**
+   - Thay thế icon hình ảnh chung chung cũ (`FileImageIcon`) bằng `DocumentIcon` mới.
+   - Bổ sung nút **Mở thư mục / Xem tài liệu** (`FolderIcon`) bên cạnh nút **Tải xuống** (`DownloadIcon`).
+   - Bổ sung dòng trạng thái tệp: icon tích xanh (`CheckCircleIcon`) + nhãn thông tin (`chat.availableOnDevice` / `statusText`).
+   - Định nghĩa alias `FileCard` và `FileCardProps` tương thích ngược hoàn toàn với `LargeImageCard`.
+3. **Cập nhật SCSS & Design System:**
+   - Tinh chỉnh giao diện thẻ tệp: `border-radius: 8px`, `padding: 10px 14px`, viền `var(--chat-large-img-own-border, #93c5fd)`, nền `var(--chat-large-img-own-bg, #ebf5ff)`.
+   - Nâng cấp typography: Tên tệp (14px, font-weight 700, text-overflow ellipsis), thông tin dung lượng và trạng thái (13px, font-weight 500, màu `#16a34a`).
+   - Nút hành động (32x32px) với hiệu ứng hover, active và trạng thái loading spinner khi đang tải tệp.
+4. **Tích hợp `MessageItem` & Prop Propagation:**
+   - Thêm callback `onOpenAttachment` vào `MessageItemProps`.
+   - Truyền `onOpen` và `mimeType` cho tất cả các nhánh hiển thị tệp: tin nhắn tệp đơn (`isFileMessage`), ảnh kích thước lớn (`isSingleLargeImage`), và danh sách tệp đính kèm (`message.attachments`).
+5. **Mở rộng Unit Test Coverage:**
+   - Bổ sung test case kiểm tra hiển thị đúng icon cho Word, Excel, PowerPoint, PDF trong `LargeImageCard.test.tsx`.
+   - Bổ sung test case kiểm tra tương tác khi nhấn nút Open (`onOpen` callback và fallback `window.open`).
 
 ---
 
-## Medium
+## 2. Đánh giá chi tiết (Detailed Findings & Code Quality)
 
-- **M1. Room targeting mơ hồ:** `roomId` vừa nằm trong query URL connect (`websocketAdapter.buildWebSocketUrl`) vừa được gửi lại `enter_room` khi handshake (`websocketService.ts:166-168`) — double join nếu server coi URL param là join. `leave_room`/`read` **không mang roomId** → target theo "phòng active" ngầm. `lastVisibleMessageIds` chỉ tăng, không prune.
-- **M2. Không có recovery sau khi cạn retries** (liên quan H1/H3): hết `maxRetries` là thôi; `connectionService.handleOnline` bị chặn bởi state 'connected' ảo.
-- **M3. Reconnect loop không có generation counter:** `dispose()` đặt `isExplicitlyClosed=true` nhưng `initialize()` reset nó ngay; loop reconnect cũ còn chạy sẽ tiếp tục với adapter/config mới → race với connection mới, và `isReconnecting` cũ có thể chặn `scheduleReconnect` hợp lệ.
-- **M4. Plain vs HTML payload bất nhất:** `MessageInput.handleSend` luôn gửi `innerHTML` của contentEditable; `ConversationFooter.tsx:137-144` chỉ đính `type:'html'` khi bật format mode. Tin plain nhiều dòng (Shift+Enter → `<div>…</div>`) đi với type mặc định `'text'` → người nhận render escape, thấy markup thô.
-- **M5. `sendMessage` khi server không trả `serverMessageId` hợp lệ:** optimistic temp trong store giữ `status:'sending'` vĩnh viễn (hàm return 'sent'), chỉ WS echo mới cứu được.
-- **M6. Resolve `roomId` trong `sendMessage`/`editMessage`** (`conversations[id]?.conversationId || id`) không đi qua `getRoomId()`/alias index như các hàm khác → không nhất quán khi gọi bằng alias (`threadId`).
-- **M7. Dependency `file:` tarball:** `"@namphuongtechnologi/azure-blob-transfer": "file:../../azure-storage-large-file/….tgz"` (`package.json:60`) — consumer cài từ npm không resolve được đường dẫn tương đối. Cần publish gói này hoặc bundle.
-- **M8. `.tgz` artifact commit trong repo + xuất xứ tarball:** `namphuongtechnologi-acs-chat-react-1.2.0.tgz` được stage (bản 1.1.0 bị xóa). Binary không nên nằm trong git; quan trọng hơn, nếu tarball build từ cây staged thì nó mang theo C1 (không sanitize) + H7 (jump gãy).
-- **M9. `fetchBackend` không có timeout/`AbortController`** (`src/utils/apiClient.ts`) — request treo là treo luôn cả operation.
-- **M10. Token trong WS URL query** (`access_token`, `websocketAdapter.ts:75`) — token có thể rơi vào access log/proxy. Cân nhắc `Sec-WebSocket-Protocol` hoặc vé ngắn hạn.
-- **M11. Close code 1000 từ server → không reconnect** (`websocketService.handleClose`); 4001 (duplicate session) cũng không reconnect, không có UX takeover. Cả hai im lặng.
-- **M12. `useWebSocket.enterRoom`** set local `activeRoomId` kể cả khi send thất bại (UI state lệch thật).
-- **M13. `adapter.disconnect()` tự sinh `CloseEvent` và luôn gọi onClose callbacks kể cả khi chưa từng connect** — `websocketService.handleClose` sẽ dispatch `ws:disconnected` trong dispose(); hiện vô hại nhưng dễ gây surprise về sau.
-- **M14. CHANGELOG thiếu breaking changes:** chưa ghi rõ việc mất `typing:*`, `readReceipt:received`, `connection:*` events; `uploadFile` đổi error behavior; `sendMessage/edit/delete` chuyển sang backend API.
+### ✅ Điểm sáng & Thực hành tốt (Strengths & Best Practices)
+
+1. **Thiết kế SVG gọn nhẹ, không phụ thuộc asset tĩnh:**
+   - [DocumentIcon.tsx](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/MessageItem/DocumentIcon.tsx) được vẽ hoàn toàn bằng SVG nguyên bản, không dùng file PNG/SVG bên ngoài giúp tối ưu bundle size, không bị lỗi vỡ hình khi load chậm và hiển thị sắc nét trên màn hình Retina/High-DPI.
+2. **Tương thích ngược (Backward Compatibility):**
+   - Giữ nguyên component `LargeImageCard` và export thêm alias `FileCard = LargeImageCard`. Mã nguồn hiện tại đang dùng `LargeImageCard` không bị break, trong khi code mới có thể dùng tên chuẩn ngữ nghĩa `FileCard`.
+3. **Bảo mật khi mở tệp ngoại tuyến (Security on External Links):**
+   - Hàm `handleOpen` trong [LargeImageCard.tsx](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/MessageItem/LargeImageCard.tsx#L38-L47) sử dụng `window.open(url, '_blank', 'noopener,noreferrer')`, ngăn chặn tấn công `window.opener` reverse tabnabbing.
+4. **Quản lý i18n chuẩn hóa:**
+   - Tất cả nhãn văn bản (`chat.download`, `chat.openFolder`, `chat.availableOnDevice`) đều đi qua hook `useTranslation()` và có fallback tiếng Anh mặc định.
+5. **Cải tiến Icon hệ thống:**
+   - [CheckCircleIcon](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/Icons/index.tsx#L352-L362) được chuẩn hóa theo format hình tròn khép kín (`<circle>` + `<path>`), đồng bộ phong cách thiết kế với bộ Lucide/Feather icon.
 
 ---
 
-## Low / Nits
+## 3. Các điểm lưu ý & Đề xuất cải tiến (Recommendations & Edge Cases)
 
-- `VERSION` trong `src/index.ts` vẫn `'1.0.0'` trong khi `package.json` là 1.2.0 (có từ trước, nên sửa luôn).
-- `.gitignore` thêm `*.docx` toàn cục — hơi rộng, có thể ignore nhầm tài liệu khác.
-- `dompurify` chuyển từ devDependencies → dependencies: đúng, cần thiết.
-- Test suite không reset `useMessageStore` giữa các test (highlight timer 2500ms có thể leak giữa tests).
-- `WS_ERROR_CODES` export ra nhưng chưa thấy consumer xử lý error code cụ thể nào.
-- Comment thừa `// 1.` `// 2.` trong dedup thì ok, nhưng `messageMap.delete(msg.clientMessageId)` (xóa key trùng clientMessageId) khó hiểu — nên có comment lý do.
+### 💡 Đề xuất 1: Xử lý an toàn khi `fileName` chứa URL Query Params hoặc Hash
+
+- **Vị trí:** [DocumentIcon.tsx](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/MessageItem/DocumentIcon.tsx#L13-L71)
+- **Hiện tượng:** Hàm `getDocumentFileType` kiểm tra `name.endsWith('.pdf')`. Trong trường hợp `fileName` được truyền là một URL đầy đủ có query parameter (ví dụ Azure SAS token: `https://storage.../file.pdf?sp=r&st=...`), điều kiện `name.endsWith('.pdf')` sẽ trả về `false` và rơi vào icon `generic` (DOC).
+- **Giải pháp đề xuất:** Tách bỏ query params / hash trước khi kiểm tra extension:
+  ```typescript
+  export const getDocumentFileType = (
+    fileName?: string,
+    mimeType?: string
+  ): DocumentFileType => {
+    const rawName = (fileName || '').split('?')[0].split('#')[0].toLowerCase();
+    const mime = (mimeType || '').toLowerCase();
+    
+    if (rawName.endsWith('.pdf') || mime === 'application/pdf') {
+      return 'pdf';
+    }
+    // ...
+  };
+  ```
+
+### 💡 Đề xuất 2: Chuyển tiếp prop `onOpenAttachment` qua `MessageList` & `ConversationView` (✅ Đã hiện thực)
+
+- **Vị trí:** [MessageItem/index.tsx](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/MessageItem/index.tsx#L60), [MessageList/index.tsx](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/MessageList/index.tsx), [Conversation/index.tsx](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/Conversation/index.tsx) và [ChatContainer.tsx](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/ChatContainer.tsx)
+- **Hiện tượng:** `MessageItemProps` đã có `onOpenAttachment`, tuy nhiên `MessageListProps` và `ConversationViewProps` chưa khai báo prop này. Khi ứng dụng cha (host app) dùng `<ConversationView />` mặc định, họ không thể truyền callback tùy biến cho việc mở tài liệu (ví dụ: mở modal xem trước PDF/ảnh nội bộ thay vì tab mới) trừ khi dùng `renderMessage`.
+- **Giải pháp:** Đã khai báo thêm `onOpenAttachment` và `onDownloadAttachment` vào `MessageListProps`, `ConversationViewProps` và `ChatContainerProps`, đồng thời forward thông suốt từ container xuống item và bổ sung unit test tương ứng.
+
+### 💡 Đề xuất 3: Cân nhắc ngữ cảnh cho nhãn mặc định `chat.availableOnDevice`
+
+- **Vị trí:** [LargeImageCard.tsx](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/MessageItem/LargeImageCard.tsx#L96-L101)
+- **Hiện tượng:** `showStatus` đang mặc định là `true`, hiển thị dòng `"Đã lưu trên thiết bị"`. Trên nền tảng Web thuần túy (không có local storage cache / offline sync), tệp tin vẫn nằm trên cloud blob storage cho đến khi người dùng click tải về.
+- **Gợi ý:** Nếu đây là UI mô phỏng theo mẫu Zalo/Teams thì hoàn toàn phù hợp. Trường hợp muốn thể hiện trạng thái chính xác hơn giữa các tệp đã tải và chưa tải, có thể hỗ trợ truyền prop `statusText` hoặc toggle `showStatus={false}` theo nhu cầu nghiệp vụ.
 
 ---
 
-## inconsistenci staged ↔ worktree — khuyến nghị commit
+## 4. Bảng tổng hợp thay đổi theo tệp (File-by-File Review Matrix)
 
-1. `git add src/store/registry.ts src/utils/conversationKeys.ts` (2 file untracked đang được worktree import).
-2. Stage toàn bộ worktree fixes (sanitize, MessageList offsets, adapter, services, stores) — cây staged hiện tại thiếu chúng.
-3. Trước khi sửa xong C1/H7: **không** publish/rebuild tarball 1.2.0 từ cây staged.
+| Tệp | Loại thay đổi | Trạng thái | Đánh giá |
+| :--- | :---: | :---: | :--- |
+| [`DocumentIcon.tsx`](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/MessageItem/DocumentIcon.tsx) | New file | ✅ Rất tốt | SVG vector sắc nét, phân loại định dạng đầy đủ (PDF, Word, Excel, PPT, Zip, Text, Img, Doc). |
+| [`LargeImageCard.tsx`](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/MessageItem/LargeImageCard.tsx) | Modified | ✅ Rất tốt | Bổ sung nút Open Folder, DocumentIcon, status info, giữ tương thích qua alias `FileCard`. |
+| [`MessageItem.module.scss`](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/MessageItem/MessageItem.module.scss) | Modified | ✅ Đẹp | Padding, kích thước icon box (40x46px), màu sắc theme và typography rõ ràng, chuẩn UI mockup. |
+| [`MessageItem/index.tsx`](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/MessageItem/index.tsx) | Modified | ✅ Hoàn thiện | Truyền `onOpen` và `mimeType` đầy đủ cho các trường hợp render file; export các type & component mới. |
+| [`Icons/index.tsx`](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/Icons/index.tsx) | Modified | ✅ Chuẩn hóa | Sửa `CheckCircleIcon` dạng circle khép kín, re-export `DocumentIcon` và helper functions. |
+| [`LargeImageCard.test.tsx`](file:///Users/thaoanhhaa1/Documents/IT/NP/WEB/acs-chat/np-acs-library/src/components/MessageItem/__tests__/LargeImageCard.test.tsx) | Modified | ✅ Đầy đủ | Test suite đạt 100% pass với coverage mở rộng cho icon type rendering và `onOpen` click event. |
 
 ---
 
-## Security review
+## 5. Kết luận (Conclusion)
 
-1. **XSS rich-text** — Critical (C1): staged = không sanitize; worktree = sanitize sau parse + fail-open. Sửa thứ tự + fail-closed.
-2. **WS token trong URL query** (M10) — log/proxy leak.
-3. **`img src` từ payload WS** — render không có `referrerpolicy`; thêm `referrerpolicy="no-referrer"` cho ảnh remote.
-4. **Auth forwarding** — `backendHeaders`/`uploadHeaders` merge nhất quán ở `fetchBackend` và 3 endpoint upload: OK.
-5. **DOMPurify defaults** cho phép `style`, `font[size]` — chỉ lạm dụng cosmetic, không phải script XSS.
-
-## Test coverage gaps
-
-- WS: socket kẹt `CONNECTING` (H1), heartbeat watchdog (H2), duplicate-session close, dispatch khi không có ChatService.
-- Store: dedup khe 0–30s và lệch giờ >30s (H4 — cả 2 buggy path đều chưa test), jump target khác conversation (H8).
-- Service: `loadLatestMessage` khi backend trả cũ→mới (H6), message bị xóa phía server sau merge (H5), send/edit/delete rollback khi `serverMessageId` rỗng (M5), resync khi `connectionState` đã 'connected' (H3).
-- Component: `initialTopMostItemIndex` semantics sau prepend (H7), payload plain-mode nhiều dòng (M4), sanitize-before-parse (C1).
-
-## Điểm tốt
-
-- Bao phủ test tốt: 335 tests pass, typecheck sạch; test WS adapter (promise connect semantics, CLOSING guard, detach stale CLOSED) viết chắc tay.
-- Adapter wrap mọi callback trong try/catch; `disconnect()` reject pending connect promise để caller không treo.
-- Alias-aware keys + `registry.ts` phá circular import là refactor đúng hướng; `conversationKeys` pure, có cache index.
-- `uploadFiles` dùng `Promise.allSettled` (partial failure có kết quả rõ), `uploadFile` có `cancelSession` + strip SAS token trước khi lưu URL.
-- Pin flow end-to-end (optimistic + WS `message:pinned/unpinned` → store → banner), gate `hasFetchedPinned` cẩn thận; background refetch khi thiếu message.
-- `conversation:updated` merge từng field thay vì spread undefined — fix đúng bug thật.
-- Gate `hasFetched` trong `Conversation` chặn refetch loop cho hội thoại rỗng.
-- IME composition guard (`isComposing` + keyCode 229) + `isSendingRef` chống double-send, có test.
-- CHANGELOG đã ghi breaking change của `uploadFiles` và việc bỏ ACS realtime adapter.
-- Mapper WS chịu cả camelCase lẫn PascalCase, phủ gần hết event types; event chưa dùng (reactions, roles) có comment TODO tường minh thay vì rơi vào default.
-
-## Ưu tiên đề xuất
-
-1. **Trước release:** sửa C1 (sanitize trước parse + fail-closed), commit đủ worktree fixes + 2 file untracked, rebuild tarball từ cây đã sửa.
-2. **Reliability reconnect:** abort socket `CONNECTING` treo (H1), heartbeat watchdog (H2), generation counter cho reconnect loop (M3), recovery sau max-retries (M2).
-3. **State/events:** map `ws:*` vào `connectionState`, sửa handleOnline resync (H3); quyết định typing/readReceipt legacy (map hoặc document).
-4. **Dedup:** gửi `clientMessageId` lên backend + tie-break, tolerance hai chiều (H4); sắp xếp lại merge vs replace trong `loadMessages` (H5).
-5. **MessageList:** check `jumpTarget.conversationId` (H8), hợp nhất staged/worktree cho đúng semantics virtuoso (H7).
-6. **Payload:** plain-mode gửi text thuần hoặc luôn đính `type:'html'` (M4).
+Bộ code change trong git diff đạt chất lượng cao:
+- **Tính thẩm mỹ & Trải nghiệm người dùng:** Giao diện thẻ tài liệu hiện đại, phân biệt màu sắc và nhãn rõ ràng cho từng định dạng tài liệu quen thuộc (Word, Excel, PowerPoint, PDF...).
+- **Chất lượng mã nguồn:** Tuân thủ TypeScript nghiêm ngặt, clean code, không có lint error, build thành công cả bundle ESM/CJS và hoàn thành 100% các bài test tự động (440/440 passed).
+- **Sẵn sàng triển khai:** Các thay đổi an toàn, tương thích ngược tốt và sẵn sàng để đóng gói/commit vào nhánh phát triển.

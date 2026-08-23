@@ -50,6 +50,8 @@ export interface MessageListProps {
   onDeleteMessage?: (messageId: string) => void;
   onPinMessage?: (messageId: string, pin: boolean) => void;
   pinnedMessageIds?: Set<string> | string[];
+  onOpenAttachment?: (url: string, fileName?: string) => void;
+  onDownloadAttachment?: (url: string, fileName?: string) => void;
 }
 
 type ListItem =
@@ -76,6 +78,8 @@ export const MessageList = React.memo(
         onDeleteMessage,
         onPinMessage,
         pinnedMessageIds,
+        onOpenAttachment,
+        onDownloadAttachment,
       },
       ref
     ) => {
@@ -719,6 +723,8 @@ export const MessageList = React.memo(
             onEdit={onEditMessage}
             onDelete={onDeleteMessage}
             onPin={onPinMessage}
+            onOpenAttachment={onOpenAttachment}
+            onDownloadAttachment={onDownloadAttachment}
             currentUserId={currentUserId}
             roomMembers={roomMembers}
           />

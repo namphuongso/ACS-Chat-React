@@ -20,10 +20,12 @@ import styles from './ConversationView.module.scss';
 export interface ConversationViewProps {
   conversationId?: string;
   pinnedMessageIds?: Set<string> | string[];
+  onOpenAttachment?: (url: string, fileName?: string) => void;
+  onDownloadAttachment?: (url: string, fileName?: string) => void;
 }
 
 export const ConversationView: React.FC<ConversationViewProps> = React.memo(
-  ({ conversationId, pinnedMessageIds }) => {
+  ({ conversationId, pinnedMessageIds, onOpenAttachment, onDownloadAttachment }) => {
     const { activeConversation, conversations } = useConversations();
     const { currentUser, connectionState } = useChat();
     const setIsSearching = useChatStore((state) => state.setIsSearching);
@@ -215,6 +217,8 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
             onDeleteMessage={handleDeleteMessage}
             onPinMessage={handlePinMessage}
             pinnedMessageIds={effectivePinnedMessageIds}
+            onOpenAttachment={onOpenAttachment}
+            onDownloadAttachment={onDownloadAttachment}
           />
         </div>
 

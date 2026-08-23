@@ -448,7 +448,7 @@
 }
 
 .largeImageBubble {
-  padding: 8px;
+  padding: 10px 14px;
   border-radius: 8px;
   width: fit-content;
   max-width: 440px;
@@ -467,11 +467,11 @@
 
 .ownBubble.largeImageBubble {
   background-color: var(--chat-large-img-own-bg, #ebf5ff);
-  border: 1px solid var(--chat-large-img-own-border, #60a5fa);
+  border: 1px solid var(--chat-large-img-own-border, #93c5fd);
 }
 
 .otherBubble.largeImageBubble {
-  background-color: var(--chat-bg, #ffffff);
+  background-color: var(--chat-large-img-other-bg, #ebf5ff);
   border: 1px solid var(--chat-large-img-other-border, #93c5fd);
 }
 
@@ -479,7 +479,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
 }
 
@@ -492,15 +492,12 @@
 }
 
 .largeImageIconBox {
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
-  background-color: #52b7a5;
+  width: 40px;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #ffffff;
 }
 
 .largeImageFileIcon {
@@ -514,6 +511,7 @@
   flex-direction: column;
   min-width: 0;
   flex: 1;
+  justify-content: center;
 }
 
 .largeImageFileName {
@@ -530,14 +528,15 @@
 .largeImageDetails {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 13px;
   color: var(--chat-text-secondary, #64748b);
   white-space: nowrap;
 }
 
 .largeImageSize {
   color: var(--chat-text-secondary, #64748b);
+  font-size: 13px;
 }
 
 .largeImageStatus {
@@ -546,6 +545,7 @@
   gap: 4px;
   color: #16a34a;
   font-weight: 500;
+  font-size: 13px;
 }
 
 .largeImageStatusIcon {
