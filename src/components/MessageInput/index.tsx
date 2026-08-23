@@ -111,7 +111,12 @@ export const MessageInput: React.FC<MessageInputProps> = React.memo(
         setContent('');
         setPlainText('');
         const cleanHtml = html.trim().toLowerCase();
-        if (cleanHtml === '<br>' || cleanHtml === '<div><br></div>' || cleanHtml === '<p><br></p>' || cleanHtml === '') {
+        if (
+          cleanHtml === '<br>' ||
+          cleanHtml === '<div><br></div>' ||
+          cleanHtml === '<p><br></p>' ||
+          cleanHtml === ''
+        ) {
           if (e.currentTarget.innerHTML !== '') {
             e.currentTarget.innerHTML = '';
           }

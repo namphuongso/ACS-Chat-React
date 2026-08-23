@@ -181,13 +181,13 @@ export class LinkPreviewService {
 
     const getMeta = (name: string): string | undefined => {
       const el =
-        doc.querySelector(`meta[property="${name}"]`) ||
-        doc.querySelector(`meta[name="${name}"]`);
+        doc.querySelector(`meta[property="${name}"]`) || doc.querySelector(`meta[name="${name}"]`);
       const content = el?.getAttribute('content')?.trim();
       return content || undefined;
     };
 
-    const title = getMeta('og:title') || doc.querySelector('title')?.textContent?.trim() || undefined;
+    const title =
+      getMeta('og:title') || doc.querySelector('title')?.textContent?.trim() || undefined;
     const description = getMeta('og:description') || getMeta('description');
     const siteName = getMeta('og:site_name');
     const imageUrl = this.resolveUrl(
@@ -221,7 +221,9 @@ export class LinkPreviewService {
   }
 }
 
+
 /**
  * Singleton instance of LinkPreviewService for global application usage.
  */
 export const linkPreviewService = new LinkPreviewService();
+

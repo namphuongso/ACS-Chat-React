@@ -33,6 +33,7 @@ import {
 import { ChatImage } from './ChatImage';
 import { LargeImageCard } from './LargeImageCard';
 import { LinkPreviewCard } from './LinkPreviewCard';
+import { VideoCard } from './VideoCard';
 
 export interface MessageItemProps {
   message: ChatMessage;
@@ -157,7 +158,6 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
     onViewDetails,
     onRecall,
     onDownloadAttachment,
-    onOpenAttachment,
     renderContent,
     renderActions,
     renderStatus,
@@ -226,6 +226,43 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
       return [];
     }, [message.metadata]);
 
+    const isVideoMessage = useMemo(() => {
+      if (message.metadata?.type === 'video') return true;
+      const fileName =
+        (message.metadata?.fileName as string) || (message.metadata?.name as string) || '';
+      const mimeType = (message.metadata?.mimeType as string) || '';
+      if (mimeType.startsWith('video/') || /\.(mp4|mov|webm|m4v|avi|mkv|3gp)$/i.test(fileName)) {
+        return Boolean(message.metadata?.url);
+      }
+      return false;
+    }, [message.metadata]);
+
+    const isFileMessage = useMemo(() => {
+      if (isVideoMessage) return false;
+      if (message.metadata?.type === 'file') return true;
+      if (
+        message.metadata?.type !== 'image' &&
+        Boolean(message.metadata?.url) &&
+        Boolean(message.metadata?.fileName)
+      ) {
+        return true;
+      }
+      return false;
+    }, [message.metadata, isVideoMessage]);
+
+    const isSingleLargeImage = useMemo(() => {
+      if (imageFiles.length !== 1) return false;
+      const single = imageFiles[0];
+      const size =
+        single.size ?? (message.metadata?.size ? Number(message.metadata.size) : undefined);
+      return Boolean(
+        single.isLarge || isLargeImage(size) || String(message.metadata?.isLarge) === 'true'
+      );
+    }, [imageFiles, message.metadata]);
+
+    const isImageMessage = imageFiles.length > 0;
+    const isNormalImageMessage = isImageMessage && !isSingleLargeImage;
+
     const linkPreviewFromMetadata = useMemo(
       () => parseLinkPreview(message.metadata?.linkPreview),
       [message.metadata]
@@ -233,6 +270,9 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
 
     const linkPreviewUrlToFetch = useMemo(() => {
       if (message.type === 'system' || message.deletedAt) return null;
+      if (isVideoMessage || isFileMessage || isImageMessage || isSingleLargeImage) {
+        return null;
+      }
       if (linkPreviewFromMetadata && !isEmptyLinkPreview(linkPreviewFromMetadata)) {
         return null;
       }
@@ -248,33 +288,15 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
       message.deletedAt,
       message.metadata,
       linkPreviewFromMetadata,
+      isVideoMessage,
+      isFileMessage,
+      isImageMessage,
+      isSingleLargeImage,
     ]);
 
     const fetchedLinkPreview = useLinkPreview(linkPreviewUrlToFetch);
 
     const linkPreview = fetchedLinkPreview || linkPreviewFromMetadata;
-
-    const isSingleLargeImage = useMemo(() => {
-      if (imageFiles.length !== 1) return false;
-      const single = imageFiles[0];
-      const size =
-        single.size ?? (message.metadata?.size ? Number(message.metadata.size) : undefined);
-      return Boolean(
-        single.isLarge || isLargeImage(size) || String(message.metadata?.isLarge) === 'true'
-      );
-    }, [imageFiles, message.metadata]);
-
-    const isFileMessage = useMemo(() => {
-      if (message.metadata?.type === 'file' || message.metadata?.type === 'video') return true;
-      if (
-        message.metadata?.type !== 'image' &&
-        Boolean(message.metadata?.url) &&
-        Boolean(message.metadata?.fileName)
-      ) {
-        return true;
-      }
-      return false;
-    }, [message.metadata]);
 
     const hasAttachments = Boolean(message.attachments && message.attachments.length > 0);
 
@@ -364,14 +386,11 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
       );
     }
 
-    const isImageMessage = imageFiles.length > 0;
-    const isNormalImageMessage = isImageMessage && !isSingleLargeImage;
-
     // Handle standard messages
     const messageClass = isOwn ? styles.ownMessage : styles.otherMessage;
     const bubbleClass = `${isOwn ? styles.ownBubble : styles.otherBubble} ${
       isNormalImageMessage ? styles.imageBubble : ''
-    } ${isSingleLargeImage || isFileMessage || hasAttachments ? styles.largeImageBubble : ''} ${
+    } ${isSingleLargeImage || isFileMessage || isVideoMessage || hasAttachments ? styles.largeImageBubble : ''} ${
       isHighlighted ? styles.highlightedBubble : ''
     }`;
 
@@ -397,6 +416,31 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
         );
       }
 
+      if (isVideoMessage) {
+        const fileName =
+          (message.metadata?.fileName as string) ||
+          (message.metadata?.name as string) ||
+          'video.mp4';
+        const size = message.metadata?.size ? Number(message.metadata.size) : undefined;
+        const url = (message.metadata?.url as string) || '';
+        const mimeType = message.metadata?.mimeType as string | undefined;
+
+        return (
+          <div>
+            <VideoCard
+              fileName={fileName}
+              fileSize={size}
+              url={url}
+              mimeType={mimeType}
+              onDownload={onDownloadAttachment}
+            />
+            {message.content && message.content !== url ? (
+              <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{message.content}</div>
+            ) : null}
+          </div>
+        );
+      }
+
       if (isSingleLargeImage) {
         const singleImg = imageFiles[0];
         const fileName =
@@ -411,7 +455,6 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
             fileSize={size}
             url={url}
             onDownload={onDownloadAttachment}
-            onOpenFolder={onOpenAttachment}
           />
         );
       }
@@ -429,7 +472,6 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
               fileSize={size}
               url={url}
               onDownload={onDownloadAttachment}
-              onOpenFolder={onOpenAttachment}
             />
             {message.content ? (
               <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{message.content}</div>
@@ -441,16 +483,32 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
       if (hasAttachments && message.attachments) {
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {message.attachments.map((att) => (
-              <LargeImageCard
-                key={att.id || att.url}
-                fileName={att.name}
-                fileSize={att.size}
-                url={att.url}
-                onDownload={onDownloadAttachment}
-                onOpenFolder={onOpenAttachment}
-              />
-            ))}
+            {message.attachments.map((att) => {
+              const isAttVideo =
+                att.mimeType?.startsWith('video/') ||
+                /\.(mp4|mov|webm|m4v|avi|mkv|3gp)$/i.test(att.name || '');
+              if (isAttVideo) {
+                return (
+                  <VideoCard
+                    key={att.id || att.url}
+                    fileName={att.name}
+                    fileSize={att.size}
+                    url={att.url}
+                    mimeType={att.mimeType}
+                    onDownload={onDownloadAttachment}
+                  />
+                );
+              }
+              return (
+                <LargeImageCard
+                  key={att.id || att.url}
+                  fileName={att.name}
+                  fileSize={att.size}
+                  url={att.url}
+                  onDownload={onDownloadAttachment}
+                />
+              );
+            })}
             {message.content ? (
               <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{message.content}</div>
             ) : null}
@@ -709,3 +767,5 @@ export type { LargeImageCardProps } from './LargeImageCard';
 export { ChatImage } from './ChatImage';
 export { LinkPreviewCard } from './LinkPreviewCard';
 export type { LinkPreviewCardProps } from './LinkPreviewCard';
+export { VideoCard } from './VideoCard';
+export type { VideoCardProps } from './VideoCard';

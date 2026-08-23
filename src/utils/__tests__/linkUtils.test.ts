@@ -74,7 +74,7 @@ describe('linkUtils', () => {
 
   describe('escapeHtml', () => {
     it('escapes special characters', () => {
-      expect(escapeHtml('<b>&"\'' )).toBe('&lt;b&gt;&amp;&quot;&#39;');
+      expect(escapeHtml('<b>&"\'')).toBe('&lt;b&gt;&amp;&quot;&#39;');
     });
   });
 

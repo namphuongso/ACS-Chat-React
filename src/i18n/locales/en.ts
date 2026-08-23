@@ -56,6 +56,7 @@ export const en = {
     sending: 'Sending...',
     failedToLoad: 'Failed to load',
     availableOnDevice: 'Available on device',
+    videoUnsupported: 'Video format not supported for direct preview',
     openFolder: 'Open folder',
     download: 'Download',
     downloading: 'Downloading...',

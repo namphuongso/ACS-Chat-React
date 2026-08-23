@@ -144,6 +144,44 @@ export function compareMessages(a: ChatMessage, b: ChatMessage): number {
 }
 
 /**
+ * Revokes any Blob Object URLs attached to a message's metadata (e.g. optimistic previews)
+ * to release browser memory.
+ */
+export function revokeBlobUrlsInMessage(msg?: ChatMessage): void {
+  if (!msg || typeof window === 'undefined' || typeof URL === 'undefined' || !URL.revokeObjectURL) {
+    return;
+  }
+  const metadata = msg.metadata;
+  if (!metadata) return;
+
+  if (typeof metadata.url === 'string' && metadata.url.startsWith('blob:')) {
+    try {
+      URL.revokeObjectURL(metadata.url);
+    } catch {
+      // Ignore revoke errors
+    }
+  }
+
+  if (Array.isArray(metadata.files)) {
+    for (const file of metadata.files) {
+      if (
+        file &&
+        typeof file === 'object' &&
+        'url' in file &&
+        typeof file.url === 'string' &&
+        file.url.startsWith('blob:')
+      ) {
+        try {
+          URL.revokeObjectURL(file.url);
+        } catch {
+          // Ignore revoke errors
+        }
+      }
+    }
+  }
+}
+
+/**
  * Client/server clock skew tolerance when matching an optimistic message
  * to its server confirmation by createdAt timestamps.
  */
@@ -273,10 +311,14 @@ export function dedupAndSortMessages(
     if (msg.clientMessageId && clientMsgIdToId.has(msg.clientMessageId)) {
       const oldId = clientMsgIdToId.get(msg.clientMessageId)!;
       if (oldId !== msg.id) {
+        const oldMsg = messageMap.get(oldId);
+        revokeBlobUrlsInMessage(oldMsg);
         messageMap.delete(oldId);
       }
     }
     if (msg.clientMessageId && messageMap.has(msg.clientMessageId)) {
+      const oldMsg = messageMap.get(msg.clientMessageId);
+      revokeBlobUrlsInMessage(oldMsg);
       messageMap.delete(msg.clientMessageId);
     }
 
@@ -294,6 +336,7 @@ export function dedupAndSortMessages(
             stripHtml(existingMsg.content) === stripHtml(msg.content);
 
           if (sameSender && sameContent && isConfirmationOf(existingMsg, msg)) {
+            revokeBlobUrlsInMessage(existingMsg);
             messageMap.delete(existingId);
             if (existingMsg.clientMessageId) {
               clientMsgIdToId.delete(existingMsg.clientMessageId);
@@ -370,6 +413,7 @@ export function dedupAndSortMessages(
         );
       });
       if (hasMatchingConfirmed) {
+        revokeBlobUrlsInMessage(msg);
         continue; // Skip this duplicate temp message
       }
     }
@@ -380,7 +424,7 @@ export function dedupAndSortMessages(
   return finalMessages;
 }
 
-export const useMessageStore = create<MessageState>((set) => ({
+export const useMessageStore = create<MessageState>((set, get) => ({
   ...initialMessageState,
 
   addMessage: (conversationId: string, message: ChatMessage) =>
@@ -512,6 +556,13 @@ export const useMessageStore = create<MessageState>((set) => ({
       for (const key of keys) {
         const convData = newMessagesByConversation[key];
         if (!convData) continue;
+
+        const removed = convData.messages.filter(
+          (msg) => msg.id === messageId || msg.clientMessageId === messageId
+        );
+        for (const msg of removed) {
+          revokeBlobUrlsInMessage(msg);
+        }
 
         const filtered = convData.messages.filter(
           (msg) => msg.id !== messageId && msg.clientMessageId !== messageId
@@ -743,6 +794,11 @@ export const useMessageStore = create<MessageState>((set) => ({
       for (const [convId, convData] of Object.entries(state.messagesByConversation)) {
         if (!activeKeys.has(convId) && convData.messages.length > keepLimit) {
           changed = true;
+          const trimmedCount = convData.messages.length - keepLimit;
+          const droppedMessages = convData.messages.slice(0, trimmedCount);
+          for (const msg of droppedMessages) {
+            revokeBlobUrlsInMessage(msg);
+          }
           // Keep only the most recent `keepLimit` messages
           const trimmedMessages = convData.messages.slice(-keepLimit);
           newMessagesByConversation[convId] = {
@@ -779,7 +835,15 @@ export const useMessageStore = create<MessageState>((set) => ({
   clearJumpTarget: () =>
     set({ jumpTarget: null }),
 
-  reset: () => set(initialMessageState),
+  reset: () => {
+    const allMessages = get().messagesByConversation;
+    for (const convData of Object.values(allMessages)) {
+      for (const msg of convData.messages) {
+        revokeBlobUrlsInMessage(msg);
+      }
+    }
+    set(initialMessageState);
+  },
 }));
 
 registerMessageStore(useMessageStore);

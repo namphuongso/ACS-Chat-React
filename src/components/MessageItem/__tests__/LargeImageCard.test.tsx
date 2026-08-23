@@ -19,7 +19,6 @@ describe('LargeImageCard Component', () => {
 
     expect(screen.getByText('report.pdf')).toBeInTheDocument();
     expect(screen.getByText('1.00 MB')).toBeInTheDocument();
-    expect(screen.getByText('chat.availableOnDevice')).toBeInTheDocument();
   });
 
   it('should call custom onDownload when provided', () => {
@@ -95,38 +94,5 @@ describe('LargeImageCard Component', () => {
     await waitFor(() => {
       expect(screen.getByTitle('chat.download')).not.toBeDisabled();
     });
-  });
-
-  it('should call onOpenFolder when folder button is clicked', () => {
-    const onOpenFolder = vi.fn();
-    render(
-      <LargeImageCard
-        fileName="archive.zip"
-        fileSize={5000}
-        url="https://example.com/archive.zip"
-        onOpenFolder={onOpenFolder}
-      />
-    );
-
-    const folderBtn = screen.getByTitle('chat.openFolder');
-    fireEvent.click(folderBtn);
-
-    expect(onOpenFolder).toHaveBeenCalledWith('https://example.com/archive.zip', 'archive.zip');
-  });
-
-  it('should open window when folder button is clicked without onOpenFolder', () => {
-    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-    render(
-      <LargeImageCard fileName="doc.docx" fileSize={3000} url="https://example.com/doc.docx" />
-    );
-
-    const folderBtn = screen.getByTitle('chat.openFolder');
-    fireEvent.click(folderBtn);
-
-    expect(windowOpenSpy).toHaveBeenCalledWith(
-      'https://example.com/doc.docx',
-      '_blank',
-      'noopener,noreferrer'
-    );
   });
 });

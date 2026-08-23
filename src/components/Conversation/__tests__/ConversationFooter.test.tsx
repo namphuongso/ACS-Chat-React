@@ -39,6 +39,31 @@ describe('ConversationFooter Component', () => {
       createObjectURL: vi.fn((file: File) => `blob:http://localhost/${file?.name || 'test'}`),
       revokeObjectURL: vi.fn(),
     });
+
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((...args: Parameters<Document['createElement']>) => {
+      const el = origCreateElement(...args);
+      const tagName = args[0];
+      if (typeof tagName === 'string' && tagName.toLowerCase() === 'video') {
+        const videoEl = el as HTMLVideoElement;
+        Object.defineProperty(videoEl, 'videoWidth', { value: 1920, writable: true });
+        Object.defineProperty(videoEl, 'videoHeight', { value: 1080, writable: true });
+        Object.defineProperty(videoEl, 'duration', { value: 32, writable: true });
+        let _src = '';
+        Object.defineProperty(videoEl, 'src', {
+          get: () => _src,
+          set: (val: string) => {
+            _src = val;
+            setTimeout(() => {
+              if (typeof videoEl.onloadedmetadata === 'function') {
+                videoEl.onloadedmetadata(new Event('loadedmetadata'));
+              }
+            }, 0);
+          },
+        });
+      }
+      return el;
+    });
   });
 
   it('should not include type: html in onSend options when isFormatMode is not active', () => {
@@ -298,6 +323,52 @@ describe('ConversationFooter Component', () => {
           fileName: 'large2_80mb.png',
           url: 'https://blob.example.com/large2_80mb.png',
         }),
+      })
+    );
+  });
+
+  it('should send video attachment with formatted metadata', async () => {
+    const mockSend = vi.fn();
+    const { container } = render(
+      <ConversationFooter
+        conversationId="conv-1"
+        onSend={mockSend}
+        onTyping={vi.fn()}
+      />
+    );
+
+    const fileInputs = container.querySelectorAll('input[type="file"]');
+    const attachmentInput = fileInputs[1];
+
+    const videoFile = new File(['dummy video content'], 'trip.mp4', { type: 'video/mp4' });
+    Object.defineProperty(videoFile, 'size', { value: 5242880 });
+
+    Object.defineProperty(attachmentInput, 'files', {
+      value: [videoFile],
+      writable: true,
+      configurable: true,
+    });
+    fireEvent.change(attachmentInput);
+
+    await vi.waitFor(() => {
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockSend).toHaveBeenCalledWith(
+      '',
+      expect.objectContaining({
+        metadata: {
+          type: 'video',
+          url: 'https://blob.example.com/trip.mp4',
+          fileName: 'trip.mp4',
+          mimeType: 'video/mp4',
+          size: 5242880,
+          width: 1920,
+          height: 1080,
+          duration: 32,
+          clientMessageId: expect.any(String),
+        },
+        clientMessageId: expect.any(String),
       })
     );
   });

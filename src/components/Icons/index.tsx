@@ -371,5 +371,13 @@ export const LoaderIcon: React.FC<SVGProps<SVGSVGElement>> = React.memo((props) 
   </svg>
 ));
 
-
-
+export const PlayIcon: React.FC<SVGProps<SVGSVGElement>> = React.memo((props) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    stroke="none"
+    {...props}
+  >
+    <polygon points="5 3 19 12 5 21 5 3" />
+  </svg>
+));

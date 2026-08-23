@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LinkPreviewCard } from '../LinkPreviewCard';
 import type { LinkPreview } from '../../../types/message.types';
@@ -13,59 +13,72 @@ const fullPreview: LinkPreview = {
 };
 
 describe('LinkPreviewCard', () => {
-  it('renders title, description, image and site name', () => {
+  it('renders title, description, image and site name', async () => {
     const { container } = render(<LinkPreviewCard preview={fullPreview} />);
+
+    expect(await screen.findByText('Article description')).toBeInTheDocument();
+    expect(screen.getByText('Article Title')).toBeInTheDocument();
+    expect(screen.getByText(/Example/)).toBeInTheDocument();
+
+    const imageContainer = container.querySelector('[data-testid="image-container"]');
+    expect(imageContainer).toBeInTheDocument();
+    expect(imageContainer?.getAttribute('style')).toContain('https://example.com/image.png');
+  });
+
+  it('falls back to the domain when no title/siteName is provided', async () => {
+    render(<LinkPreviewCard preview={{ url: 'https://bare.example.com/path' }} />);
+    await waitFor(() => {
+      expect(screen.getAllByText(/bare\.example\.com/).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('renders compact mode with thumbnail, title, description and domain', () => {
+    const { container } = render(<LinkPreviewCard preview={fullPreview} compact />);
 
     expect(screen.getByText('Article Title')).toBeInTheDocument();
     expect(screen.getByText('Article description')).toBeInTheDocument();
     expect(screen.getByText('Example')).toBeInTheDocument();
 
-    const images = container.querySelectorAll('img');
-    const sources = Array.from(images).map((img) => img.getAttribute('src'));
-    expect(sources).toContain('https://example.com/image.png');
-    expect(sources).toContain('https://example.com/favicon.ico');
+    const image = container.querySelector('img');
+    expect(image).toBeInTheDocument();
+    expect(image?.getAttribute('src')).toBe('https://example.com/image.png');
   });
 
-  it('falls back to the domain when no title/siteName is provided', () => {
-    render(<LinkPreviewCard preview={{ url: 'https://bare.example.com/path' }} />);
-    expect(screen.getAllByText('bare.example.com').length).toBeGreaterThan(0);
+  it('hides the thumbnail in compact mode when image fails to load', () => {
+    const { container } = render(<LinkPreviewCard preview={fullPreview} compact />);
+    const image = container.querySelector('img');
+    expect(image).toBeInTheDocument();
+
+    fireEvent.error(image as HTMLElement);
+    expect(container.querySelector('img')).toBeNull();
   });
 
-  it('hides the preview image when it fails to load', () => {
-    const { container } = render(<LinkPreviewCard preview={fullPreview} />);
-    const mainImage = Array.from(container.querySelectorAll('img')).find(
-      (img) => img.getAttribute('src') === 'https://example.com/image.png'
-    );
-    expect(mainImage).toBeDefined();
-
-    fireEvent.error(mainImage as HTMLElement);
-    const sources = Array.from(container.querySelectorAll('img')).map((img) =>
-      img.getAttribute('src')
-    );
-    expect(sources).not.toContain('https://example.com/image.png');
-  });
-
-  it('opens the url in a new tab on click by default', () => {
+  it('renders anchor with target="_blank" and rel="noopener noreferrer" by default in compact mode', () => {
     const openSpy = vi.fn();
     vi.stubGlobal('open', openSpy);
 
-    render(<LinkPreviewCard preview={fullPreview} />);
-    fireEvent.click(screen.getByTestId('link-preview-card'));
+    render(<LinkPreviewCard preview={fullPreview} compact />);
+    const card = screen.getByTestId('link-preview-card');
 
-    expect(openSpy).toHaveBeenCalledWith(
-      'https://example.com/article',
-      '_blank',
-      'noopener,noreferrer'
-    );
+    expect(card.tagName).toBe('A');
+    expect(card).toHaveAttribute('href', 'https://example.com/article');
+    expect(card).toHaveAttribute('target', '_blank');
+    expect(card).toHaveAttribute('rel', 'noopener noreferrer');
+    // Ensure window.open is not called to prevent double navigation
+    fireEvent.click(card);
+    expect(openSpy).not.toHaveBeenCalled();
+
     vi.unstubAllGlobals();
   });
 
-  it('invokes the custom onClick handler instead of opening the url', () => {
+  it('invokes the custom onClick handler instead of opening the url in full mode', async () => {
     const onClick = vi.fn();
     const openSpy = vi.fn();
     vi.stubGlobal('open', openSpy);
 
     render(<LinkPreviewCard preview={fullPreview} onClick={onClick} />);
+    await screen.findByText('Article description');
+
     fireEvent.click(screen.getByTestId('link-preview-card'));
 
     expect(onClick).toHaveBeenCalledWith('https://example.com/article');
@@ -73,9 +86,12 @@ describe('LinkPreviewCard', () => {
     vi.unstubAllGlobals();
   });
 
-  it('omits the description in compact mode', () => {
-    render(<LinkPreviewCard preview={fullPreview} compact />);
-    expect(screen.queryByText('Article description')).not.toBeInTheDocument();
-    expect(screen.getByText('Article Title')).toBeInTheDocument();
+  it('invokes the custom onClick handler in compact mode', () => {
+    const onClick = vi.fn();
+
+    render(<LinkPreviewCard preview={fullPreview} onClick={onClick} compact />);
+    fireEvent.click(screen.getByTestId('link-preview-card'));
+
+    expect(onClick).toHaveBeenCalledWith('https://example.com/article');
   });
 });

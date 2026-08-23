@@ -57,6 +57,7 @@ export const vi = {
     sending: 'Đang gửi...',
     failedToLoad: 'Tải thất bại',
     availableOnDevice: 'Available on device',
+    videoUnsupported: 'Định dạng video không hỗ trợ xem trước trực tiếp',
     openFolder: 'Mở thư mục',
     download: 'Tải về',
     downloading: 'Đang tải về...',

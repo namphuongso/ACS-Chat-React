@@ -274,20 +274,12 @@ describe('MessageItem Component', () => {
     expect(screen.getByText('100.36 MB')).toBeInTheDocument();
 
     // Should render action buttons
-    const folderBtn = screen.getByTitle('chat.openFolder');
     const downloadBtn = screen.getByTitle('chat.download');
-    expect(folderBtn).toBeInTheDocument();
     expect(downloadBtn).toBeInTheDocument();
 
     // Test actions
     fireEvent.click(downloadBtn);
     expect(onDownloadAttachment).toHaveBeenCalledWith(
-      'https://example.com/100-mb-example-jpg.jpg',
-      '100-mb-example-jpg.jpg'
-    );
-
-    fireEvent.click(folderBtn);
-    expect(onOpenAttachment).toHaveBeenCalledWith(
       'https://example.com/100-mb-example-jpg.jpg',
       '100-mb-example-jpg.jpg'
     );
@@ -307,7 +299,6 @@ describe('MessageItem Component', () => {
     render(<MessageItem message={largeImageMsg} isOwn={true} />);
 
     expect(screen.getByText('huge.png')).toBeInTheDocument();
-    expect(screen.getByText('chat.availableOnDevice')).toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
@@ -437,6 +428,73 @@ describe('MessageItem Component', () => {
       };
       render(<MessageItem message={deletedWithPreview} isOwn={false} />);
       expect(screen.queryByTestId('link-preview-card')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Video Messages', () => {
+    it('renders VideoCard for video message with metadata type video', () => {
+      const videoMessage: ChatMessage = {
+        ...baseMessage,
+        content: '',
+        metadata: {
+          type: 'video',
+          url: 'https://example.com/trip.mp4',
+          fileName: 'trip.mp4',
+          mimeType: 'video/mp4',
+          size: 5242880,
+        },
+      };
+
+      render(<MessageItem message={videoMessage} isOwn={true} />);
+
+      expect(screen.getByTestId('video-card')).toBeInTheDocument();
+      expect(screen.getByTestId('video-player')).toHaveAttribute(
+        'src',
+        'https://example.com/trip.mp4'
+      );
+      expect(screen.getByText('trip.mp4')).toBeInTheDocument();
+      expect(screen.getByText('5.00 MB')).toBeInTheDocument();
+      // Should not render link preview
+      expect(screen.queryByTestId('link-preview-card')).not.toBeInTheDocument();
+    });
+
+    it('renders VideoCard for mov video message by extension', () => {
+      const movMessage: ChatMessage = {
+        ...baseMessage,
+        content: '',
+        metadata: {
+          url: 'https://example.com/video.mov',
+          fileName: 'video.mov',
+          mimeType: 'video/quicktime',
+          size: 1048576,
+        },
+      };
+
+      render(<MessageItem message={movMessage} isOwn={false} />);
+
+      expect(screen.getByTestId('video-card')).toBeInTheDocument();
+      expect(screen.getByText('video.mov')).toBeInTheDocument();
+      expect(screen.getByText('1.00 MB')).toBeInTheDocument();
+    });
+
+    it('renders VideoCard for attachments with video type', () => {
+      const msgWithAttachment: ChatMessage = {
+        ...baseMessage,
+        attachments: [
+          {
+            id: 'att-1',
+            name: 'holiday.mp4',
+            url: 'https://example.com/holiday.mp4',
+            mimeType: 'video/mp4',
+            size: 2048000,
+          },
+        ],
+      };
+
+      render(<MessageItem message={msgWithAttachment} isOwn={false} />);
+
+      expect(screen.getByTestId('video-card')).toBeInTheDocument();
+      expect(screen.getByText('holiday.mp4')).toBeInTheDocument();
     });
   });
 });

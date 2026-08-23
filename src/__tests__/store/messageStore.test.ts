@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   useMessageStore,
   initialMessageState,
@@ -577,5 +577,124 @@ describe('messageStore', () => {
     const messages = useMessageStore.getState().messagesByConversation['conv-1'].messages;
     expect(messages).toHaveLength(1);
     expect(messages[0].id).toBe('server-skew-1');
+  });
+
+  describe('Blob URL cleanup (revokeObjectURL)', () => {
+    let revokeSpy: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      revokeSpy = vi.fn();
+      URL.revokeObjectURL = revokeSpy;
+    });
+
+    afterEach(() => {
+      delete (URL as unknown as { revokeObjectURL?: unknown }).revokeObjectURL;
+    });
+
+    it('should revoke blob URLs when optimistic message is replaced by server-confirmed message', () => {
+      const optimisticMsg: ChatMessage = {
+        id: 'temp-video-1',
+        clientMessageId: 'client-video-1',
+        conversationId: 'conv-1',
+        type: 'text',
+        content: '',
+        sender: sampleUser,
+        createdAt: new Date(),
+        status: 'sending',
+        metadata: {
+          type: 'video',
+          url: 'blob:http://localhost/temp-video-blob',
+          fileName: 'clip.mp4',
+        },
+      };
+
+      useMessageStore.getState().addMessage('conv-1', optimisticMsg);
+
+      const serverMsg: ChatMessage = {
+        id: 'server-video-1',
+        clientMessageId: 'client-video-1',
+        conversationId: 'conv-1',
+        type: 'text',
+        content: '',
+        sender: sampleUser,
+        createdAt: new Date(),
+        status: 'sent',
+        metadata: {
+          type: 'video',
+          url: 'https://example.com/videos/clip.mp4',
+          fileName: 'clip.mp4',
+        },
+      };
+
+      useMessageStore.getState().addMessage('conv-1', serverMsg);
+
+      expect(revokeSpy).toHaveBeenCalledWith('blob:http://localhost/temp-video-blob');
+    });
+
+    it('should revoke blob URLs inside files array when optimistic image album is replaced', () => {
+      const optimisticMsg: ChatMessage = {
+        id: 'temp-album-1',
+        clientMessageId: 'client-album-1',
+        conversationId: 'conv-1',
+        type: 'text',
+        content: '',
+        sender: sampleUser,
+        createdAt: new Date(),
+        status: 'sending',
+        metadata: {
+          type: 'image',
+          files: [
+            { url: 'blob:http://localhost/temp-img-1', fileName: 'img1.png' },
+            { url: 'blob:http://localhost/temp-img-2', fileName: 'img2.png' },
+          ],
+        },
+      };
+
+      useMessageStore.getState().addMessage('conv-1', optimisticMsg);
+
+      const serverMsg: ChatMessage = {
+        id: 'server-album-1',
+        clientMessageId: 'client-album-1',
+        conversationId: 'conv-1',
+        type: 'text',
+        content: '',
+        sender: sampleUser,
+        createdAt: new Date(),
+        status: 'sent',
+        metadata: {
+          type: 'image',
+          files: [
+            { url: 'https://example.com/img1.png', fileName: 'img1.png' },
+            { url: 'https://example.com/img2.png', fileName: 'img2.png' },
+          ],
+        },
+      };
+
+      useMessageStore.getState().addMessage('conv-1', serverMsg);
+
+      expect(revokeSpy).toHaveBeenCalledWith('blob:http://localhost/temp-img-1');
+      expect(revokeSpy).toHaveBeenCalledWith('blob:http://localhost/temp-img-2');
+    });
+
+    it('should revoke blob URLs when message is removed', () => {
+      const optimisticMsg: ChatMessage = {
+        id: 'temp-del-1',
+        conversationId: 'conv-1',
+        type: 'text',
+        content: '',
+        sender: sampleUser,
+        createdAt: new Date(),
+        status: 'sending',
+        metadata: {
+          type: 'video',
+          url: 'blob:http://localhost/temp-to-delete',
+        },
+      };
+
+      useMessageStore.getState().addMessage('conv-1', optimisticMsg);
+      useMessageStore.getState().removeMessage('conv-1', 'temp-del-1');
+
+      expect(revokeSpy).toHaveBeenCalledWith('blob:http://localhost/temp-to-delete');
+    });
   });
 });

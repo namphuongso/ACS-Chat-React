@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { SendMessageOptions } from '../../types/message.types';
+import type { MessageMetadata, SendMessageOptions } from '../../types/message.types';
 import { uploadFile } from '../../services/fileService';
 import { useMessageStore } from '../../store/messageStore';
 import { useChatStore } from '../../store/chatStore';
@@ -135,16 +135,17 @@ export function useConversationFooter({
       try {
         const localFilesMeta = await Promise.all(
           fileList.map(async (file, index) => {
+            const blobUrl = URL.createObjectURL(file);
             const dimensions = await new Promise<{ width: number; height: number }>((resolve) => {
               const img = new Image();
               img.onload = () => resolve({ width: img.width, height: img.height });
               img.onerror = () => resolve({ width: 0, height: 0 });
-              img.src = URL.createObjectURL(file);
+              img.src = blobUrl;
             });
 
             return {
               file,
-              url: URL.createObjectURL(file),
+              url: blobUrl,
               fileName: file.name,
               mimeType: file.type,
               size: file.size,
@@ -302,20 +303,12 @@ export function useConversationFooter({
         const tempId = `temp-${clientMessageId}`;
 
         try {
-          const baseMetadata: Record<string, string> = {
-            fileName: file.name,
-            mimeType: file.type,
-            size: String(file.size),
-          };
-
-          let localMetadata: Record<string, string> = {
-            ...baseMetadata,
-            url: URL.createObjectURL(file),
-          };
-          let finalMetadata: Record<string, string> = { ...baseMetadata };
+          let localMetadata: MessageMetadata;
+          let finalMetadata: MessageMetadata;
 
           const isVideo = file.type.startsWith('video/') || /\.(mp4|mov)$/i.test(file.name);
           if (isVideo) {
+            const localBlobUrl = URL.createObjectURL(file);
             const videoMeta = await new Promise<{
               width: number;
               height: number;
@@ -325,35 +318,60 @@ export function useConversationFooter({
               video.preload = 'metadata';
               video.onloadedmetadata = () => {
                 resolve({
-                  width: video.videoWidth,
-                  height: video.videoHeight,
-                  duration: Math.round(video.duration),
+                  width: video.videoWidth || 0,
+                  height: video.videoHeight || 0,
+                  duration: Number.isFinite(video.duration) ? Math.round(video.duration) : 0,
                 });
               };
               video.onerror = () => {
                 resolve({ width: 0, height: 0, duration: 0 });
               };
-              video.src = URL.createObjectURL(file);
+              video.src = localBlobUrl;
             });
 
+            const mimeType =
+              file.type || (/\.mov$/i.test(file.name) ? 'video/quicktime' : 'video/mp4');
+
             localMetadata = {
-              ...localMetadata,
               type: 'video',
-              width: String(videoMeta.width),
-              height: String(videoMeta.height),
-              duration: String(videoMeta.duration),
+              url: localBlobUrl,
+              fileName: file.name,
+              mimeType,
+              size: file.size,
+              width: videoMeta.width,
+              height: videoMeta.height,
+              duration: videoMeta.duration,
+              clientMessageId,
             };
 
             finalMetadata = {
-              ...finalMetadata,
               type: 'video',
-              width: String(videoMeta.width),
-              height: String(videoMeta.height),
-              duration: String(videoMeta.duration),
+              url: '',
+              fileName: file.name,
+              mimeType,
+              size: file.size,
+              width: videoMeta.width,
+              height: videoMeta.height,
+              duration: videoMeta.duration,
+              clientMessageId,
             };
           } else {
-            localMetadata = { ...localMetadata, type: 'file' };
-            finalMetadata = { ...finalMetadata, type: 'file' };
+            const baseMetadata: MessageMetadata = {
+              fileName: file.name,
+              mimeType: file.type,
+              size: file.size,
+              clientMessageId,
+            };
+            localMetadata = {
+              ...baseMetadata,
+              type: 'file',
+              url: URL.createObjectURL(file),
+            };
+            finalMetadata = {
+              ...baseMetadata,
+              type: 'file',
+              url: '',
+            };
           }
 
           if (conversationId) {

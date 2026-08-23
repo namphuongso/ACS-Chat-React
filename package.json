@@ -57,9 +57,11 @@
     "react-dom": ">=18.0.0"
   },
   "dependencies": {
+    "@dhaiwat10/react-link-preview": "^1.15.0",
     "@namphuongtechnologi/azure-blob-transfer": "^1.2.1",
     "dompurify": "^3.0.0",
     "i18next": "^26.3.6",
+    "link-preview-js": "^4.0.4",
     "lucide-react": "^1.28.0",
     "react-i18next": "^17.0.11",
     "react-virtuoso": "^4.0.0",
