@@ -18,10 +18,31 @@ vi.mock('../../../hooks/useRoomMembers', () => ({
 }));
 
 vi.mock('../../MessageList', () => ({
-  MessageList: (props: { messages?: unknown[]; onLoadMore?: () => void }) => (
+  MessageList: (props: {
+    messages?: unknown[];
+    onLoadMore?: () => void;
+    onOpenAttachment?: (url: string, fileName?: string) => void;
+    onDownloadAttachment?: (url: string, fileName?: string) => void;
+  }) => (
     <div data-testid="mock-message-list">
       {props.messages?.length || 0} messages
       <button onClick={props.onLoadMore}>Load More</button>
+      {props.onOpenAttachment && (
+        <button
+          onClick={() => props.onOpenAttachment?.('https://example.com/test.pdf', 'test.pdf')}
+          data-testid="open-attach-btn"
+        >
+          Open
+        </button>
+      )}
+      {props.onDownloadAttachment && (
+        <button
+          onClick={() => props.onDownloadAttachment?.('https://example.com/test.pdf', 'test.pdf')}
+          data-testid="download-attach-btn"
+        >
+          Download
+        </button>
+      )}
     </div>
   ),
 }));
@@ -37,6 +58,7 @@ vi.mock('../../MessageInput', () => ({
 describe('ConversationView Component', () => {
   const mockSendMessage = vi.fn();
   const mockLoadMore = vi.fn();
+  const mockLoadMessages = vi.fn().mockResolvedValue([]);
   
   beforeEach(() => {
     vi.clearAllMocks();
@@ -59,7 +81,9 @@ describe('ConversationView Component', () => {
       loading: false,
       loadingMore: false,
       hasMore: true,
+      hasFetched: true,
       loadMore: mockLoadMore,
+      loadMessages: mockLoadMessages,
       sendMessage: mockSendMessage,
     } as unknown as ReturnType<typeof useMessages>);
   });
@@ -106,4 +130,55 @@ describe('ConversationView Component', () => {
     render(<ConversationView />);
     expect(screen.getByText('chat.send')).toBeDisabled();
   });
+
+  it('should call loadMessages when hasFetched is false even if messages already contain a received message', () => {
+    vi.mocked(useMessages).mockReturnValue({
+      messages: [{ id: 'realtime-msg-1' }] as never,
+      loading: false,
+      loadingMore: false,
+      hasMore: true,
+      hasFetched: false,
+      loadMore: mockLoadMore,
+      loadMessages: mockLoadMessages,
+      sendMessage: mockSendMessage,
+    } as unknown as ReturnType<typeof useMessages>);
+
+    render(<ConversationView conversationId="conv-1" />);
+    expect(mockLoadMessages).toHaveBeenCalledTimes(1);
+  });
+
+  it('should forward onOpenAttachment and onDownloadAttachment to MessageList', () => {
+    const onOpenAttachment = vi.fn();
+    const onDownloadAttachment = vi.fn();
+
+    render(
+      <ConversationView
+        onOpenAttachment={onOpenAttachment}
+        onDownloadAttachment={onDownloadAttachment}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('open-attach-btn'));
+    expect(onOpenAttachment).toHaveBeenCalledWith('https://example.com/test.pdf', 'test.pdf');
+
+    fireEvent.click(screen.getByTestId('download-attach-btn'));
+    expect(onDownloadAttachment).toHaveBeenCalledWith('https://example.com/test.pdf', 'test.pdf');
+  });
+
+  it('should not open internal FilePreviewModal when disableInternalPreview is true', () => {
+    const onOpenAttachment = vi.fn();
+
+    render(
+      <ConversationView
+        onOpenAttachment={onOpenAttachment}
+        disableInternalPreview={true}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('open-attach-btn'));
+    expect(onOpenAttachment).toHaveBeenCalledWith('https://example.com/test.pdf', 'test.pdf');
+    // FilePreviewModal should not be rendered
+    expect(screen.queryByTestId('file-preview-modal')).not.toBeInTheDocument();
+  });
 });
+

@@ -2,7 +2,8 @@ import type { ChatService } from './chatService';
 import { useChatStore } from '../store/chatStore';
 import { useParticipantStore } from '../store/participantStore';
 import { AcsChatError } from '../types/errors.types';
-import { mapAcsErrorToChatError } from '../adapters/acs/acsMappers';
+import { mapAcsErrorToChatError, mapAcsReadReceiptToReadReceipt } from '../adapters/acs/acsMappers';
+import { websocketService } from './websocketService';
 
 /**
  * Service for managing and sending read receipts.
@@ -92,13 +93,20 @@ export class ReadReceiptService {
       clearTimeout(existingTimer);
     }
 
-    // Debounce the actual ACS API call
+    // Debounce the actual send
     const timer = setTimeout(async () => {
       this.debounceTimers.delete(conversationId);
 
       try {
-        const threadClient = this.getThreadClient(conversationId);
-        await threadClient.sendReadReceipt({ chatMessageId: messageId });
+        // Prefer the WebSocket channel when the connection is active, so the
+        // backend receives a single read event instead of a duplicate from
+        // both ACS and the WS channel. Fall back to ACS only when the
+        // WebSocket is not available (e.g. ACS-only deployments).
+        const wsSent = websocketService.isConnected() && websocketService.sendRead(messageId);
+        if (!wsSent) {
+          const threadClient = this.getThreadClient(conversationId);
+          await threadClient.sendReadReceipt({ chatMessageId: messageId });
+        }
 
         // Mark this messageId as the last one we successfully requested a read receipt for
         this.lastSentMessageIds.set(conversationId, messageId);
@@ -136,7 +144,6 @@ export class ReadReceiptService {
 
       for await (const page of iterable.byPage()) {
         for (const acsReceipt of page) {
-          const { mapAcsReadReceiptToReadReceipt } = await import('../adapters/acs/acsMappers');
           const receipt = mapAcsReadReceiptToReadReceipt(acsReceipt);
           partStore.addReadReceipt(conversationId, receipt);
         }
@@ -145,6 +152,18 @@ export class ReadReceiptService {
     } catch (error) {
       console.warn(`[ReadReceiptService] Failed to load read receipts for ${conversationId}:`, error);
     }
+  }
+
+  /**
+   * Clean up pending debounce timers and cached state.
+   */
+  public dispose(): void {
+    for (const timer of this.debounceTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.debounceTimers.clear();
+    this.lastSentMessageIds.clear();
+    this.chatServiceRef = null;
   }
 }
 export const readReceiptService = new ReadReceiptService();

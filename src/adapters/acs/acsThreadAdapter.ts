@@ -67,11 +67,25 @@ export class AcsThreadAdapter {
     }
 
     try {
+      let acsMetadata: Record<string, string> | undefined;
+      if (options?.metadata) {
+        acsMetadata = {};
+        for (const [key, val] of Object.entries(options.metadata)) {
+          if (typeof val === 'string') {
+            acsMetadata[key] = val;
+          } else if (typeof val === 'number' || typeof val === 'boolean') {
+            acsMetadata[key] = String(val);
+          } else if (val !== undefined && val !== null) {
+            acsMetadata[key] = JSON.stringify(val);
+          }
+        }
+      }
+
       const response = await this.chatThreadClient.sendMessage(
         { content },
         {
           type: options?.type,
-          metadata: options?.metadata,
+          metadata: acsMetadata,
         }
       );
       return response.id;

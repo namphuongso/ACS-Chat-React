@@ -3,16 +3,12 @@ import { AcsClientAdapter } from '../../adapters/acs/acsClientAdapter';
 import { AcsChatError } from '../../types/errors.types';
 import { AzureCommunicationTokenCredential } from '@azure/communication-common';
 
-const mockStartRealtimeNotifications = vi.fn().mockResolvedValue(undefined);
-const mockStopRealtimeNotifications = vi.fn().mockResolvedValue(undefined);
 const mockGetChatThreadClient = vi.fn().mockReturnValue({ threadId: 'thread-123' });
 
 vi.mock('@azure/communication-chat', () => {
   return {
     ChatClient: vi.fn().mockImplementation(() => {
       return {
-        startRealtimeNotifications: mockStartRealtimeNotifications,
-        stopRealtimeNotifications: mockStopRealtimeNotifications,
         getChatThreadClient: mockGetChatThreadClient,
       };
     }),
@@ -86,51 +82,11 @@ describe('AcsClientAdapter', () => {
     });
   });
 
-  describe('Realtime Notifications', () => {
-    it('should start realtime notifications successfully', async () => {
-      const adapter = new AcsClientAdapter(validEndpoint, mockCredential);
-      await adapter.startRealtimeNotifications();
-      expect(mockStartRealtimeNotifications).toHaveBeenCalledTimes(1);
-    });
-
-    it('should throw CONNECTION_FAILED if startRealtimeNotifications fails', async () => {
-      mockStartRealtimeNotifications.mockRejectedValueOnce(new Error('Network error'));
-      const adapter = new AcsClientAdapter(validEndpoint, mockCredential);
-      await expect(adapter.startRealtimeNotifications()).rejects.toThrow(AcsChatError);
-
-      try {
-        await adapter.startRealtimeNotifications();
-      } catch (err: unknown) {
-        expect((err as AcsChatError).code).toBe('CONNECTION_FAILED');
-      }
-    });
-
-    it('should stop realtime notifications successfully', async () => {
-      const adapter = new AcsClientAdapter(validEndpoint, mockCredential);
-      await adapter.stopRealtimeNotifications();
-      expect(mockStopRealtimeNotifications).toHaveBeenCalledTimes(1);
-    });
-
-    it('should throw CONNECTION_FAILED if stopRealtimeNotifications fails', async () => {
-      mockStopRealtimeNotifications.mockRejectedValueOnce(new Error('Stop error'));
-      const adapter = new AcsClientAdapter(validEndpoint, mockCredential);
-      await expect(adapter.stopRealtimeNotifications()).rejects.toThrow(AcsChatError);
-    });
-  });
-
   describe('Dispose', () => {
-    it('should call stopRealtimeNotifications if notifications were started', async () => {
+    it('should dispose successfully without errors', () => {
       const adapter = new AcsClientAdapter(validEndpoint, mockCredential);
-      await adapter.startRealtimeNotifications();
-      adapter.dispose();
-      expect(mockStopRealtimeNotifications).toHaveBeenCalled();
-    });
-
-    it('should not throw if stopRealtimeNotifications fails during dispose', async () => {
-      mockStopRealtimeNotifications.mockRejectedValueOnce(new Error('Stop failed'));
-      const adapter = new AcsClientAdapter(validEndpoint, mockCredential);
-      await adapter.startRealtimeNotifications();
       expect(() => adapter.dispose()).not.toThrow();
     });
   });
 });
+

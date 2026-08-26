@@ -13,3 +13,6 @@ export * from './ConnectionStatus';
 export * from './LoadingState';
 export * from './EmptyState';
 export * from './ErrorState';
+export * from './FilePreviewModal';
+export * from './Icons';
+

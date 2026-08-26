@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ChatContainer } from '../ChatContainer';
 import { useConversations } from '../../hooks/useConversations';
@@ -24,7 +24,34 @@ vi.mock('../ConversationList', () => ({
 }));
 
 vi.mock('../Conversation', () => ({
-  ConversationView: () => <div data-testid="mock-conversation-view">Conversation View</div>,
+  ConversationView: (props: {
+    onOpenAttachment?: (url: string, fileName?: string) => void;
+    onDownloadAttachment?: (url: string, fileName?: string) => void;
+    disableInternalPreview?: boolean;
+  }) => (
+    <div
+      data-testid="mock-conversation-view"
+      data-disable-preview={props.disableInternalPreview ? 'true' : 'false'}
+    >
+      Conversation View
+      {props.onOpenAttachment && (
+        <button
+          onClick={() => props.onOpenAttachment?.('https://example.com/test.pdf', 'test.pdf')}
+          data-testid="open-attach-btn"
+        >
+          Open
+        </button>
+      )}
+      {props.onDownloadAttachment && (
+        <button
+          onClick={() => props.onDownloadAttachment?.('https://example.com/test.pdf', 'test.pdf')}
+          data-testid="download-attach-btn"
+        >
+          Download
+        </button>
+      )}
+    </div>
+  ),
 }));
 
 vi.mock('../EmptyState', () => ({
@@ -137,4 +164,44 @@ describe('ChatContainer Component', () => {
     );
     expect(screen.getByTestId('custom-empty')).toBeInTheDocument();
   });
+
+  it('should forward onOpenAttachment and onDownloadAttachment to ConversationView', () => {
+    vi.mocked(useConversations).mockReturnValue({
+      ...vi.mocked(useConversations)(),
+      activeConversation: { id: 'conv-1' } as unknown as Conversation,
+    });
+
+    const onOpenAttachment = vi.fn();
+    const onDownloadAttachment = vi.fn();
+
+    render(
+      <ChatContainer
+        onOpenAttachment={onOpenAttachment}
+        onDownloadAttachment={onDownloadAttachment}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('open-attach-btn'));
+    expect(onOpenAttachment).toHaveBeenCalledWith('https://example.com/test.pdf', 'test.pdf');
+
+    fireEvent.click(screen.getByTestId('download-attach-btn'));
+    expect(onDownloadAttachment).toHaveBeenCalledWith('https://example.com/test.pdf', 'test.pdf');
+  });
+
+  it('should forward disableInternalPreview to ConversationView', () => {
+    vi.mocked(useConversations).mockReturnValue({
+      ...vi.mocked(useConversations)(),
+      activeConversation: { id: 'conv-1' } as unknown as Conversation,
+    });
+
+    render(
+      <ChatContainer
+        disableInternalPreview={true}
+      />
+    );
+
+    const convView = screen.getByTestId('mock-conversation-view');
+    expect(convView).toHaveAttribute('data-disable-preview', 'true');
+  });
 });
+

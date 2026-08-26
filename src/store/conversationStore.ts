@@ -1,10 +1,13 @@
 import { create } from 'zustand';
 import { chatI18n } from '../i18n';
+import { findConversationKey } from '../utils/conversationKeys';
 import { useChatStore } from './chatStore';
-import { useMessageStore } from './messageStore';
+import { getMessageStoreHook } from './registry';
 import type { Conversation } from '../types/conversation.types';
 import type { ChatError } from '../types/errors.types';
 import type { ChatMessage } from '../types/message.types';
+
+export { findConversationKey } from '../utils/conversationKeys';
 
 export interface ConversationState {
   /** Map of conversation ID to Conversation entity (normalized state) */
@@ -141,12 +144,13 @@ export const useConversationStore = create<ConversationState>((set) => ({
 
   updateConversation: (id: string, updates: Partial<Conversation>) =>
     set((state) => {
-      const existing = state.conversations[id];
+      const key = findConversationKey(id, state.conversations) || id;
+      const existing = state.conversations[key];
       if (!existing) return state;
       const updated = { ...existing, ...updates } as Conversation;
       const newConversations = {
         ...state.conversations,
-        [id]: updated,
+        [key]: updated,
       };
       return {
         conversations: newConversations,
@@ -156,13 +160,17 @@ export const useConversationStore = create<ConversationState>((set) => ({
 
   removeConversation: (id: string) =>
     set((state) => {
-      if (!state.conversations[id]) return state;
+      const key = findConversationKey(id, state.conversations) || id;
+      if (!state.conversations[key]) return state;
       const conversations = { ...state.conversations };
-      delete conversations[id];
+      delete conversations[key];
       return {
         conversations,
-        conversationIds: state.conversationIds.filter((item) => item !== id),
-        activeConversationId: state.activeConversationId === id ? null : state.activeConversationId,
+        conversationIds: state.conversationIds.filter((item) => item !== key),
+        activeConversationId:
+          state.activeConversationId === key || state.activeConversationId === id
+            ? null
+            : state.activeConversationId,
       };
     }),
 
@@ -170,7 +178,8 @@ export const useConversationStore = create<ConversationState>((set) => ({
 
   incrementUnreadCount: (id: string, by: number = 1) =>
     set((state) => {
-      const existing = state.conversations[id];
+      const key = findConversationKey(id, state.conversations) || id;
+      const existing = state.conversations[key];
       if (!existing) return state;
       const currentUnread = existing.unreadCount || 0;
       const updated = {
@@ -180,14 +189,15 @@ export const useConversationStore = create<ConversationState>((set) => ({
       return {
         conversations: {
           ...state.conversations,
-          [id]: updated,
+          [key]: updated,
         },
       };
     }),
 
   resetUnreadCount: (id: string) =>
     set((state) => {
-      const existing = state.conversations[id];
+      const key = findConversationKey(id, state.conversations) || id;
+      const existing = state.conversations[key];
       if (!existing || existing.unreadCount === 0) return state;
       const updated = {
         ...existing,
@@ -196,38 +206,45 @@ export const useConversationStore = create<ConversationState>((set) => ({
       return {
         conversations: {
           ...state.conversations,
-          [id]: updated,
+          [key]: updated,
         },
       };
     }),
 
   updateLastMessage: (id: string, lastMessage: ChatMessage) =>
     set((state) => {
-      const existing = state.conversations[id];
+      const key = findConversationKey(id, state.conversations) || id;
+      const existing = state.conversations[key];
       if (!existing) return state;
 
       const currentUser = useChatStore.getState().currentUser;
       const currentUserId = currentUser?.id;
 
       let senderName = lastMessage.senderDisplayName || lastMessage.sender?.displayName || '';
-      
+
       if (senderName === 'Unknown' || senderName === chatI18n.t('chat.unknownSender')) {
         senderName = '';
       }
-      
+
       if (!senderName && lastMessage.sender?.id === currentUserId) {
-        senderName = currentUser?.displayName 
-          || existing.participants?.find(p => p.id === currentUserId)?.displayName 
-          || '';
+        senderName =
+          currentUser?.displayName ||
+          existing.participants?.find((p) => p.id === currentUserId)?.displayName ||
+          '';
 
         if (senderName === 'Unknown' || senderName === chatI18n.t('chat.unknownSender')) {
           senderName = '';
         }
-        
+
         // If still empty, try to find the sender name from previous messages
         if (!senderName) {
-          const messages = useMessageStore.getState().messagesByConversation[id]?.messages;
-          const lastOwnMsg = messages?.find((m: ChatMessage) => m.sender.id === currentUserId && m.senderDisplayName && m.senderDisplayName !== 'Unknown');
+          const messages = getMessageStoreHook()?.getState().messagesByConversation[key]?.messages;
+          const lastOwnMsg = messages?.find(
+            (m: ChatMessage) =>
+              m.sender.id === currentUserId &&
+              m.senderDisplayName &&
+              m.senderDisplayName !== 'Unknown'
+          );
           if (lastOwnMsg) {
             senderName = lastOwnMsg.senderDisplayName || '';
           }
@@ -236,7 +253,7 @@ export const useConversationStore = create<ConversationState>((set) => ({
 
       let content = lastMessage.content || '';
 
-      if (lastMessage.type === 'html') {
+      if (lastMessage.type === 'html' || lastMessage.metadata?.type === 'html') {
         content = content.replace(/<[^>]*>?/gm, '');
       }
 
@@ -253,9 +270,11 @@ export const useConversationStore = create<ConversationState>((set) => ({
 
       const newConversations = {
         ...state.conversations,
-        [id]: updated,
+        [key]: updated,
       };
-      const newIds = state.conversationIds.includes(id) ? state.conversationIds : [id, ...state.conversationIds];
+      const newIds = state.conversationIds.includes(key)
+        ? state.conversationIds
+        : [key, ...state.conversationIds];
       return {
         conversations: newConversations,
         conversationIds: sortConversationIds(newIds, newConversations),

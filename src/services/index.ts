@@ -6,3 +6,5 @@ export * from './typingService';
 export * from './readReceiptService';
 export * from './connectionService';
 export * from './fileService';
+export * from './websocketService';
+export * from './linkPreviewService';

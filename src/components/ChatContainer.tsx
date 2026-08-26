@@ -6,6 +6,7 @@ import { ConversationList } from './ConversationList';
 import { ConversationView } from './Conversation';
 import { EmptyState } from './EmptyState';
 import { LoadingState } from './LoadingState';
+import type { FilePreviewItem } from './FilePreviewModal';
 
 export interface ConversationListRenderProps {}
 
@@ -19,10 +20,25 @@ export interface ChatContainerProps {
   renderConversationList?: (props: ConversationListRenderProps) => ReactNode;
   renderConversation?: (props: ConversationRenderProps) => ReactNode;
   renderEmpty?: () => ReactNode;
+  onOpenAttachment?: (url: string, fileName?: string, metadata?: FilePreviewItem) => void;
+  onDownloadAttachment?: (url: string, fileName?: string) => void;
+  disableOfficeOnlineViewer?: boolean;
+  disableInternalPreview?: boolean;
 }
 
+
 export const ChatContainer: React.FC<ChatContainerProps> = React.memo(
-  ({ className, style, renderConversationList, renderConversation, renderEmpty }) => {
+  ({
+    className,
+    style,
+    renderConversationList,
+    renderConversation,
+    renderEmpty,
+    onOpenAttachment,
+    onDownloadAttachment,
+    disableOfficeOnlineViewer,
+    disableInternalPreview,
+  }) => {
     const { activeConversation, openingConversation } = useConversations();
     const { loading: loadingPinnedMessages } = usePinnedMessages(
       activeConversation?.id || '',
@@ -70,7 +86,12 @@ export const ChatContainer: React.FC<ChatContainerProps> = React.memo(
             renderConversation ? (
               renderConversation({ conversationId: activeConversation.id })
             ) : (
-              <ConversationView /> // Assuming it reads from store internally
+              <ConversationView
+                onOpenAttachment={onOpenAttachment}
+                onDownloadAttachment={onDownloadAttachment}
+                disableOfficeOnlineViewer={disableOfficeOnlineViewer}
+                disableInternalPreview={disableInternalPreview}
+              />
             )
           ) : renderEmpty ? (
             renderEmpty()

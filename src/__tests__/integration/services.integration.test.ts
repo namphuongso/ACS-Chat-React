@@ -11,8 +11,6 @@ import { useParticipantStore } from '../../store/participantStore';
 import type { ChatConfig } from '../../types/config.types';
 
 // Mock ACS SDK modules
-let mockOn: (event: string, callback: (...args: unknown[]) => void) => void = vi.fn();
-const mockOff: (event: string, callback: (...args: unknown[]) => void) => void = vi.fn();
 const mockListChatThreads = vi.fn();
 const mockSendMessage = vi.fn();
 const mockSendTypingNotification = vi.fn();
@@ -29,14 +27,6 @@ vi.mock('@azure/communication-common', () => {
 vi.mock('@azure/communication-chat', () => {
   return {
     ChatClient: vi.fn().mockImplementation(() => ({
-      startRealtimeNotifications: vi.fn().mockResolvedValue(undefined),
-      stopRealtimeNotifications: vi.fn().mockResolvedValue(undefined),
-      on: (event: string, cb: (...args: unknown[]) => void) => {
-        mockOn(event, cb);
-      },
-      off: (event: string, cb: (...args: unknown[]) => void) => {
-        mockOff(event, cb);
-      },
       getChatThreadClient: vi.fn().mockImplementation((threadId: string) => ({
         threadId,
         sendMessage: mockSendMessage,
@@ -59,9 +49,6 @@ describe('Services Integration', () => {
     backendUrl: 'https://api.example.com',
   };
 
-  // Map to store event callbacks registered by AcsEventAdapter
-  let eventCallbacks: Record<string, (...args: unknown[]) => void> = {};
-
   beforeEach(() => {
     vi.clearAllMocks();
     global.fetch = vi.fn().mockResolvedValue({
@@ -69,16 +56,11 @@ describe('Services Integration', () => {
       json: () => Promise.resolve({ statusCode: 200, data: [
         { id: 'thread-1', type: 'direct', threadId: 'thread-1', pid: 'user-2', roomName: 'Test Thread', created: new Date().toISOString() },
       ] }),
-    }) as any;
+    }) as unknown as typeof fetch;
     useChatStore.getState().reset();
     useConversationStore.getState().reset();
     useMessageStore.getState().reset();
     useParticipantStore.getState().reset();
-
-    eventCallbacks = {};
-    mockOn = vi.fn((event, cb) => {
-      eventCallbacks[event] = cb;
-    });
 
     // Wire up services
     conversationService.setChatService(chatService);
@@ -97,8 +79,8 @@ describe('Services Integration', () => {
     await chatService.initialize(mockConfig);
 
     const chatState = useChatStore.getState();
-    expect(chatState.connectionState).toBe('connected');
     expect(chatState.currentUser?.id).toBe(mockConfig.userId);
+    expect(chatService.isInitialized()).toBe(true);
   });
 
   it('should load conversations and update conversation store', async () => {
@@ -126,23 +108,21 @@ describe('Services Integration', () => {
   it('should handle real-time message received event and update message store', async () => {
     await chatService.initialize(mockConfig);
 
-    // Simulate real-time event from ACS SDK
-    const messageEvent = {
-      type: 'Text',
-      id: 'msg-1',
-      sender: { communicationUserId: '8:acs:999' },
-      senderDisplayName: 'Jane Doe',
-      createdOn: new Date(),
-      message: 'Hello world',
-      threadId: 'thread-1',
-    };
-
-    // Trigger the real-time event
-    if (eventCallbacks['chatMessageReceived']) {
-      eventCallbacks['chatMessageReceived'](messageEvent);
-    } else {
-      throw new Error('chatMessageReceived event callback not registered');
-    }
+    // Trigger real-time domain event (e.g. from WebSocket)
+    chatService.handleDomainEvent({
+      type: 'message:received',
+      conversationId: 'thread-1',
+      timestamp: new Date(),
+      payload: {
+        id: 'msg-1',
+        conversationId: 'thread-1',
+        type: 'text',
+        content: 'Hello world',
+        sender: { id: '8:acs:999', displayName: 'Jane Doe' },
+        createdAt: new Date(),
+        status: 'sent',
+      },
+    });
 
     const messages = useMessageStore.getState().messagesByConversation['thread-1']?.messages;
     expect(messages).toBeDefined();
@@ -175,5 +155,83 @@ describe('Services Integration', () => {
     await typingService.sendTypingNotification('thread-1');
 
     expect(mockSendTypingNotification).toHaveBeenCalled();
+  });
+
+  it('should handle real-time message:pinned and message:unpinned only when data is cached', async () => {
+    await chatService.initialize(mockConfig);
+
+    // 1. Initial state: data has not been fetched (hasFetchedPinned is false/undefined)
+    // Receiving a pin event should NOT update store
+    chatService.handleDomainEvent({
+      type: 'message:pinned',
+      conversationId: 'thread-1',
+      timestamp: new Date(),
+      payload: {
+        messageId: '1787198733909',
+        actorId: '2a53536f-a1a4-4e87-9586-86f14537ed6b',
+        actorName: 'Hà Anh Thảo 2',
+        actionAtUtc: '2026-08-20T04:09:02.3617401Z',
+      },
+    });
+
+    expect(useMessageStore.getState().messagesByConversation['thread-1']?.pinnedMessages).toBeUndefined();
+
+    // 2. Set up cached data (simulating having called /api/chat/get-pinned-messages)
+    useMessageStore.getState().setPinnedMessages('thread-1', [
+      {
+        messageId: '1786594746570',
+        type: 'text',
+        content: 'Old Pinned Message',
+        createdDate: '2026-08-20T04:00:00Z',
+        creator: 'Hà Anh Thảo 2',
+        attachmentType: '',
+        attachmentUrl: '',
+        thumbUrl: '',
+      },
+    ]);
+    useMessageStore.getState().addMessage('thread-1', {
+      id: '1787198733909',
+      conversationId: 'thread-1',
+      type: 'text',
+      content: 'New message to pin',
+      sender: { id: 'user-1', displayName: 'Hà Anh Thảo 2' },
+      createdAt: new Date('2026-08-20T04:09:02.361Z'),
+      status: 'sent',
+    });
+
+    // 3. Receive message:pinned event
+    chatService.handleDomainEvent({
+      type: 'message:pinned',
+      conversationId: 'thread-1',
+      timestamp: new Date(),
+      payload: {
+        messageId: '1787198733909',
+        actorId: '2a53536f-a1a4-4e87-9586-86f14537ed6b',
+        actorName: 'Hà Anh Thảo 2',
+        actionAtUtc: '2026-08-20T04:09:02.3617401Z',
+      },
+    });
+
+    const pinnedMessagesAfterPin = useMessageStore.getState().messagesByConversation['thread-1']?.pinnedMessages;
+    expect(pinnedMessagesAfterPin).toHaveLength(2);
+    expect(pinnedMessagesAfterPin?.[0].messageId).toBe('1787198733909');
+    expect(pinnedMessagesAfterPin?.[0].content).toBe('New message to pin');
+
+    // 4. Receive message:unpinned event for '1786594746570'
+    chatService.handleDomainEvent({
+      type: 'message:unpinned',
+      conversationId: 'thread-1',
+      timestamp: new Date(),
+      payload: {
+        messageId: '1786594746570',
+        actorId: '2a53536f-a1a4-4e87-9586-86f14537ed6b',
+        actorName: 'Hà Anh Thảo 2',
+        actionAtUtc: '2026-08-20T04:10:08.2670851Z',
+      },
+    });
+
+    const pinnedMessagesAfterUnpin = useMessageStore.getState().messagesByConversation['thread-1']?.pinnedMessages;
+    expect(pinnedMessagesAfterUnpin).toHaveLength(1);
+    expect(pinnedMessagesAfterUnpin?.[0].messageId).toBe('1787198733909');
   });
 });

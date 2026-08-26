@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-08-26
+
+### Added
+
+- Added `FilePreviewModal` component for modal previewing of attachments (images, videos, audio, PDF documents, text/code files):
+  - Image controls: zoom in/out, fit to width, 90° clockwise/counter-clockwise rotation, and pan/drag support.
+  - Video and audio custom playback controls with progress bar, volume/mute toggles, time formatting, and fullscreen support.
+  - PDF document viewer and plain-text file viewer with monospace styling.
+  - Fallback view with direct download button for unsupported file types.
+  - Keyboard shortcuts (ESC to close, navigation).
+- Added `DocumentIcon` component for rendering branded, color-coded file icons based on extension and MIME type (PDF, Word, Excel, PowerPoint, ZIP/Archive, Code, Audio, Video, Image, Text).
+- Added `VideoCard` component for inline video message rendering with playback thumbnail, duration badge, play button, and click-to-preview.
+- Added `LargeImageCard` and `ChatImage` components for responsive image rendering with loading skeletons, error fallback placeholders, aspect-ratio handling, and preview modal integration.
+- Added attachment opening handlers and custom preview control:
+  - Added `onAttachmentOpen` callback prop to `ChatContainer`, `Conversation`, `MessageList`, `MessageItem`, and `LargeImageCard` allowing parent applications to handle file clicks or customize opening behavior.
+  - Added `disableInternalFilePreview` prop to `ChatContainer` and `Conversation` to disable built-in modal preview in favor of custom host opening handlers.
+- Added WebSocket-based real-time communication service and adapter:
+  - New `WebSocketService` managing real-time bidirectional communication with automatic reconnection, heartbeat/ping-pong (`PING_INTERVAL_MS = 25000`, `PONG_TIMEOUT_MS = 10000`), event subscription, and outbox queue.
+  - New `WebSocketAdapter` and `websocketMappers` for mapping real-time events (messages, edits, deletes, reactions, typing indicators, read receipts, membership changes).
+  - New `useWebSocket` hook exposing connection status and controls.
+  - New `enableWebSocket` and `websocketUrl` configuration options in `ChatClientConfig`.
+- Added URL detection and link preview support:
+  - Automatic URL detection and linkification in text messages: http(s)/www. links are rendered as clickable anchors (`target="_blank"`, `rel="noopener noreferrer"`).
+  - New `LinkPreviewCard` component rendering title, description, image, site name, domain badge, and favicon with loading skeletons and retry mechanism.
+  - New `linkPreviewService` (`POST /api/link-preview` backend extraction, with client-side Open Graph fallback and in-memory cache).
+  - New `useLinkPreview` hook for lazy preview resolution in rendered messages.
+  - Message compose area now shows the preview of the first detected URL before sending with a dismiss button; the preview is attached to the message as `metadata.linkPreview`.
+  - New `MessageInput.enableLinkPreview` prop (default `true`).
+  - Added `LinkPreview` type exported from the package.
+- Added `useJumpToMessage` hook to navigate and scroll to specific messages with highlight animation and history fetching.
+- Added custom logger configuration via `setLogger` and `ChatLogger` interface in `logger.ts`.
+- Added new UI translations in English and Vietnamese for file preview modals, video cards, link previews, and retry actions.
+
+### Changed
+
+- **Breaking:** `uploadFiles` in `fileService` now returns `Promise<UploadFilesResult>` (`{ success: string[], failed: Array<{ file: File; error: unknown }> }`) instead of `Promise<string[]>`; `uploadFile` now throws when the server does not return a file URL (previously fell back to the `uploadId`).
+- Replaced ACS signaling realtime layer with `WebSocketService` and `WebSocketAdapter` for all real-time events.
+- `sanitizeHtml` now preserves the `target` attribute (DOMPurify >= 3.3 drops it by default) so message links can open in a new tab.
+- Refactored `MessageItem` and `MessageList` layout and styling to support rich media attachments, responsive aspect ratios, and file cards.
+
+### Removed
+
+- Removed ACS signaling realtime adapter (`AcsEventAdapter`); realtime updates now require WebSocket (`websocketUrl` or `backendUrl` with `enableWebSocket` not `false`). Deployments without WebSocket will only update via manual refresh — a warning is logged at startup in that case.
+
+### Fixed
+
+- Fixed optimistic message deduplication mistakenly dropping a new message when the same sender recently sent identical content (e.g., sending the same text twice within 60s); messages with distinct `clientMessageId`/`sequenceId` are no longer treated as duplicates, and a server confirmation must not predate its optimistic counterpart.
+- Fixed MIME type inference and fallback handling for file attachments without explicit content types.
+
 ## [1.2.0] - 2026-08-14
 
 ### Added

@@ -25,6 +25,7 @@ import type { ChatError } from '../types/errors.types';
 import { AcsChatError } from '../types/errors.types';
 import { logger } from '../utils/logger';
 import type { ChatService } from './chatService';
+import { websocketService } from './websocketService';
 
 
 
@@ -551,9 +552,12 @@ export class ConversationService {
     }
 
     if (store.conversations[conversationId]) {
+      const conv = store.conversations[conversationId];
+      const roomId = conv?.conversationId || conversationId;
       store.setActiveConversation(conversationId);
       store.resetUnreadCount(conversationId);
       useMessageStore.getState().trimInactiveConversations(conversationId, 50);
+      this.enterRoomWithLeave(roomId);
       logger.info(`Conversation ${conversationId} opened`);
       return;
     }
@@ -612,6 +616,8 @@ export class ConversationService {
       store.resetUnreadCount(threadId);
 
       useMessageStore.getState().trimInactiveConversations(threadId, 50);
+      const roomId = directConv.conversationId || threadId;
+      this.enterRoomWithLeave(roomId);
       logger.info(`Conversation ${threadId} created and opened for contact ${conversationId}`);
     } catch (e) {
       const chatError = mapAcsErrorToChatError(e, 'openConversation', { conversationId });
@@ -620,6 +626,19 @@ export class ConversationService {
     } finally {
       store.setOpeningConversation(false);
     }
+  }
+
+  /**
+   * Leave the currently active room (if any, and different from the target)
+   * before entering a new room, so the server does not keep tracking the
+   * previous room for this connection.
+   */
+  private enterRoomWithLeave(roomId: string): void {
+    const currentActiveRoom = websocketService.getActiveRoomId();
+    if (currentActiveRoom && currentActiveRoom !== roomId) {
+      websocketService.leaveRoom();
+    }
+    websocketService.enterRoom(roomId);
   }
 
   /**
@@ -635,6 +654,7 @@ export class ConversationService {
     }
 
     store.setActiveConversation(null);
+    websocketService.leaveRoom();
 
     // Memory optimization: trim cached messages for inactive conversations
     useMessageStore.getState().trimInactiveConversations(null, 50);

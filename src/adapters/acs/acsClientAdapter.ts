@@ -7,7 +7,6 @@ import { AcsChatError } from '../../types/errors.types';
  */
 export class AcsClientAdapter {
   private chatClient: ChatClient;
-  private isNotificationsStarted = false;
 
   constructor(endpoint: string, credential: AzureCommunicationTokenCredential) {
     this.validateEndpoint(endpoint);
@@ -91,45 +90,9 @@ export class AcsClientAdapter {
   }
 
   /**
-   * Start receiving real-time notifications from ACS.
-   */
-  public async startRealtimeNotifications(): Promise<void> {
-    try {
-      await this.chatClient.startRealtimeNotifications();
-      this.isNotificationsStarted = true;
-    } catch (error) {
-      throw new AcsChatError('CONNECTION_FAILED', 'Failed to start realtime notifications.', {
-        cause: error,
-        operation: 'startRealtimeNotifications',
-      });
-    }
-  }
-
-  /**
-   * Stop receiving real-time notifications from ACS.
-   */
-  public async stopRealtimeNotifications(): Promise<void> {
-    try {
-      await this.chatClient.stopRealtimeNotifications();
-    } catch (error) {
-      throw new AcsChatError('CONNECTION_FAILED', 'Failed to stop realtime notifications.', {
-        cause: error,
-        operation: 'stopRealtimeNotifications',
-      });
-    } finally {
-      this.isNotificationsStarted = false;
-    }
-  }
-
-  /**
    * Dispose and cleanup resources.
    */
   public dispose(): void {
-    if (this.isNotificationsStarted) {
-      this.stopRealtimeNotifications().catch(() => {
-        // Silently catch errors during dispose cleanup
-      });
-    }
-    this.isNotificationsStarted = false;
+    // No-op: ChatClient does not require manual connection teardown since realtime notifications are disabled.
   }
 }

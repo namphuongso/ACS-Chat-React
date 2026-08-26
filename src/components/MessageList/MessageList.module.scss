@@ -5,7 +5,13 @@
   width: 100%;
   position: relative;
   background-color: var(--chat-bg-color, var(--chat-bg));
+  overflow: hidden;
   overflow-x: hidden;
+
+  :global([data-virtuoso-scroller]),
+  :global([data-test-id="virtuoso-scroller"]) {
+    overflow-x: hidden !important;
+  }
 }
 
 .loadingMore {

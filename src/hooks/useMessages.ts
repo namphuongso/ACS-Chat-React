@@ -29,7 +29,7 @@ export const useMessages = (conversationId: string) => {
     state.messagesByConversation[conversationId] || initialConversationMessages
   );
 
-  const { messages, loading, loadingMore, hasMore } = convData;
+  const { messages, loading, loadingMore, hasMore, hasFetched } = convData;
 
   const loadMessages = useCallback(async (options?: { maxPageSize?: number; startTime?: Date }) => {
     setError(null);
@@ -96,18 +96,27 @@ export const useMessages = (conversationId: string) => {
     return result;
   }, [conversationId]);
 
+  const jumpToMessage = useCallback(
+    (messageId: string, highlightDuration?: number) => {
+      useMessageStore.getState().jumpToMessage(messageId, conversationId, highlightDuration);
+    },
+    [conversationId]
+  );
+
   return useMemo(() => ({
     messages,
     loading,
     loadingMore,
     hasMore,
+    hasFetched,
     error,
     sendMessage,
     editMessage,
     deleteMessage,
     retryMessage,
     pinMessage,
+    jumpToMessage,
     loadMessages,
     loadMore,
-  }), [messages, loading, loadingMore, hasMore, error, sendMessage, editMessage, deleteMessage, retryMessage, pinMessage, loadMessages, loadMore]);
+  }), [messages, loading, loadingMore, hasMore, hasFetched, error, sendMessage, editMessage, deleteMessage, retryMessage, pinMessage, jumpToMessage, loadMessages, loadMore]);
 };

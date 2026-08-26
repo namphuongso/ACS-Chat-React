@@ -18,6 +18,7 @@ import type {
   ChatErrorCode,
   BackendConversationItem,
   GroupConversation,
+  BackendChatMessageData,
 } from '../../types';
 import type { ReadReceipt } from '../../models/ReadReceipt';
 import { AcsChatError } from '../../types/errors.types';
@@ -27,10 +28,13 @@ import { CHAT_ERRORS } from '../../constants/errors';
  * Extract raw communication user ID string from ACS CommunicationIdentifier.
  */
 export function extractCommunicationUserId(
-  identifier?: CommunicationIdentifier | CommunicationIdentifierKind | Record<string, unknown>
+  identifier?: CommunicationIdentifier | CommunicationIdentifierKind | Record<string, unknown> | string
 ): string {
   if (!identifier) {
     return '';
+  }
+  if (typeof identifier === 'string') {
+    return identifier;
   }
   const idObj = identifier as Record<string, unknown>;
   if (typeof idObj.communicationUserId === 'string') {
@@ -38,6 +42,12 @@ export function extractCommunicationUserId(
   }
   if (typeof idObj.rawId === 'string') {
     return idObj.rawId;
+  }
+  if (
+    idObj.communicationUser &&
+    typeof (idObj.communicationUser as Record<string, unknown>).id === 'string'
+  ) {
+    return (idObj.communicationUser as Record<string, unknown>).id as string;
   }
   if (typeof idObj.phoneNumber === 'string') {
     return idObj.phoneNumber;
@@ -95,7 +105,7 @@ export function mapBackendItemToConversation(item: BackendConversationItem): Con
  * Map ACS CommunicationIdentifier to Library ChatUser.
  */
 export function mapAcsIdentifierToUser(
-  identifier?: CommunicationIdentifier | CommunicationIdentifierKind,
+  identifier?: CommunicationIdentifier | CommunicationIdentifierKind | Record<string, unknown> | string,
   displayName?: string
 ): ChatUser {
   const id = extractCommunicationUserId(identifier);
@@ -106,59 +116,114 @@ export function mapAcsIdentifierToUser(
 }
 
 /**
- * Map ACS ChatMessage to Library ChatMessage.
+ * Map ACS ChatMessage or backend ChatMessage to Library ChatMessage.
  */
 export function mapAcsMessageToMessage(
-  acsMsg: ACSChatMessage,
+  acsMsg: ACSChatMessage | BackendChatMessageData | Record<string, unknown> | unknown,
   convId: string,
   _currentUserId?: string
 ): ChatMessage {
+  const msgObj = acsMsg as Record<string, unknown>;
+  const msgType = (msgObj.type as string) || 'text';
+  const metadata = (msgObj.metadata as Record<string, string>) || undefined;
+
   const isSystem =
-    acsMsg.type === 'topicUpdated' ||
-    acsMsg.type === 'participantAdded' ||
-    acsMsg.type === 'participantRemoved';
+    msgType === 'topicUpdated' ||
+    msgType === 'participantAdded' ||
+    msgType === 'participantRemoved';
 
-  const type: MessageType = isSystem ? 'system' : acsMsg.type === 'html' ? 'html' : 'text';
+  const type: MessageType = isSystem
+    ? 'system'
+    : msgType === 'html' || metadata?.type === 'html'
+    ? 'html'
+    : 'text';
 
-  const sender = mapAcsIdentifierToUser(acsMsg.sender, acsMsg.senderDisplayName);
+  const senderIdentifier =
+    msgObj.sender ||
+    msgObj.senderCommunicationIdentifier ||
+    msgObj.senderIdentifier;
+
+  const sender = mapAcsIdentifierToUser(
+    senderIdentifier as CommunicationIdentifier | undefined,
+    msgObj.senderDisplayName as string | undefined
+  );
+
+  const rawContent = msgObj.content as
+    | {
+        message?: string | null;
+        topic?: string | null;
+        participants?: Array<{ id?: unknown; displayName?: string }>;
+        initiator?: unknown;
+      }
+    | string
+    | undefined;
 
   let systemEvent: ChatMessage['systemEvent'] = undefined;
-  if (isSystem) {
+  if (isSystem && typeof rawContent === 'object' && rawContent !== null) {
     systemEvent = {
-      type: acsMsg.type as 'topicUpdated' | 'participantAdded' | 'participantRemoved',
-      initiator: acsMsg.content?.initiator
-        ? mapAcsIdentifierToUser(acsMsg.content.initiator)
+      type: msgType as 'topicUpdated' | 'participantAdded' | 'participantRemoved',
+      initiator: rawContent.initiator
+        ? mapAcsIdentifierToUser(rawContent.initiator as CommunicationIdentifier)
         : undefined,
-      participants: acsMsg.content?.participants
-        ? acsMsg.content.participants.map((p) => mapAcsIdentifierToUser(p.id, p.displayName))
+      participants: rawContent.participants
+        ? rawContent.participants.map((p) =>
+            mapAcsIdentifierToUser(
+              (p.id || (p as Record<string, unknown>).senderCommunicationIdentifier || p) as CommunicationIdentifier,
+              p.displayName
+            )
+          )
         : undefined,
-      newTopic: acsMsg.content?.topic,
+      newTopic: rawContent.topic || undefined,
     };
   }
 
-  const content = isSystem
-    ? acsMsg.content?.topic || acsMsg.content?.message || ''
-    : acsMsg.content?.message || '';
+  let content = '';
+  if (typeof rawContent === 'string') {
+    content = rawContent;
+  } else if (typeof rawContent === 'object' && rawContent !== null) {
+    content = isSystem
+      ? rawContent.topic || rawContent.message || ''
+      : rawContent.message || '';
+  }
 
-  const recalledAt = acsMsg.metadata?.deletedBy
-    ? new Date(acsMsg.editedOn || acsMsg.createdOn)
+  const createdOn =
+    (msgObj.createdOn || msgObj.createdDate || msgObj.createdAt) as
+      | string
+      | number
+      | Date
+      | undefined;
+  const editedOn =
+    (msgObj.editedOn || msgObj.editedDate || msgObj.editedAt) as
+      | string
+      | number
+      | Date
+      | undefined;
+  const deletedOn =
+    (msgObj.deletedOn || msgObj.deletedDate || msgObj.deletedAt) as
+      | string
+      | number
+      | Date
+      | undefined;
+
+  const recalledAt = metadata?.deletedBy
+    ? new Date(editedOn || createdOn || Date.now())
     : undefined;
 
   return {
-    id: acsMsg.id,
+    id: String(msgObj.id),
     conversationId: convId,
     type,
     content,
     sender,
-    senderDisplayName: acsMsg.senderDisplayName,
-    createdAt: acsMsg.createdOn ? new Date(acsMsg.createdOn) : new Date(),
-    editedAt: acsMsg.editedOn ? new Date(acsMsg.editedOn) : undefined,
-    deletedAt: acsMsg.deletedOn ? new Date(acsMsg.deletedOn) : undefined,
+    senderDisplayName: msgObj.senderDisplayName as string | undefined,
+    createdAt: createdOn ? new Date(createdOn) : new Date(),
+    editedAt: editedOn ? new Date(editedOn) : undefined,
+    deletedAt: deletedOn ? new Date(deletedOn) : undefined,
     recalledAt,
     status: 'sent',
-    metadata: acsMsg.metadata,
+    metadata,
     systemEvent,
-    sequenceId: acsMsg.sequenceId,
+    sequenceId: msgObj.sequenceId ? String(msgObj.sequenceId) : undefined,
   };
 }
 

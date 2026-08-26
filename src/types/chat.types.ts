@@ -6,6 +6,8 @@ export interface ChatUser {
   id: string;
   /** Display name of the user */
   displayName?: string;
+  /** Optional avatar URL of the user */
+  avatarUrl?: string;
 }
 
 /**

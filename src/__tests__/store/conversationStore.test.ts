@@ -147,6 +147,41 @@ describe('conversationStore', () => {
     expect(state.conversations['thread-1'].updatedAt).toEqual(lastMessage.createdAt);
   });
 
+  it('should updateLastMessage and incrementUnreadCount using conversationId (roomId) alias', () => {
+    const convWithAlias: GroupConversation = {
+      id: '19:cfc0c058@thread.v2',
+      conversationId: 'f220f5e0-a950-45fd-b011-130ac2cca639',
+      type: 'group',
+      name: 'Backend Room',
+      createdAt: new Date('2026-01-01'),
+      unreadCount: 0,
+      participants: [{ id: 'user-1', displayName: 'Alice' }],
+    };
+
+    useConversationStore.getState().setConversations([convWithAlias]);
+
+    const lastMessage: ChatMessage = {
+      id: '1787195186393',
+      conversationId: 'f220f5e0-a950-45fd-b011-130ac2cca639',
+      type: 'html',
+      content: '<p>777</p>',
+      sender: { id: 'user-2', displayName: 'Hà Anh Thảo 2' },
+      senderDisplayName: 'Hà Anh Thảo 2',
+      createdAt: new Date('2026-08-20T03:06:26.490Z'),
+      status: 'sent',
+    };
+
+    // Update using roomId instead of threadId
+    useConversationStore.getState().updateLastMessage('f220f5e0-a950-45fd-b011-130ac2cca639', lastMessage);
+    useConversationStore.getState().incrementUnreadCount('f220f5e0-a950-45fd-b011-130ac2cca639', 1);
+
+    const state = useConversationStore.getState();
+    const conv = state.conversations['19:cfc0c058@thread.v2'];
+    expect(conv).toBeDefined();
+    expect(conv.lastMessage).toBe('Hà Anh Thảo 2: 777');
+    expect(conv.unreadCount).toBe(1);
+  });
+
   it('should update loading, loadingMore, hasMore, cursor, error flags', () => {
     const error: ChatError = {
       code: 'CONVERSATION_NOT_FOUND',

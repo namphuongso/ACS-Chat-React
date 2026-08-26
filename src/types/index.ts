@@ -6,3 +6,5 @@ export * from './events.types';
 export * from './errors.types';
 export * from './config.types';
 export * from './contact.types';
+export * from './file.types';
+export * from './websocket.types';

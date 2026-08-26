@@ -23,10 +23,6 @@ vi.mock('@azure/communication-common', () => {
 vi.mock('@azure/communication-chat', () => {
   return {
     ChatClient: vi.fn().mockImplementation(() => ({
-      startRealtimeNotifications: vi.fn().mockResolvedValue(undefined),
-      stopRealtimeNotifications: vi.fn().mockResolvedValue(undefined),
-      on: vi.fn(),
-      off: vi.fn(),
       getChatThreadClient: vi.fn().mockReturnValue({}),
     })),
   };
@@ -73,7 +69,6 @@ describe('ChatService', () => {
       expect(service.isInitialized()).toBe(true);
       expect(service.getConfig()).toEqual(mockConfig);
       expect(service.getClientAdapter()).toBeDefined();
-      expect(service.getEventAdapter()).toBeDefined();
       expect(service.getChatClient()).toBeDefined();
 
       const chatState = useChatStore.getState();
@@ -98,10 +93,10 @@ describe('ChatService', () => {
     });
 
     it('should handle initialization errors gracefully and reset state', async () => {
-      const { AcsClientAdapter } = await import('../../adapters/acs/acsClientAdapter');
-      vi.spyOn(AcsClientAdapter.prototype, 'startRealtimeNotifications').mockRejectedValueOnce(
-        new Error('Network error starting notifications')
-      );
+      const { ChatClient } = await import('@azure/communication-chat');
+      vi.mocked(ChatClient).mockImplementationOnce(() => {
+        throw new Error('Adapter failure');
+      });
 
       await expect(service.initialize(mockConfig)).rejects.toThrow(AcsChatError);
 
@@ -110,7 +105,8 @@ describe('ChatService', () => {
       expect(chatState.connectionState).toBe('error');
       expect(chatState.initializing).toBe(false);
       expect(chatState.initError).toBeDefined();
-      expect(chatState.initError?.code).toBe('CONNECTION_FAILED');
+      // ChatClient construction failure is wrapped by AcsClientAdapter as INVALID_INPUT
+      expect(chatState.initError?.code).toBe('INVALID_INPUT');
     });
 
     it('should re-initialize and dispose previous session if already initialized', async () => {
@@ -167,7 +163,6 @@ describe('ChatService', () => {
 
     it('should throw when accessing adapters on an uninitialized service', () => {
       expect(() => service.getClientAdapter()).toThrow(AcsChatError);
-      expect(() => service.getEventAdapter()).toThrow(AcsChatError);
       expect(() => service.getChatClient()).toThrow(AcsChatError);
     });
   });
@@ -389,6 +384,20 @@ describe('ChatService', () => {
         payload: {
           id: 'group-1',
           name: 'Renamed Project Discussion',
+          updatedAt: new Date(),
+        },
+      });
+
+      conv = useConversationStore.getState().conversations['group-1'];
+      expect((conv as { name?: string })?.name).toBe('Renamed Project Discussion');
+
+      // RoomUpdated without optional fields must not overwrite existing data
+      service.handleDomainEvent({
+        type: 'conversation:updated',
+        conversationId: 'group-1',
+        timestamp: new Date(),
+        payload: {
+          id: 'group-1',
           updatedAt: new Date(),
         },
       });

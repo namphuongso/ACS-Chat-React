@@ -26,3 +26,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# Protocol spec documents
+Giao-thuc-WebSocket-Chat-App-wide (1).docx
+*.docx

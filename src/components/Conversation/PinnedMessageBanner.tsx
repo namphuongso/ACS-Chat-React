@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { usePinnedMessages } from '../../hooks';
+import { usePinnedMessages, useJumpToMessage } from '../../hooks';
 import { MessageIcon, MoreHorizontalIcon, ChevronDownIcon, ChevronUpIcon } from '../Icons';
 import { PinDropdownMenu } from './PinDropdownMenu';
 import styles from './PinnedMessageBanner.module.scss';
@@ -11,6 +11,7 @@ export interface PinnedMessageBannerProps {
   pinnedMessageIds?: Set<string> | string[];
   isGroup?: boolean;
   onUnpinMessage: (messageId: string, pin: boolean) => void;
+  onJumpToMessage?: (messageId: string) => void;
 }
 
 export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
@@ -19,6 +20,7 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
   pinnedMessageIds,
   isGroup,
   onUnpinMessage,
+  onJumpToMessage,
 }) => {
   const { t } = useTranslation();
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
@@ -37,6 +39,8 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
     backendConversationId,
     [pinnedMessageIdsArray.join(',')]
   );
+
+  const { jumpToMessage } = useJumpToMessage();
 
   // Click outside handler for dropdowns
   useEffect(() => {
@@ -92,6 +96,14 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
     }
   };
 
+  const handleJumpToMessage = (messageId: string) => {
+    jumpToMessage(messageId, conversationId);
+    if (onJumpToMessage) {
+      onJumpToMessage(messageId);
+    }
+    setIsPinboardOpen(false);
+  };
+
   const handleCopy = (content: string) => {
     navigator.clipboard.writeText(content);
     setOpenDropdownId(null);
@@ -110,7 +122,24 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
   return (
     <div className={styles.bannerContainer} ref={bannerRef}>
       {/* Keep the static content in DOM but visually hidden when open to preserve height and prevent layout shift */}
-      <div className={styles.leftSection} style={{ visibility: isPinboardOpen ? 'hidden' : 'visible', opacity: isPinboardOpen ? 0 : 1, transition: 'opacity 0.2s' }}>
+      <div
+        className={styles.leftSection}
+        role="button"
+        tabIndex={0}
+        onClick={() => handleJumpToMessage(firstMessage.messageId)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleJumpToMessage(firstMessage.messageId);
+          }
+        }}
+        style={{
+          cursor: 'pointer',
+          visibility: isPinboardOpen ? 'hidden' : 'visible',
+          opacity: isPinboardOpen ? 0 : 1,
+          transition: 'opacity 0.2s',
+        }}
+      >
         <div className={styles.iconWrapper}>
           <MessageIcon width={16} height={16} />
         </div>
@@ -162,7 +191,19 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
           >
             {pinnedMessages.map((msg) => (
               <div key={msg.messageId} className={styles.pinboardItem}>
-                <div className={styles.leftSection}>
+                <div
+                  className={styles.leftSection}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleJumpToMessage(msg.messageId)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleJumpToMessage(msg.messageId);
+                    }
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className={styles.iconWrapper}>
                     <MessageIcon width={16} height={16} />
                   </div>

@@ -40,6 +40,18 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onCl
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    return () => {
+      if (avatarPreview && avatarPreview.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(avatarPreview);
+        } catch {
+          // Ignore
+        }
+      }
+    };
+  }, [avatarPreview]);
+
   // Debounced search could be added here, simplified for now
   useEffect(() => {
     if (isOpen) {
