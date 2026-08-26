@@ -27,8 +27,12 @@ vi.mock('../Conversation', () => ({
   ConversationView: (props: {
     onOpenAttachment?: (url: string, fileName?: string) => void;
     onDownloadAttachment?: (url: string, fileName?: string) => void;
+    disableInternalPreview?: boolean;
   }) => (
-    <div data-testid="mock-conversation-view">
+    <div
+      data-testid="mock-conversation-view"
+      data-disable-preview={props.disableInternalPreview ? 'true' : 'false'}
+    >
       Conversation View
       {props.onOpenAttachment && (
         <button
@@ -183,4 +187,21 @@ describe('ChatContainer Component', () => {
     fireEvent.click(screen.getByTestId('download-attach-btn'));
     expect(onDownloadAttachment).toHaveBeenCalledWith('https://example.com/test.pdf', 'test.pdf');
   });
+
+  it('should forward disableInternalPreview to ConversationView', () => {
+    vi.mocked(useConversations).mockReturnValue({
+      ...vi.mocked(useConversations)(),
+      activeConversation: { id: 'conv-1' } as unknown as Conversation,
+    });
+
+    render(
+      <ChatContainer
+        disableInternalPreview={true}
+      />
+    );
+
+    const convView = screen.getByTestId('mock-conversation-view');
+    expect(convView).toHaveAttribute('data-disable-preview', 'true');
+  });
 });
+

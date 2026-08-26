@@ -8,3 +8,4 @@ export * from './apiClient';
 export * from './htmlUtils';
 export * from './conversationKeys';
 export * from './imageUtils';
+export * from './linkUtils';

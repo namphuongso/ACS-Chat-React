@@ -3,7 +3,7 @@ import type { ChatMessage, MessageStatus } from '../../types/message.types';
 import { Avatar } from '../Avatar';
 import { formatTime } from '../../utils/date';
 import { normalizeFormattingHtml, sanitizeHtml } from '../../utils/htmlUtils';
-import { isLargeImage } from '../../utils/imageUtils';
+import { isLargeImage, getImageMimeType } from '../../utils/imageUtils';
 import {
   containsUrl,
   extractUrls,
@@ -34,6 +34,7 @@ import { ChatImage } from './ChatImage';
 import { LargeImageCard } from './LargeImageCard';
 import { LinkPreviewCard } from './LinkPreviewCard';
 import { VideoCard } from './VideoCard';
+import type { FilePreviewItem } from '../FilePreviewModal';
 
 export interface MessageItemProps {
   message: ChatMessage;
@@ -57,11 +58,12 @@ export interface MessageItemProps {
   onViewDetails?: (messageId: string) => void;
   onRecall?: (messageId: string) => void;
   onDownloadAttachment?: (url: string, fileName?: string) => void;
-  onOpenAttachment?: (url: string, fileName?: string) => void;
+  onOpenAttachment?: (url: string, fileName?: string, metadata?: FilePreviewItem) => void;
   renderContent?: (message: ChatMessage) => ReactNode;
   renderActions?: (message: ChatMessage) => ReactNode;
   renderStatus?: (status: MessageStatus) => ReactNode;
 }
+
 
 const getImageGridContainerStyle = (count: number): React.CSSProperties => {
   if (count === 2) {
@@ -206,6 +208,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
               width: f.width as string | number | undefined,
               height: f.height as string | number | undefined,
               isLarge: f.isLarge === true || f.isLarge === 'true',
+              mimeType: f.mimeType ? String(f.mimeType) : undefined,
             }))
             .filter((f) => Boolean(f.url));
         }
@@ -220,6 +223,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
             width: message.metadata.width as string | number | undefined,
             height: message.metadata.height as string | number | undefined,
             isLarge: String(message.metadata.isLarge) === 'true',
+            mimeType: message.metadata.mimeType ? String(message.metadata.mimeType) : undefined,
           },
         ];
       }
@@ -434,6 +438,17 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
               url={url}
               mimeType={mimeType}
               onDownload={onDownloadAttachment}
+              onOpen={(u, fn) =>
+                onOpenAttachment?.(u, fn, {
+                  url: u,
+                  fileName: fn,
+                  fileSize: size,
+                  mimeType: mimeType || 'video/mp4',
+                  senderName,
+                  senderAvatarUrl,
+                  sentAt: message.createdAt,
+                })
+              }
             />
             {message.content && message.content !== url ? (
               <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{message.content}</div>
@@ -449,6 +464,10 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
         const size =
           singleImg.size ?? (message.metadata?.size ? Number(message.metadata.size) : undefined);
         const url = singleImg.url || (message.metadata?.url as string) || '';
+        const mimeType = getImageMimeType(
+          fileName,
+          singleImg.mimeType || (message.metadata?.mimeType as string)
+        );
 
         return (
           <LargeImageCard
@@ -457,8 +476,19 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
             fileName={fileName}
             fileSize={size}
             url={url}
+            mimeType={mimeType}
             onDownload={onDownloadAttachment}
-            onOpen={onOpenAttachment}
+            onOpen={(u, fn) =>
+              onOpenAttachment?.(u, fn, {
+                url: u,
+                fileName: fn,
+                fileSize: size,
+                mimeType,
+                senderName,
+                senderAvatarUrl,
+                sentAt: message.createdAt,
+              })
+            }
           />
         );
       }
@@ -480,7 +510,17 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
               url={url}
               mimeType={mimeType}
               onDownload={onDownloadAttachment}
-              onOpen={onOpenAttachment}
+              onOpen={(u, fn) =>
+                onOpenAttachment?.(u, fn, {
+                  url: u,
+                  fileName: fn,
+                  fileSize: size,
+                  mimeType,
+                  senderName,
+                  senderAvatarUrl,
+                  sentAt: message.createdAt,
+                })
+              }
             />
             {message.content ? (
               <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{message.content}</div>
@@ -505,6 +545,17 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
                     url={att.url}
                     mimeType={att.mimeType}
                     onDownload={onDownloadAttachment}
+                    onOpen={(u, fn) =>
+                      onOpenAttachment?.(u, fn, {
+                        url: u,
+                        fileName: fn,
+                        fileSize: att.size,
+                        mimeType: att.mimeType,
+                        senderName,
+                        senderAvatarUrl,
+                        sentAt: message.createdAt,
+                      })
+                    }
                   />
                 );
               }
@@ -518,7 +569,17 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
                   url={att.url}
                   mimeType={att.mimeType}
                   onDownload={onDownloadAttachment}
-                  onOpen={onOpenAttachment}
+                  onOpen={(u, fn) =>
+                    onOpenAttachment?.(u, fn, {
+                      url: u,
+                      fileName: fn,
+                      fileSize: att.size,
+                      mimeType: att.mimeType,
+                      senderName,
+                      senderAvatarUrl,
+                      sentAt: message.createdAt,
+                    })
+                  }
                 />
               );
             })}
@@ -532,6 +593,11 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
       if (isImageMessage) {
         if (imageFiles.length === 1) {
           const singleImg = imageFiles[0];
+          const fileName = singleImg.fileName || 'image.jpg';
+          const mimeType = getImageMimeType(
+            fileName,
+            singleImg.mimeType || (message.metadata?.mimeType as string)
+          );
           return (
             <div className={styles.imageContainer}>
               <div className={styles.hdBadge}>HD</div>
@@ -539,6 +605,17 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
                 src={singleImg.url}
                 alt={singleImg.fileName || 'image'}
                 className={styles.imageContent}
+                onClick={() =>
+                  onOpenAttachment?.(singleImg.url, fileName, {
+                    url: singleImg.url,
+                    fileName,
+                    fileSize: singleImg.size,
+                    mimeType,
+                    senderName,
+                    senderAvatarUrl,
+                    sentAt: message.createdAt,
+                  })
+                }
                 style={{
                   aspectRatio:
                     singleImg.width &&
@@ -557,23 +634,42 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(
 
         return (
           <div className={styles.imageGrid} style={getImageGridContainerStyle(count)}>
-            {imageFiles.map((img, idx) => (
-              <div
-                key={img.url || idx}
-                className={styles.imageGridItem}
-                style={getImageGridItemStyle(count, idx)}
-              >
-                <div className={styles.hdBadge}>HD</div>
-                <ChatImage
-                  src={img.url}
-                  alt={img.fileName || `image-${idx}`}
-                  className={styles.imageContent}
-                />
-              </div>
-            ))}
+            {imageFiles.map((img, idx) => {
+              const fileName = img.fileName || `image-${idx + 1}.jpg`;
+              const mimeType = getImageMimeType(
+                fileName,
+                img.mimeType || (message.metadata?.mimeType as string)
+              );
+              return (
+                <div
+                  key={img.url || idx}
+                  className={styles.imageGridItem}
+                  style={getImageGridItemStyle(count, idx)}
+                >
+                  <div className={styles.hdBadge}>HD</div>
+                  <ChatImage
+                    src={img.url}
+                    alt={img.fileName || `image-${idx}`}
+                    className={styles.imageContent}
+                    onClick={() =>
+                      onOpenAttachment?.(img.url, fileName, {
+                        url: img.url,
+                        fileName,
+                        fileSize: img.size,
+                        mimeType,
+                        senderName,
+                        senderAvatarUrl,
+                        sentAt: message.createdAt,
+                      })
+                    }
+                  />
+                </div>
+              );
+            })}
           </div>
         );
       }
+
 
       if (message.type === 'html' || message.metadata?.type === 'html') {
         const sanitized = normalizeFormattingHtml(sanitizeHtml(message.content)) || '';

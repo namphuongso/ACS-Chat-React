@@ -60,6 +60,8 @@ export const en = {
     openFolder: 'Open folder',
     download: 'Download',
     downloading: 'Downloading...',
+    officePreviewNotice: 'If the document preview does not display, please download the file to view.',
+    officePrivateNotice: 'Local or private documents cannot be previewed online. Please download the file to view.',
     you: 'You',
     justNow: 'Just now',
     minsAgo: '{{count}} mins',

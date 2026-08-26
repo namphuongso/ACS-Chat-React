@@ -84,7 +84,19 @@ export const LargeImageCard: React.FC<LargeImageCardProps> = React.memo(
       : t('chat.download', 'Download');
 
     return (
-      <div className={`${styles.largeImageCard} ${className || ''}`} data-testid="file-card">
+      <div
+        className={`${styles.largeImageCard} ${className || ''}`}
+        data-testid="file-card"
+        onClick={handleOpen}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleOpen(e as unknown as React.MouseEvent);
+          }
+        }}
+      >
         <div className={styles.largeImageLeft}>
           <div className={styles.largeImageIconBox}>
             <DocumentIcon fileName={fileName} mimeType={mimeType} />
@@ -132,6 +144,7 @@ export const LargeImageCard: React.FC<LargeImageCardProps> = React.memo(
     );
   }
 );
+
 
 export type FileCardProps = LargeImageCardProps;
 export const FileCard = LargeImageCard;

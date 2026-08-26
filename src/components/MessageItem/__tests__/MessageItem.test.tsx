@@ -497,4 +497,94 @@ describe('MessageItem Component', () => {
       expect(screen.getByText('holiday.mp4')).toBeInTheDocument();
     });
   });
+
+  describe('Image MIME type inference', () => {
+    it('passes inferred mimeType for png and webp images to onOpenAttachment', () => {
+      const onOpenAttachment = vi.fn();
+      const pngMessage: ChatMessage = {
+        ...baseMessage,
+        metadata: {
+          type: 'image',
+          url: 'https://example.com/screenshot.png',
+          fileName: 'screenshot.png',
+          size: 2048,
+        },
+      };
+
+      render(
+        <MessageItem
+          message={pngMessage}
+          isOwn={false}
+          onOpenAttachment={onOpenAttachment}
+        />
+      );
+
+      const img = screen.getByRole('img');
+      fireEvent.click(img);
+
+      expect(onOpenAttachment).toHaveBeenCalledWith(
+        'https://example.com/screenshot.png',
+        'screenshot.png',
+        expect.objectContaining({
+          mimeType: 'image/png',
+          fileName: 'screenshot.png',
+          url: 'https://example.com/screenshot.png',
+        })
+      );
+    });
+
+    it('passes explicit mimeType when available in image files array', () => {
+      const onOpenAttachment = vi.fn();
+      const multiImageMessage: ChatMessage = {
+        ...baseMessage,
+        metadata: {
+          type: 'image',
+          files: JSON.stringify([
+            {
+              url: 'https://example.com/image1.webp',
+              fileName: 'image1.webp',
+              mimeType: 'image/webp',
+              size: 5000,
+            },
+            {
+              url: 'https://example.com/image2.gif',
+              fileName: 'image2.gif',
+              mimeType: 'image/gif',
+              size: 8000,
+            },
+          ]),
+        },
+      };
+
+      render(
+        <MessageItem
+          message={multiImageMessage}
+          isOwn={false}
+          onOpenAttachment={onOpenAttachment}
+        />
+      );
+
+      const images = screen.getAllByRole('img');
+      expect(images).toHaveLength(2);
+
+      fireEvent.click(images[0]);
+      expect(onOpenAttachment).toHaveBeenCalledWith(
+        'https://example.com/image1.webp',
+        'image1.webp',
+        expect.objectContaining({
+          mimeType: 'image/webp',
+        })
+      );
+
+      fireEvent.click(images[1]);
+      expect(onOpenAttachment).toHaveBeenCalledWith(
+        'https://example.com/image2.gif',
+        'image2.gif',
+        expect.objectContaining({
+          mimeType: 'image/gif',
+        })
+      );
+    });
+  });
 });
+

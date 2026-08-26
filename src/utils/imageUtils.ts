@@ -40,3 +40,37 @@ export const formatFileSize = (bytes?: number | string | null): string => {
   return `${(num / (k * k * k)).toFixed(2)} GB`;
 };
 
+/**
+ * Infer or retrieve the image MIME type based on file name or provided explicit MIME type.
+ *
+ * @param fileName File name or URL
+ * @param explicitMime Explicit MIME type if already known
+ * @param defaultMime Default MIME type if not determinable (default: 'image/jpeg')
+ * @returns MIME type string
+ */
+export const getImageMimeType = (
+  fileName?: string,
+  explicitMime?: string,
+  defaultMime: string = 'image/jpeg'
+): string => {
+  if (explicitMime && explicitMime.toLowerCase().startsWith('image/')) {
+    return explicitMime;
+  }
+  if (fileName) {
+    const clean = fileName.split('?')[0].split('#')[0].toLowerCase();
+    if (clean.endsWith('.png')) return 'image/png';
+    if (clean.endsWith('.webp')) return 'image/webp';
+    if (clean.endsWith('.gif')) return 'image/gif';
+    if (clean.endsWith('.svg')) return 'image/svg+xml';
+    if (clean.endsWith('.bmp')) return 'image/bmp';
+    if (clean.endsWith('.ico')) return 'image/x-icon';
+    if (clean.endsWith('.tiff') || clean.endsWith('.tif')) return 'image/tiff';
+    if (clean.endsWith('.avif')) return 'image/avif';
+    if (clean.endsWith('.heic')) return 'image/heic';
+    if (clean.endsWith('.heif')) return 'image/heif';
+    if (clean.endsWith('.jpg') || clean.endsWith('.jpeg')) return 'image/jpeg';
+  }
+  return explicitMime || defaultMime;
+};
+
+

@@ -61,6 +61,8 @@ export const vi = {
     openFolder: 'Mở thư mục',
     download: 'Tải về',
     downloading: 'Đang tải về...',
+    officePreviewNotice: 'Nếu tài liệu không hiển thị, vui lòng tải tệp về máy để xem.',
+    officePrivateNotice: 'Tài liệu trong mạng nội bộ hoặc tệp cục bộ không hỗ trợ xem trước trực tuyến. Vui lòng tải về để xem.',
     you: 'Bạn',
     justNow: 'Vừa xong',
     minsAgo: '{{count}} phút trước',

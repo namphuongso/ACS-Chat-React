@@ -484,12 +484,20 @@ describe('MessageList Component', () => {
 
     expect(screen.getByText('document.docx')).toBeInTheDocument();
 
-    const openBtn = screen.getByTitle('chat.openFolder');
-    fireEvent.click(openBtn);
-    expect(onOpenAttachment).toHaveBeenCalledWith('https://example.com/document.docx', 'document.docx');
+    const fileCard = screen.getByTestId('file-card');
+    fireEvent.click(fileCard);
+    expect(onOpenAttachment).toHaveBeenCalledWith(
+      'https://example.com/document.docx',
+      'document.docx',
+      expect.objectContaining({
+        url: 'https://example.com/document.docx',
+        fileName: 'document.docx',
+      })
+    );
 
-    const downloadBtn = screen.getByTitle('chat.download');
+    const downloadBtn = screen.getByTestId('file-download-btn');
     fireEvent.click(downloadBtn);
     expect(onDownloadAttachment).toHaveBeenCalledWith('https://example.com/document.docx', 'document.docx');
+
   });
 });

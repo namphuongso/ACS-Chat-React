@@ -6,6 +6,7 @@ import {
   extractUrlsFromHtml,
   getDomainFromUrl,
   isEmptyLinkPreview,
+  isPublicHttpUrl,
   linkifyHtml,
   normalizeUrl,
   parseLinkPreview,
@@ -178,6 +179,62 @@ describe('linkUtils', () => {
     it('is false when enrichment data exists', () => {
       expect(isEmptyLinkPreview({ url: 'https://a.com', title: 'T' })).toBe(false);
       expect(isEmptyLinkPreview({ url: 'https://a.com', imageUrl: 'i.png' })).toBe(false);
+    });
+  });
+
+  describe('isPublicHttpUrl', () => {
+    it('returns true for standard public http and https URLs', () => {
+      expect(isPublicHttpUrl('https://example.com/files/doc.docx')).toBe(true);
+      expect(isPublicHttpUrl('http://my-storage.blob.core.windows.net/files/doc.docx?token=xyz')).toBe(true);
+      expect(isPublicHttpUrl('https://cdn.example.org:8080/presentation.pptx')).toBe(true);
+      expect(isPublicHttpUrl('https://sub.domain.co.uk/sheet.xlsx')).toBe(true);
+    });
+
+    it('returns false for blob, data, and file URLs', () => {
+      expect(isPublicHttpUrl('blob:http://localhost:3000/1234-5678')).toBe(false);
+      expect(isPublicHttpUrl('data:application/pdf;base64,JVBERi0xL...')).toBe(false);
+      expect(isPublicHttpUrl('file:///path/to/doc.docx')).toBe(false);
+    });
+
+    it('returns false for localhost and loopback addresses', () => {
+      expect(isPublicHttpUrl('http://localhost:3000/doc.docx')).toBe(false);
+      expect(isPublicHttpUrl('https://localhost/file.xlsx')).toBe(false);
+      expect(isPublicHttpUrl('http://127.0.0.1:8080/doc.docx')).toBe(false);
+      expect(isPublicHttpUrl('http://0.0.0.0/file.pptx')).toBe(false);
+      expect(isPublicHttpUrl('http://[::1]/file.docx')).toBe(false);
+    });
+
+    it('returns false for private IPv4 addresses', () => {
+      // 10.0.0.0/8
+      expect(isPublicHttpUrl('http://10.0.0.1/doc.docx')).toBe(false);
+      expect(isPublicHttpUrl('https://10.255.0.5/doc.docx')).toBe(false);
+
+      // 172.16.0.0/12
+      expect(isPublicHttpUrl('http://172.16.0.1/doc.docx')).toBe(false);
+      expect(isPublicHttpUrl('http://172.31.255.255/doc.docx')).toBe(false);
+
+      // 192.168.0.0/16
+      expect(isPublicHttpUrl('http://192.168.1.1/doc.docx')).toBe(false);
+      expect(isPublicHttpUrl('http://192.168.100.25/doc.docx')).toBe(false);
+
+      // 169.254.0.0/16
+      expect(isPublicHttpUrl('http://169.254.1.1/doc.docx')).toBe(false);
+    });
+
+    it('returns false for intranet single-label hostnames and local domains', () => {
+      expect(isPublicHttpUrl('http://internal-server/doc.docx')).toBe(false);
+      expect(isPublicHttpUrl('http://myserver/doc.docx')).toBe(false);
+      expect(isPublicHttpUrl('http://intranet.local/doc.docx')).toBe(false);
+      expect(isPublicHttpUrl('http://app.internal/doc.docx')).toBe(false);
+      expect(isPublicHttpUrl('http://dev.lan/doc.docx')).toBe(false);
+      expect(isPublicHttpUrl('http://corp.corp/doc.docx')).toBe(false);
+    });
+
+    it('returns false for empty or invalid inputs', () => {
+      expect(isPublicHttpUrl('')).toBe(false);
+      expect(isPublicHttpUrl(undefined)).toBe(false);
+      expect(isPublicHttpUrl('not a url')).toBe(false);
+      expect(isPublicHttpUrl('ftp://example.com/doc.docx')).toBe(false);
     });
   });
 });

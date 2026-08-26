@@ -12,17 +12,29 @@ export interface VideoCardProps {
   url?: string;
   mimeType?: string;
   onDownload?: (url: string, fileName?: string) => void;
+  onOpen?: (url: string, fileName?: string) => void;
   className?: string;
 }
 
 export const VideoCard: React.FC<VideoCardProps> = React.memo(
-  ({ fileName, fileSize, url = '', mimeType: _mimeType, onDownload, className }) => {
+  ({ fileName, fileSize, url = '', mimeType: _mimeType, onDownload, onOpen, className }) => {
     const { t } = useTranslation();
     const formattedSize = formatFileSize(fileSize);
     const [isDownloading, setIsDownloading] = useState(false);
     const [downloadPercent, setDownloadPercent] = useState<number | null>(null);
     const [hasError, setHasError] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
+
+    const handleOpen = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onOpen) {
+        onOpen(url, fileName);
+        return;
+      }
+      if (url && typeof window !== 'undefined') {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    };
 
     useEffect(() => {
       setHasError(false);
@@ -90,7 +102,19 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(
         </div>
 
         <div className={styles.videoActionBar}>
-          <div className={styles.videoActionLeft}>
+          <div
+            className={styles.videoActionLeft}
+            onClick={handleOpen}
+            role="button"
+            tabIndex={0}
+            style={{ cursor: 'pointer' }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleOpen(e as unknown as React.MouseEvent);
+              }
+            }}
+          >
             <div className={styles.videoIconBox}>
               <PlayIcon className={styles.videoIcon} />
             </div>
@@ -103,6 +127,7 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(
               </div>
             </div>
           </div>
+
 
           <div className={styles.videoActions}>
             <button

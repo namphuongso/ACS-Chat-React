@@ -6,6 +6,7 @@ import { ConversationList } from './ConversationList';
 import { ConversationView } from './Conversation';
 import { EmptyState } from './EmptyState';
 import { LoadingState } from './LoadingState';
+import type { FilePreviewItem } from './FilePreviewModal';
 
 export interface ConversationListRenderProps {}
 
@@ -19,9 +20,12 @@ export interface ChatContainerProps {
   renderConversationList?: (props: ConversationListRenderProps) => ReactNode;
   renderConversation?: (props: ConversationRenderProps) => ReactNode;
   renderEmpty?: () => ReactNode;
-  onOpenAttachment?: (url: string, fileName?: string) => void;
+  onOpenAttachment?: (url: string, fileName?: string, metadata?: FilePreviewItem) => void;
   onDownloadAttachment?: (url: string, fileName?: string) => void;
+  disableOfficeOnlineViewer?: boolean;
+  disableInternalPreview?: boolean;
 }
+
 
 export const ChatContainer: React.FC<ChatContainerProps> = React.memo(
   ({
@@ -32,6 +36,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = React.memo(
     renderEmpty,
     onOpenAttachment,
     onDownloadAttachment,
+    disableOfficeOnlineViewer,
+    disableInternalPreview,
   }) => {
     const { activeConversation, openingConversation } = useConversations();
     const { loading: loadingPinnedMessages } = usePinnedMessages(
@@ -83,6 +89,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = React.memo(
               <ConversationView
                 onOpenAttachment={onOpenAttachment}
                 onDownloadAttachment={onDownloadAttachment}
+                disableOfficeOnlineViewer={disableOfficeOnlineViewer}
+                disableInternalPreview={disableInternalPreview}
               />
             )
           ) : renderEmpty ? (

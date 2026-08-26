@@ -164,4 +164,21 @@ describe('ConversationView Component', () => {
     fireEvent.click(screen.getByTestId('download-attach-btn'));
     expect(onDownloadAttachment).toHaveBeenCalledWith('https://example.com/test.pdf', 'test.pdf');
   });
+
+  it('should not open internal FilePreviewModal when disableInternalPreview is true', () => {
+    const onOpenAttachment = vi.fn();
+
+    render(
+      <ConversationView
+        onOpenAttachment={onOpenAttachment}
+        disableInternalPreview={true}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('open-attach-btn'));
+    expect(onOpenAttachment).toHaveBeenCalledWith('https://example.com/test.pdf', 'test.pdf');
+    // FilePreviewModal should not be rendered
+    expect(screen.queryByTestId('file-preview-modal')).not.toBeInTheDocument();
+  });
 });
+

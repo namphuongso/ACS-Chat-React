@@ -15,6 +15,7 @@ import { useMessageStore, compareMessages, getConversationKeys } from '../../sto
 import { LoadingState } from '../LoadingState';
 import { MessageItem } from '../MessageItem';
 import { preloadChatImage } from '../MessageItem/ChatImage';
+import type { FilePreviewItem } from '../FilePreviewModal';
 import styles from './MessageList.module.scss';
 
 export interface MessageListHandle {
@@ -50,9 +51,10 @@ export interface MessageListProps {
   onDeleteMessage?: (messageId: string) => void;
   onPinMessage?: (messageId: string, pin: boolean) => void;
   pinnedMessageIds?: Set<string> | string[];
-  onOpenAttachment?: (url: string, fileName?: string) => void;
+  onOpenAttachment?: (url: string, fileName?: string, metadata?: FilePreviewItem) => void;
   onDownloadAttachment?: (url: string, fileName?: string) => void;
 }
+
 
 type ListItem =
   { type: 'message'; data: ChatMessage } | { type: 'date-separator'; id: string; date: Date };

@@ -20,9 +20,10 @@ export interface ChatImageProps {
   alt?: string;
   className?: string;
   style?: React.CSSProperties;
+  onClick?: (e: React.MouseEvent<HTMLImageElement>) => void;
 }
 
-export const ChatImage: React.FC<ChatImageProps> = React.memo(({ src, alt = '', className, style }) => {
+export const ChatImage: React.FC<ChatImageProps> = React.memo(({ src, alt = '', className, style, onClick }) => {
   const isInitiallyCached = imageCache.has(src);
   const [loaded, setLoaded] = useState(isInitiallyCached);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -49,7 +50,9 @@ export const ChatImage: React.FC<ChatImageProps> = React.memo(({ src, alt = '', 
         ...style,
         opacity: loaded || isInitiallyCached ? 1 : 0,
         transition: loaded || isInitiallyCached ? 'none' : 'opacity 0.2s ease-in',
+        cursor: onClick ? 'pointer' : style?.cursor,
       }}
+      onClick={onClick}
       onLoad={() => {
         setLoaded(true);
         imageCache.add(src);
@@ -57,3 +60,4 @@ export const ChatImage: React.FC<ChatImageProps> = React.memo(({ src, alt = '', 
     />
   );
 });
+

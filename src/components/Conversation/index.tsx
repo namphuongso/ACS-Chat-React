@@ -14,18 +14,29 @@ import { LoadingState } from '../LoadingState';
 import { EditMessageDialog } from './EditMessageDialog';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PinnedMessageBanner } from './PinnedMessageBanner';
+import { FilePreviewModal, type FilePreviewItem } from '../FilePreviewModal';
 import { useTranslation } from 'react-i18next';
 import styles from './ConversationView.module.scss';
 
 export interface ConversationViewProps {
   conversationId?: string;
   pinnedMessageIds?: Set<string> | string[];
-  onOpenAttachment?: (url: string, fileName?: string) => void;
+  onOpenAttachment?: (url: string, fileName?: string, metadata?: FilePreviewItem) => void;
   onDownloadAttachment?: (url: string, fileName?: string) => void;
+  disableOfficeOnlineViewer?: boolean;
+  disableInternalPreview?: boolean;
 }
 
+
 export const ConversationView: React.FC<ConversationViewProps> = React.memo(
-  ({ conversationId, pinnedMessageIds, onOpenAttachment, onDownloadAttachment }) => {
+  ({
+    conversationId,
+    pinnedMessageIds,
+    onOpenAttachment,
+    onDownloadAttachment,
+    disableOfficeOnlineViewer,
+    disableInternalPreview,
+  }) => {
     const { activeConversation, conversations } = useConversations();
     const { currentUser, connectionState } = useChat();
     const setIsSearching = useChatStore((state) => state.setIsSearching);
@@ -174,6 +185,44 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
       setDeleteDialog({ isOpen: false, messageId: '' });
     }, []);
 
+    const [previewFile, setPreviewFile] = useState<FilePreviewItem | null>(null);
+
+    const handleOpenAttachment = useCallback(
+      (url: string, fileName?: string, metadata?: FilePreviewItem) => {
+        if (onOpenAttachment) {
+          if (metadata !== undefined) {
+            onOpenAttachment(url, fileName, metadata);
+          } else {
+            onOpenAttachment(url, fileName);
+          }
+        }
+        if (disableInternalPreview) {
+          return;
+        }
+        const resolvedName =
+          fileName ||
+          metadata?.fileName ||
+          url.split('?')[0].split('#')[0].split('/').pop() ||
+          'file';
+
+        setPreviewFile({
+          url,
+          fileName: resolvedName,
+          fileSize: metadata?.fileSize,
+          mimeType: metadata?.mimeType,
+          senderName: metadata?.senderName,
+          senderAvatarUrl: metadata?.senderAvatarUrl,
+          sentAt: metadata?.sentAt,
+        });
+      },
+      [onOpenAttachment, disableInternalPreview]
+    );
+
+
+    const handleClosePreview = useCallback(() => {
+      setPreviewFile(null);
+    }, []);
+
     const handlePinMessage = useCallback(
       (messageId: string, pin: boolean) => {
         pinMessage(messageId, pin);
@@ -217,7 +266,7 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
             onDeleteMessage={handleDeleteMessage}
             onPinMessage={handlePinMessage}
             pinnedMessageIds={effectivePinnedMessageIds}
-            onOpenAttachment={onOpenAttachment}
+            onOpenAttachment={handleOpenAttachment}
             onDownloadAttachment={onDownloadAttachment}
           />
         </div>
@@ -247,7 +296,16 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
           onConfirm={handleConfirmDelete}
           onCancel={handleCancelDelete}
         />
+
+        <FilePreviewModal
+          isOpen={Boolean(previewFile)}
+          file={previewFile}
+          onClose={handleClosePreview}
+          onDownload={onDownloadAttachment}
+          disableOfficeOnlineViewer={disableOfficeOnlineViewer}
+        />
       </div>
     );
   }
 );
+

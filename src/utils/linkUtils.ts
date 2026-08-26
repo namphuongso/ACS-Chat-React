@@ -203,3 +203,64 @@ export function isEmptyLinkPreview(preview: LinkPreview | null | undefined): boo
   if (!preview) return true;
   return !preview.title && !preview.description && !preview.imageUrl;
 }
+
+/**
+ * Checks whether a URL is a publicly accessible HTTP/HTTPS URL that can be reached
+ * by external web services (like Microsoft Office Online Viewer).
+ * Rejects blob:, data:, file:, localhost, private/local IPs, and internal domains.
+ */
+export function isPublicHttpUrl(url?: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (
+    trimmed.startsWith('blob:') ||
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('file:')
+  ) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false;
+    }
+
+    const hostname = parsed.hostname.toLowerCase();
+
+    // Localhost & loopback
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '::1' ||
+      hostname === '[::1]'
+    ) {
+      return false;
+    }
+
+    // Local / private domain suffixes or single-label hostnames without dots (intranet)
+    if (
+      hostname.endsWith('.local') ||
+      hostname.endsWith('.localhost') ||
+      hostname.endsWith('.internal') ||
+      hostname.endsWith('.lan') ||
+      hostname.endsWith('.corp') ||
+      hostname.endsWith('.test') ||
+      hostname.endsWith('.example') ||
+      !hostname.includes('.')
+    ) {
+      return false;
+    }
+
+    // Private IPv4 ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16)
+    if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) return false;
+    if (/^172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(hostname)) return false;
+    if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)) return false;
+    if (/^169\.254\.\d{1,3}\.\d{1,3}$/.test(hostname)) return false;
+
+    return true;
+  } catch {
+    return false;
+  }
+}

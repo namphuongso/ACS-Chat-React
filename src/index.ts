@@ -9,8 +9,10 @@ import './styles/variables.scss';
 export * from './components';
 export * from './hooks';
 export * from './services';
+export * from './utils';
 export * from './adapters/websocket';
 export * from './constants/websocket';
+
 export type {
   // Config
   ChatConfig,

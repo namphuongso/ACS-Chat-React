@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isLargeImage, formatFileSize } from '../../utils/imageUtils';
+import { isLargeImage, formatFileSize, getImageMimeType } from '../../utils/imageUtils';
 
 describe('imageUtils', () => {
   describe('isLargeImage', () => {
@@ -63,5 +63,36 @@ describe('imageUtils', () => {
       expect(formatFileSize(1.5 * 1024 * 1024 * 1024)).toBe('1.50 GB');
     });
   });
+
+  describe('getImageMimeType', () => {
+    it('should use explicit MIME type if provided with image/ prefix', () => {
+      expect(getImageMimeType('photo.jpg', 'image/png')).toBe('image/png');
+      expect(getImageMimeType('file.unknown', 'image/webp')).toBe('image/webp');
+    });
+
+    it('should infer MIME type from file extension', () => {
+      expect(getImageMimeType('photo.png')).toBe('image/png');
+      expect(getImageMimeType('image.webp')).toBe('image/webp');
+      expect(getImageMimeType('anim.gif')).toBe('image/gif');
+      expect(getImageMimeType('icon.svg')).toBe('image/svg+xml');
+      expect(getImageMimeType('graphic.bmp')).toBe('image/bmp');
+      expect(getImageMimeType('favicon.ico')).toBe('image/x-icon');
+      expect(getImageMimeType('photo.jpeg')).toBe('image/jpeg');
+      expect(getImageMimeType('photo.jpg')).toBe('image/jpeg');
+      expect(getImageMimeType('photo.JPG?v=1#hash')).toBe('image/jpeg');
+      expect(getImageMimeType('photo.PNG?query=123')).toBe('image/png');
+      expect(getImageMimeType('image.avif')).toBe('image/avif');
+      expect(getImageMimeType('photo.heic')).toBe('image/heic');
+      expect(getImageMimeType('photo.tiff')).toBe('image/tiff');
+    });
+
+    it('should return default MIME type for unknown extensions or missing filename', () => {
+      expect(getImageMimeType(undefined)).toBe('image/jpeg');
+      expect(getImageMimeType('')).toBe('image/jpeg');
+      expect(getImageMimeType('unknown.xyz')).toBe('image/jpeg');
+      expect(getImageMimeType('unknown.xyz', undefined, 'image/png')).toBe('image/png');
+    });
+  });
 });
+
 
