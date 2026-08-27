@@ -13,3 +13,19 @@ export type CompleteUploadSessionResponse =
   | string[]
   | { url?: string; blobUrl?: string; [key: string]: unknown };
 
+/**
+ * Metadata structure for individual files stored inside message metadata.files
+ */
+export interface MessageFileMetadata {
+  fileName?: string;
+  name?: string;
+  mimeType?: string;
+  url?: string;
+  thumbnailUrl?: string;
+  thumbUrl?: string;
+  size?: number | string;
+  isLarge?: boolean | string;
+  width?: number;
+  height?: number;
+  [key: string]: unknown;
+}

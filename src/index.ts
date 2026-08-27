@@ -16,6 +16,7 @@ export * from './constants/websocket';
 export type {
   // Config
   ChatConfig,
+  LinkPreviewConfig,
 
   // User & Participant
   ChatUser,
@@ -32,6 +33,7 @@ export type {
 
   // Message
   ChatMessage,
+  PinnedMessage,
   MessageStatus,
   MessageType,
   SendMessageOptions,
@@ -43,6 +45,9 @@ export type {
   // Error
   ChatError,
   ChatErrorCode,
+
+  // File
+  MessageFileMetadata,
 
   // Events
   ChatDomainEvent,

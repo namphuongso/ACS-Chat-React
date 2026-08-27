@@ -18,6 +18,7 @@ export interface LargeImageCardProps {
   onDownload?: (url: string, fileName?: string) => void;
   onOpen?: (url: string, fileName?: string) => void;
   className?: string;
+  disablePreview?: boolean;
 }
 
 export const LargeImageCard: React.FC<LargeImageCardProps> = React.memo(
@@ -32,21 +33,19 @@ export const LargeImageCard: React.FC<LargeImageCardProps> = React.memo(
     onDownload,
     onOpen,
     className,
+    disablePreview = false,
   }) => {
     const { t } = useTranslation();
     const formattedSize = formatFileSize(fileSize);
     const [isDownloading, setIsDownloading] = useState(false);
     const [downloadPercent, setDownloadPercent] = useState<number | null>(null);
 
+    const canOpen = Boolean(onOpen) && !disablePreview;
+
     const handleOpen = (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (onOpen) {
-        onOpen(url, fileName);
-        return;
-      }
-      if (url && typeof window !== 'undefined') {
-        window.open(url, '_blank', 'noopener,noreferrer');
-      }
+      if (!canOpen) return;
+      onOpen?.(url, fileName);
     };
 
     const handleDownload = async (e: React.MouseEvent) => {
@@ -85,17 +84,21 @@ export const LargeImageCard: React.FC<LargeImageCardProps> = React.memo(
 
     return (
       <div
-        className={`${styles.largeImageCard} ${className || ''}`}
+        className={`${styles.largeImageCard} ${canOpen ? styles.clickable : ''} ${className || ''}`}
         data-testid="file-card"
-        onClick={handleOpen}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleOpen(e as unknown as React.MouseEvent);
-          }
-        }}
+        onClick={canOpen ? handleOpen : undefined}
+        role={canOpen ? 'button' : undefined}
+        tabIndex={canOpen ? 0 : undefined}
+        onKeyDown={
+          canOpen
+            ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleOpen(e as unknown as React.MouseEvent);
+                }
+              }
+            : undefined
+        }
       >
         <div className={styles.largeImageLeft}>
           <div className={styles.largeImageIconBox}>
@@ -118,7 +121,7 @@ export const LargeImageCard: React.FC<LargeImageCardProps> = React.memo(
         </div>
 
         <div className={styles.largeImageActions}>
-          {showOpenFolder && (
+          {showOpenFolder && canOpen && (
             <button
               type="button"
               className={styles.largeImageActionBtn}

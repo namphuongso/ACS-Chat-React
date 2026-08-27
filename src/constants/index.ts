@@ -3,3 +3,4 @@ export * from './errors';
 export * from './defaults';
 export * from './websocket';
 export * from './file';
+export * from './pins';

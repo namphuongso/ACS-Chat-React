@@ -20,14 +20,20 @@ A powerful, customizable, and production-ready React chat library for **Azure Co
 
 ## Table of Contents
 
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-  - [Approach A: Pre-built UI Components](#approach-a-pre-built-ui-components)
-  - [Approach B: Headless Hooks (Custom UI)](#approach-b-headless-hooks-custom-ui)
-- [Configuration](#configuration)
-  - [ChatConfig Object](#chatconfig-object)
-- [Available Hooks](#available-hooks)
-- [Customizing Default Styles](#customizing-default-styles)
+- [@namphuongtechnologi/acs-chat-react](#namphuongtechnologiacs-chat-react)
+  - [✨ Key Features](#-key-features)
+  - [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
+    - [Peer Dependencies](#peer-dependencies)
+  - [Quick Start](#quick-start)
+    - [Approach A: Pre-built UI Components](#approach-a-pre-built-ui-components)
+    - [Approach B: Headless Hooks (Custom UI)](#approach-b-headless-hooks-custom-ui)
+  - [Configuration](#configuration)
+    - [`ChatConfig` Object](#chatconfig-object)
+      - [Reconnect Policy (`ReconnectPolicy`)](#reconnect-policy-reconnectpolicy)
+      - [Link Preview (`LinkPreviewConfig`)](#link-preview-linkpreviewconfig)
+  - [Available Hooks](#available-hooks)
+  - [Customizing Default Styles](#customizing-default-styles)
 
 ---
 
@@ -180,6 +186,7 @@ The `ChatProvider` requires a `config` object of type `ChatConfig` to initialize
 | **`reconnectPolicy`** | `ReconnectPolicy`                         |    No    | Configuration for reconnecting to ACS. Includes `maxRetries`, `initialDelayMs`, `maxDelayMs`, and `backoffMultiplier`. |
 | **`logger`**          | `ChatLogger`                              |    No    | Optional custom logger implementation (`debug`, `info`, `warn`, `error`).                                              |
 | **`onFileUpload`**    | `(file: File) => Promise<FileAttachment>` |    No    | Optional callback to handle file uploads, returning metadata for attachment.                                           |
+| **`linkPreview`**     | `LinkPreviewConfig`                       |    No    | Optional custom link-preview / SEO crawler endpoint configuration (URL, request, response mapping).                    |
 
 #### Reconnect Policy (`ReconnectPolicy`)
 
@@ -187,6 +194,54 @@ The `ChatProvider` requires a `config` object of type `ChatConfig` to initialize
 - **`initialDelayMs`**: Initial delay before first reconnection attempt (default: `1000`).
 - **`maxDelayMs`**: Maximum delay between reconnection attempts (default: `30000`).
 - **`backoffMultiplier`**: Multiplier for exponential backoff (default: `2`).
+
+#### Link Preview (`LinkPreviewConfig`)
+
+When a `linkPreview` config is provided, URL previews are resolved through your custom crawler endpoint before falling back to the built-in `/api/link-preview` backend and client-side Open Graph parsing.
+
+| Property             | Type                                                                    | Required | Description                                                                                            |
+| :------------------- | :---------------------------------------------------------------------- | :------: | :----------------------------------------------------------------------------------------------------- |
+| **`url`**            | `string`                                                                | **Yes**  | Full endpoint URL of the crawler service (e.g. `https://crawl-seo-info.vercel.app/seo-crawler/crawl`). |
+| **`method`**         | `'GET' \| 'POST' \| 'PUT' \| 'PATCH'`                                   |    No    | HTTP method for the request (default: `POST`).                                                         |
+| **`headers`**        | `Record<string, string>`                                                |    No    | Custom headers to include with the request.                                                            |
+| **`requestBody`**    | `Record<string, unknown> \| ((url: string) => Record<string, unknown>)` |    No    | Static request body or a function producing the body from the URL being crawled.                       |
+| **`responseMapper`** | `(data: unknown) => Partial<LinkPreview>`                               |    No    | Maps the raw crawler response to a `LinkPreview`. When omitted, common crawler fields are detected.    |
+
+Example using the SEO crawler endpoint from the goal:
+
+```tsx
+const chatConfig: ChatConfig = {
+  endpoint: 'https://<your-acs-resource>.communication.azure.com/',
+  userId: '8:acs:123456',
+  displayName: 'Current User',
+  token: '<your-access-token>',
+  tokenRefresher: async () => '<new-token>',
+  linkPreview: {
+    url: 'https://crawl-seo-info.vercel.app/seo-crawler/crawl',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    requestBody: (url) => ({ url }),
+  },
+};
+```
+
+When the crawler returns the goal's response shape (`url`, `title`, `description`, `ogTags.image`, `twitterTags.site`, ...), the built-in mapper automatically extracts title, description, image, and site name — no `responseMapper` needed. If your crawler returns a different shape, provide a `responseMapper`:
+
+```tsx
+linkPreview: {
+  url: 'https://your-crawler.example/crawl',
+  requestBody: { url: '' }, // replaced per request via function if needed
+  responseMapper: (data) => {
+    const d = data as { result?: { title?: string; thumb?: string } };
+    return {
+      title: d.result?.title,
+      imageUrl: d.result?.thumb,
+    };
+  },
+}
+```
 
 ---
 

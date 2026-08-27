@@ -20,10 +20,7 @@ export const formatTime = (date?: Date): string => {
   );
 };
 
-export const formatPreviewDate = (
-  dateInput?: Date | string | number,
-  language = 'vi'
-): string => {
+export const formatPreviewDate = (dateInput?: Date | string | number, language = 'vi'): string => {
   if (!dateInput) return '';
   const date = new Date(dateInput);
   if (isNaN(date.getTime())) return '';
@@ -67,4 +64,3 @@ export const formatPreviewDate = (
 
   return isVi ? `${day}/${month}/${year} lúc ${timeStr}` : `${month}/${day}/${year} at ${timeStr}`;
 };
-

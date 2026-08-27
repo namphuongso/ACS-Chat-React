@@ -1,23 +1,47 @@
 import type { LinkPreview } from '../types/message.types';
-import type { ChatConfig } from '../types/config.types';
+import type { ChatConfig, LinkPreviewConfig } from '../types/config.types';
 import { fetchBackend } from '../utils/apiClient';
 import { getDomainFromUrl, normalizeUrl } from '../utils/linkUtils';
 import { logger } from '../utils/logger';
 import type { ChatService } from './chatService';
 
 /** Timeout for client-side preview fetches (CORS-friendly sites only). */
-const CLIENT_FETCH_TIMEOUT_MS = 8000;
+const CLIENT_FETCH_TIMEOUT_MS = 5000;
 /** Maximum number of HTML characters parsed for meta tags client-side. */
 const MAX_HTML_PARSE_LENGTH = 512 * 1024;
+
+/**
+ * Type guard that narrows an unknown value to a non-null object so callers
+ * can avoid bare `as Record<string, unknown>` casts.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+/**
+ * Picks the first non-empty string value among the given keys on a record.
+ */
+function pickString(
+  record: Record<string, unknown>,
+  ...keys: string[]
+): string | undefined {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value !== '') return value;
+  }
+  return undefined;
+}
+
 
 /**
  * Service that resolves {@link LinkPreview} metadata for URLs.
  *
  * Resolution order:
- * 1. Backend extraction endpoint: POST /api/link-preview { url } (preferred,
+ * 1. Custom link-preview crawler (config.linkPreview) when configured.
+ * 2. Backend extraction endpoint: POST /api/link-preview { url } (preferred,
  *    avoids CORS limitations).
- * 2. Client-side fetch + Open Graph/meta parsing (works for CORS-enabled sites).
- * 3. Minimal fallback preview containing only the URL.
+ * 3. Client-side fetch + Open Graph/meta parsing (works for CORS-enabled sites).
+ * 4. Minimal fallback preview containing only the URL.
  *
  * Results are cached in memory per normalized URL and in-flight requests are
  * de-duplicated.
@@ -82,6 +106,14 @@ export class LinkPreviewService {
   private async load(url: string): Promise<LinkPreview> {
     const config = this.getConfig();
 
+    if (config?.linkPreview) {
+      try {
+        return await this.fetchFromCustomCrawler(config.linkPreview, url);
+      } catch (error) {
+        logger.warn(`[LinkPreviewService] Custom crawler extraction failed for ${url}`, error);
+      }
+    }
+
     if (config?.backendUrl) {
       try {
         return await this.fetchFromBackend(config, url);
@@ -113,28 +145,162 @@ export class LinkPreviewService {
     return null;
   }
 
+  /**
+   * Fetch a preview using a custom crawler endpoint. The endpoint URL, HTTP
+   * method, headers, request body and response mapping are fully configurable
+   * via {@link LinkPreviewConfig}.
+   */
+  private async fetchFromCustomCrawler(
+    linkPreviewConfig: LinkPreviewConfig,
+    url: string
+  ): Promise<LinkPreview> {
+    if (typeof fetch === 'undefined') {
+      throw new Error('fetch is not available in this environment');
+    }
+
+    const method = linkPreviewConfig.method || 'POST';
+    const headers = new Headers(linkPreviewConfig.headers || {});
+    const body = this.buildCrawlerRequestBody(linkPreviewConfig, url);
+    if (body !== undefined && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CLIENT_FETCH_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(linkPreviewConfig.url, {
+        method,
+        headers,
+        signal: controller.signal,
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data: unknown = await response.json();
+      const mapped = linkPreviewConfig.responseMapper?.(data);
+      if (mapped) {
+        return {
+          url: mapped.url || url,
+          title: mapped.title,
+          description: mapped.description,
+          imageUrl: mapped.imageUrl,
+          siteName: mapped.siteName,
+          favicon: mapped.favicon,
+          keywords: mapped.keywords,
+          canonicalUrl: mapped.canonicalUrl,
+        };
+      }
+
+      return this.mapCrawlerResponse(data, url);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
+   * Build the request body for the crawler. Supports a static object or a
+   * function receiving the URL to crawl.
+   */
+  private buildCrawlerRequestBody(
+    linkPreviewConfig: LinkPreviewConfig,
+    url: string
+  ): Record<string, unknown> | undefined {
+    if (typeof linkPreviewConfig.requestBody === 'function') {
+      return linkPreviewConfig.requestBody(url);
+    }
+    return linkPreviewConfig.requestBody;
+  }
+
+  /**
+   * Map a raw crawler response into a {@link LinkPreview}. Handles both
+   * flat responses and responses wrapped in a `data` field, picking up common
+   * crawler field names (e.g. title, description, ogTags.image, headings...).
+   */
+  private mapCrawlerResponse(data: unknown, fallbackUrl: string): LinkPreview {
+    const root = isRecord(data) ? data : {};
+    const payload =
+      root.data && typeof root.data === 'object' && !Array.isArray(root.data)
+        ? (root.data as Record<string, unknown>)
+        : root;
+
+    const ogTags =
+      payload.ogTags && typeof payload.ogTags === 'object'
+        ? (payload.ogTags as Record<string, unknown>)
+        : undefined;
+    const twitterTags =
+      payload.twitterTags && typeof payload.twitterTags === 'object'
+        ? (payload.twitterTags as Record<string, unknown>)
+        : undefined;
+
+    const images = Array.isArray(payload.images)
+      ? (payload.images as unknown[]).filter((x): x is string => typeof x === 'string' && x !== '')
+      : [];
+
+    const favicons = Array.isArray(payload.favicons)
+      ? (payload.favicons as unknown[]).filter(
+          (x): x is string => typeof x === 'string' && x !== ''
+        )
+      : [];
+
+    const keywords = Array.isArray(payload.keywords)
+      ? (payload.keywords as unknown[]).filter(
+          (x): x is string => typeof x === 'string' && x !== ''
+        )
+      : undefined;
+
+    return {
+      url:
+        pickString(payload, 'url', 'canonicalUrl') ||
+        (ogTags && typeof ogTags.url === 'string' ? ogTags.url : undefined) ||
+        fallbackUrl,
+      title:
+        pickString(payload, 'title') ||
+        (ogTags && typeof ogTags.title === 'string' ? ogTags.title : undefined) ||
+        (twitterTags && typeof twitterTags.title === 'string' ? twitterTags.title : undefined),
+      description:
+        pickString(payload, 'description') ||
+        (ogTags && typeof ogTags.description === 'string' ? ogTags.description : undefined) ||
+        (twitterTags && typeof twitterTags.description === 'string'
+          ? twitterTags.description
+          : undefined),
+      imageUrl:
+        pickString(payload, 'image', 'imageUrl', 'thumbUrl') ||
+        (ogTags && typeof ogTags.image === 'string' ? ogTags.image : undefined) ||
+        (twitterTags && typeof twitterTags.image === 'string' ? twitterTags.image : undefined) ||
+        images[0] ||
+        undefined,
+      siteName:
+        pickString(payload, 'siteName', 'site_name') ||
+        (ogTags && typeof ogTags.site_name === 'string' ? ogTags.site_name : undefined) ||
+        (twitterTags && typeof twitterTags.site === 'string' ? twitterTags.site : undefined),
+      favicon:
+        pickString(payload, 'favicon', 'faviconUrl') ||
+        favicons[0] ||
+        (ogTags && typeof ogTags.favicon === 'string' ? ogTags.favicon : undefined),
+      keywords,
+      canonicalUrl: pickString(payload, 'canonicalUrl'),
+    };
+  }
+
   private async fetchFromBackend(config: ChatConfig, url: string): Promise<LinkPreview> {
     const response = await fetchBackend<Record<string, unknown>>(config, '/api/link-preview', {
       method: 'POST',
       body: JSON.stringify({ url }),
     });
 
-    const data = (response.data || {}) as Record<string, unknown>;
-    const pickString = (...keys: string[]): string | undefined => {
-      for (const key of keys) {
-        const value = data[key];
-        if (typeof value === 'string' && value !== '') return value;
-      }
-      return undefined;
-    };
+    const data = isRecord(response.data) ? response.data : {};
 
     return {
-      url: pickString('url') || url,
-      title: pickString('title'),
-      description: pickString('description'),
-      imageUrl: pickString('imageUrl', 'image', 'thumbUrl'),
-      siteName: pickString('siteName', 'site_name'),
-      favicon: pickString('favicon', 'faviconUrl'),
+      url: pickString(data, 'url') || url,
+      title: pickString(data, 'title'),
+      description: pickString(data, 'description'),
+      imageUrl: pickString(data, 'imageUrl', 'image', 'thumbUrl'),
+      siteName: pickString(data, 'siteName', 'site_name'),
+      favicon: pickString(data, 'favicon', 'faviconUrl'),
     };
   }
 
@@ -221,9 +387,7 @@ export class LinkPreviewService {
   }
 }
 
-
 /**
  * Singleton instance of LinkPreviewService for global application usage.
  */
 export const linkPreviewService = new LinkPreviewService();
-

@@ -94,4 +94,28 @@ describe('LinkPreviewCard', () => {
 
     expect(onClick).toHaveBeenCalledWith('https://example.com/article');
   });
+
+  it('renders rich preview with keywords tags and npm site', async () => {
+    const npmPreview: LinkPreview = {
+      url: 'https://www.npmjs.com/package/link-preview-js',
+      title: 'link-preview-js - npm',
+      description:
+        'Javascript module to extract and fetch HTTP link information from blocks of text.',
+      imageUrl: 'https://static.npmjs.com/338e4905a2684ca96e08b7780fc68412.png',
+      siteName: 'npm',
+      keywords: ['javascript', 'link', 'url'],
+    };
+
+    render(<LinkPreviewCard preview={npmPreview} />);
+
+    expect(await screen.findByText('link-preview-js - npm')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Javascript module to extract and fetch HTTP link information from blocks of text.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText('npm')).toBeInTheDocument();
+    expect(screen.getByText('#javascript')).toBeInTheDocument();
+    expect(screen.getByText('#link')).toBeInTheDocument();
+  });
 });

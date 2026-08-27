@@ -280,13 +280,13 @@ export const EditIcon: React.FC<SVGProps<SVGSVGElement>> = React.memo((props) =>
 ));
 
 export const AlertIcon: React.FC<SVGProps<SVGSVGElement>> = React.memo((props) => (
-  <svg 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
     {...props}
   >
     <circle cx="12" cy="12" r="10"></circle>
@@ -372,12 +372,7 @@ export const LoaderIcon: React.FC<SVGProps<SVGSVGElement>> = React.memo((props) 
 ));
 
 export const PlayIcon: React.FC<SVGProps<SVGSVGElement>> = React.memo((props) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    stroke="none"
-    {...props}
-  >
+  <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" {...props}>
     <polygon points="5 3 19 12 5 21 5 3" />
   </svg>
 ));
@@ -394,6 +389,43 @@ export const CloseIcon: React.FC<SVGProps<SVGSVGElement>> = React.memo((props) =
   >
     <line x1="18" y1="6" x2="6" y2="18" />
     <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+));
+
+export const VideoIcon: React.FC<SVGProps<SVGSVGElement>> = React.memo((props) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
+  </svg>
+));
+
+export const LinkIcon: React.FC<SVGProps<SVGSVGElement>> = React.memo((props) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+));
+
+export const PinBubbleIcon: React.FC<SVGProps<SVGSVGElement>> = React.memo((props) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    <line x1="8" y1="10" x2="13" y2="10" />
+    <line x1="8" y1="14" x2="16" y2="14" />
   </svg>
 ));
 

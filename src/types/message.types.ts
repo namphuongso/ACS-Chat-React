@@ -48,6 +48,10 @@ export interface LinkPreview {
   siteName?: string;
   /** Favicon URL of the site */
   favicon?: string;
+  /** Keywords from crawler or meta tags */
+  keywords?: string[];
+  /** Canonical URL if provided */
+  canonicalUrl?: string;
 }
 
 /**

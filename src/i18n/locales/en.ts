@@ -14,7 +14,8 @@ export const en = {
     noDataToDisplay: 'No data to display',
     selectConversation: 'Select a conversation to start messaging',
     deleteMessage: 'Delete message',
-    confirmDeleteMessage: 'Are you sure you want to delete this message? This action cannot be undone.',
+    confirmDeleteMessage:
+      'Are you sure you want to delete this message? This action cannot be undone.',
     delete: 'Delete',
     confirm: 'Confirm',
     cancel: 'Cancel',
@@ -60,8 +61,10 @@ export const en = {
     openFolder: 'Open folder',
     download: 'Download',
     downloading: 'Downloading...',
-    officePreviewNotice: 'If the document preview does not display, please download the file to view.',
-    officePrivateNotice: 'Local or private documents cannot be previewed online. Please download the file to view.',
+    officePreviewNotice:
+      'If the document preview does not display, please download the file to view.',
+    officePrivateNotice:
+      'Local or private documents cannot be previewed online. Please download the file to view.',
     you: 'You',
     justNow: 'Just now',
     minsAgo: '{{count}} mins',
@@ -76,6 +79,19 @@ export const en = {
     openGroupBoard: 'Open group board',
     unpin: 'Unpin',
     viewAllInGroupBoard: 'View all in the group board >',
+    updatePinList: 'Update pin list',
+    noPinnedMessages: 'No pinned messages to replace.',
+    pinLimitExceededDesc:
+      'Exceed the limit of {{count}} pins. The old pin below will be removed in order to update the new one.',
+    pinLimitSelectDesc:
+      'Exceed the limit of {{count}} pins. Please select a pin to remove and pin the new one.',
+    selectMessageToReplace: 'Select a pin to remove',
+    change: 'Change',
+    update: 'Update',
+    file: 'File',
+    photo: 'Photo',
+    album: 'Album',
+    link: 'Link',
     createGroup: 'Create group',
     enterGroupName: 'Enter group name...',
     searchGroupContact: 'Enter name, phone number, or list of phone number here',
@@ -116,6 +132,15 @@ export const en = {
       undo: 'Undo',
       redo: 'Redo',
       expand: 'Expand',
+    },
+    system: {
+      topicUpdated: '<b>{{initiator}}</b> changed topic to <b>"{{newTopic}}"</b>',
+      youAddedParticipants: '<b>{{participants}}</b> were added to the group by <b>you</b>',
+      participantsAddedBy: '<b>{{participants}}</b> were added to the group by <b>{{initiator}}</b>',
+      youRemovedParticipants:
+        '<b>{{participants}}</b> were removed from the group by <b>you</b>',
+      participantsRemovedBy:
+        '<b>{{participants}}</b> were removed from the group by <b>{{initiator}}</b>',
     },
   },
 };

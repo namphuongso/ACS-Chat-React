@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { usePinnedMessages, useJumpToMessage } from '../../hooks';
 import { MessageIcon, MoreHorizontalIcon, ChevronDownIcon, ChevronUpIcon } from '../Icons';
 import { PinDropdownMenu } from './PinDropdownMenu';
+import { PinnedItemView } from './PinnedItemView';
 import styles from './PinnedMessageBanner.module.scss';
 
 export interface PinnedMessageBannerProps {
@@ -146,11 +147,18 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
         <div className={styles.contentWrapper}>
           <div className={styles.headerTitle}>{t('chat.message')}</div>
           <div className={styles.messageContent}>
-            {firstMessage.creator}: {firstMessage.content}
+            <PinnedItemView message={firstMessage} />
           </div>
         </div>
       </div>
-      <div className={styles.rightSection} style={{ visibility: isPinboardOpen ? 'hidden' : 'visible', opacity: isPinboardOpen ? 0 : 1, transition: 'opacity 0.2s' }}>
+      <div
+        className={styles.rightSection}
+        style={{
+          visibility: isPinboardOpen ? 'hidden' : 'visible',
+          opacity: isPinboardOpen ? 0 : 1,
+          transition: 'opacity 0.2s',
+        }}
+      >
         {pinnedMessages.length > 1 && (
           <button className={styles.pinCountButton} onClick={() => setIsPinboardOpen(true)}>
             {t('chat.pinCount', { count: pinnedMessages.length - 1 })}{' '}
@@ -210,7 +218,7 @@ export const PinnedMessageBanner: React.FC<PinnedMessageBannerProps> = ({
                   <div className={styles.contentWrapper}>
                     <div className={styles.headerTitle}>{t('chat.message')}</div>
                     <div className={styles.messageContent}>
-                      {msg.creator}: {msg.content}
+                      <PinnedItemView message={msg} />
                     </div>
                   </div>
                 </div>

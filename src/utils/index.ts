@@ -9,3 +9,5 @@ export * from './htmlUtils';
 export * from './conversationKeys';
 export * from './imageUtils';
 export * from './linkUtils';
+export * from './pinnedUtils';
+export * from './fileUtils';

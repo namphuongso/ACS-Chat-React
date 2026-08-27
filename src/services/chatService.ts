@@ -19,6 +19,7 @@ import { websocketService } from './websocketService';
 import { messageService } from './messageService';
 import { readReceiptService } from './readReceiptService';
 import { linkPreviewService } from './linkPreviewService';
+import { resolveMessageFileMetadata } from '../utils/fileUtils';
 import { logger, setLogger } from '../utils';
 
 export type EventListenerFn = (event: ChatDomainEvent) => void;
@@ -269,10 +270,12 @@ export class ChatService {
         convStore.updateLastMessage(event.conversationId, msg);
         const currentUserId = chatStore.currentUser?.id;
         const activeKey = convStore.activeConversationId
-          ? findConversationKey(convStore.activeConversationId, convStore.conversations) || convStore.activeConversationId
+          ? findConversationKey(convStore.activeConversationId, convStore.conversations) ||
+            convStore.activeConversationId
           : null;
         const eventKey =
-          findConversationKey(event.conversationId, convStore.conversations) || event.conversationId;
+          findConversationKey(event.conversationId, convStore.conversations) ||
+          event.conversationId;
         if (activeKey !== eventKey && msg.sender?.id !== currentUserId) {
           convStore.incrementUnreadCount(event.conversationId, 1);
         }
@@ -341,25 +344,28 @@ export class ChatService {
           }
         }
 
-        const attachment = foundMsg?.attachments?.[0];
+        const fileMeta = resolveMessageFileMetadata({
+          meta: foundMsg?.metadata,
+          attachments: foundMsg?.attachments,
+          content: foundMsg?.content,
+          type: foundMsg?.type,
+        });
+
         const pinnedMsg: PinnedMessage = {
           messageId: payload.messageId,
-          type: foundMsg?.type || 'text',
-          content: foundMsg?.content || '',
+          type: fileMeta.resolvedType,
+          content: foundMsg?.content || fileMeta.fileName || '',
           createdDate:
             foundMsg?.createdAt instanceof Date
               ? foundMsg.createdAt.toISOString()
-              : (foundMsg?.createdAt
+              : foundMsg?.createdAt
                 ? String(foundMsg.createdAt)
-                : payload.actionAtUtc || new Date().toISOString()),
+                : payload.actionAtUtc || new Date().toISOString(),
           creator:
-            foundMsg?.senderDisplayName ||
-            foundMsg?.sender?.displayName ||
-            payload.actorName ||
-            '',
-          attachmentType: attachment?.mimeType || '',
-          attachmentUrl: attachment?.url || '',
-          thumbUrl: attachment?.thumbnailUrl || '',
+            foundMsg?.senderDisplayName || foundMsg?.sender?.displayName || payload.actorName || '',
+          attachmentType: fileMeta.mimeType,
+          attachmentUrl: fileMeta.url,
+          thumbUrl: fileMeta.thumbUrl || (fileMeta.resolvedType === 'image' ? fileMeta.url : ''),
         };
 
         msgStore.addPinnedMessage(event.conversationId, pinnedMsg);
@@ -471,9 +477,14 @@ export class ChatService {
       }
 
       case 'participant:removed': {
-        const payload = event.payload as { participants?: ConversationParticipant[]; userId?: string; removedUserId?: string };
+        const payload = event.payload as {
+          participants?: ConversationParticipant[];
+          userId?: string;
+          removedUserId?: string;
+        };
         const currentUserId = chatStore.currentUser?.id;
-        const targetUserId = payload.userId || payload.removedUserId || payload.participants?.[0]?.id;
+        const targetUserId =
+          payload.userId || payload.removedUserId || payload.participants?.[0]?.id;
         if (targetUserId && targetUserId === currentUserId) {
           convStore.removeConversation(event.conversationId);
         } else if (payload.participants?.length) {

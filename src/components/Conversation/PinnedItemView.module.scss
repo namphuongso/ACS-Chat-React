@@ -1,0 +1,98 @@
+.pinItemContainer {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: inherit;
+  color: inherit;
+}
+
+.pinCreator {
+  font-weight: 500;
+  color: inherit;
+  flex-shrink: 0;
+}
+
+.pinBody {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.pinThumbImg {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  max-width: 18px;
+  max-height: 18px;
+  border-radius: 3px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background-color: var(--acs-chat-hover, #e2e8f0);
+  display: block;
+}
+
+.pinThumbPlaceholder {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  max-width: 18px;
+  max-height: 18px;
+  border-radius: 3px;
+  background-color: var(--acs-chat-hover, #f1f5f9);
+  border: 1px solid var(--acs-chat-border-color, #e2e8f0);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--acs-chat-text-secondary, #64748b);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.pinDocIcon {
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.pinVideoIcon {
+  flex-shrink: 0;
+  color: var(--acs-chat-primary, #2563eb);
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.pinTagText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+}
+
+.pinDot {
+  margin: 0 1px;
+  flex-shrink: 0;
+}
+
+.pinFileName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pinText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+}

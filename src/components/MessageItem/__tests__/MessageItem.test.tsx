@@ -104,11 +104,82 @@ describe('MessageItem Component', () => {
 
     // Click dropdown item
     const copyBtn = screen.getByText('chat.copyText');
+    expect(copyBtn).toBeInTheDocument();
     fireEvent.click(copyBtn);
     expect(onCopy).toHaveBeenCalledWith('m1');
 
     // Dropdown should be closed now (checking if copyBtn is removed)
     expect(screen.queryByText('chat.copyText')).not.toBeInTheDocument();
+  });
+
+  it('should close dropdown when clicking outside or scrolling', () => {
+    render(<MessageItem message={baseMessage} isOwn={true} />);
+
+    const moreBtn = screen.getByTitle('chat.moreOptions');
+    fireEvent.click(moreBtn);
+    expect(screen.getByText('chat.copyText')).toBeInTheDocument();
+
+    // Click outside
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByText('chat.copyText')).not.toBeInTheDocument();
+
+    // Open again and scroll
+    fireEvent.click(moreBtn);
+    expect(screen.getByText('chat.copyText')).toBeInTheDocument();
+    fireEvent.scroll(window);
+    expect(screen.queryByText('chat.copyText')).not.toBeInTheDocument();
+  });
+
+  it('should trigger pin, recall, and delete from dropdown', () => {
+    const onPin = vi.fn();
+    const onRecall = vi.fn();
+    const onDelete = vi.fn();
+
+    const { rerender } = render(
+      <MessageItem
+        message={baseMessage}
+        isOwn={true}
+        isPinned={false}
+        onPin={onPin}
+        onRecall={onRecall}
+        onDelete={onDelete}
+      />
+    );
+
+    const moreBtn = screen.getByTitle('chat.moreOptions');
+    fireEvent.click(moreBtn);
+
+    const pinBtn = screen.getByText('chat.pinMessage');
+    fireEvent.click(pinBtn);
+    expect(onPin).toHaveBeenCalledWith('m1', true);
+
+    // Rerender as pinned
+    rerender(
+      <MessageItem
+        message={baseMessage}
+        isOwn={true}
+        isPinned={true}
+        onPin={onPin}
+        onRecall={onRecall}
+        onDelete={onDelete}
+      />
+    );
+    fireEvent.click(moreBtn);
+    const unpinBtn = screen.getByText('chat.unpinMessage');
+    fireEvent.click(unpinBtn);
+    expect(onPin).toHaveBeenCalledWith('m1', false);
+
+    // Recall
+    fireEvent.click(moreBtn);
+    const recallBtn = screen.getByText('chat.recall');
+    fireEvent.click(recallBtn);
+    expect(onRecall).toHaveBeenCalledWith('m1');
+
+    // Delete
+    fireEvent.click(moreBtn);
+    const deleteBtn = screen.getByText('chat.deleteMessage');
+    fireEvent.click(deleteBtn);
+    expect(onDelete).toHaveBeenCalledWith('m1');
   });
 
   it('should allow custom renderers', () => {
@@ -283,6 +354,11 @@ describe('MessageItem Component', () => {
       'https://example.com/100-mb-example-jpg.jpg',
       '100-mb-example-jpg.jpg'
     );
+
+    // Large image card should not trigger preview on click
+    const card = screen.getByTestId('file-card');
+    fireEvent.click(card);
+    expect(onOpenAttachment).not.toHaveBeenCalled();
   });
 
   it('should render large image message when metadata.isLarge is true even without size', () => {

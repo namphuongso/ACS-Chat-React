@@ -97,7 +97,6 @@ export const ConversationItem: React.FC<ConversationItemProps> = React.memo(
         : t('chat.unknownGroup'));
     const avatarUrl = conversation.avatarUrl;
 
-    console.log('conversation', conversation);
     const lastMessage = conversation.lastMessage ?? '';
     let previewText: string = lastMessage;
 

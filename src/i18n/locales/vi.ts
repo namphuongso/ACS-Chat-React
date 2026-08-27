@@ -62,7 +62,8 @@ export const vi = {
     download: 'Tải về',
     downloading: 'Đang tải về...',
     officePreviewNotice: 'Nếu tài liệu không hiển thị, vui lòng tải tệp về máy để xem.',
-    officePrivateNotice: 'Tài liệu trong mạng nội bộ hoặc tệp cục bộ không hỗ trợ xem trước trực tuyến. Vui lòng tải về để xem.',
+    officePrivateNotice:
+      'Tài liệu trong mạng nội bộ hoặc tệp cục bộ không hỗ trợ xem trước trực tuyến. Vui lòng tải về để xem.',
     you: 'Bạn',
     justNow: 'Vừa xong',
     minsAgo: '{{count}} phút trước',
@@ -77,6 +78,19 @@ export const vi = {
     openGroupBoard: 'Mở bảng nhóm',
     unpin: 'Bỏ ghim',
     viewAllInGroupBoard: 'Xem tất cả trong bảng nhóm >',
+    updatePinList: 'Cập nhật danh sách ghim',
+    noPinnedMessages: 'Không có tin ghim nào để thay thế.',
+    pinLimitExceededDesc:
+      'Vượt quá giới hạn {{count}} tin ghim. Tin ghim cũ bên dưới sẽ bị gỡ để cập nhật tin mới.',
+    pinLimitSelectDesc:
+      'Vượt quá giới hạn {{count}} tin ghim. Vui lòng chọn một tin ghim để gỡ và ghim tin mới.',
+    selectMessageToReplace: 'Chọn một tin ghim để gỡ',
+    change: 'Thay đổi',
+    update: 'Cập nhật',
+    file: 'File',
+    photo: 'Photo',
+    album: 'Album',
+    link: 'Link',
     createGroup: 'Tạo nhóm',
     enterGroupName: 'Nhập tên nhóm...',
     searchGroupContact: 'Nhập tên, số điện thoại, hoặc danh sách số điện thoại...',
@@ -117,6 +131,13 @@ export const vi = {
       undo: 'Hoàn tác',
       redo: 'Làm lại',
       expand: 'Mở rộng',
+    },
+    system: {
+      topicUpdated: '<b>{{initiator}}</b> đã đổi chủ đề thành <b>"{{newTopic}}"</b>',
+      youAddedParticipants: '<b>{{participants}}</b> đã được thêm vào nhóm bởi <b>bạn</b>',
+      participantsAddedBy: '<b>{{participants}}</b> đã được thêm vào nhóm bởi <b>{{initiator}}</b>',
+      youRemovedParticipants: '<b>{{participants}}</b> đã bị xoá khỏi nhóm bởi <b>bạn</b>',
+      participantsRemovedBy: '<b>{{participants}}</b> đã bị xoá khỏi nhóm bởi <b>{{initiator}}</b>',
     },
   },
 };

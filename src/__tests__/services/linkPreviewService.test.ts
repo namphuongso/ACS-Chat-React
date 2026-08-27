@@ -177,4 +177,183 @@ describe('LinkPreviewService', () => {
     service.clearCache();
     expect(service.getCached('https://example.com/article')).toBeUndefined();
   });
+
+  it('uses the custom crawler with a function requestBody and maps the response', async () => {
+    const mockChatService = {
+      isInitialized: vi.fn().mockReturnValue(true),
+      getConfig: vi.fn().mockReturnValue({
+        linkPreview: {
+          url: 'https://crawl-seo-info.vercel.app/seo-crawler/crawl',
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          requestBody: (url: string) => ({ url }),
+        },
+      }),
+    } as never;
+    service.setChatService(mockChatService);
+
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        url: 'https://github.com/thaoanhhaa1',
+        title: 'thaoanhhaa1 (Hà Anh Thảo) · GitHubLinkedInFacebook',
+        description: 'thaoanhhaa1 has 100 repositories available.',
+        ogTags: {
+          image: 'https://avatars.githubusercontent.com/u/81128952?v=4',
+          site_name: 'GitHub',
+        },
+        twitterTags: {
+          site: '@github',
+          image: 'https://avatars.githubusercontent.com/u/81128952?v=4',
+        },
+      }),
+    });
+
+    const preview = await service.fetchLinkPreview('https://github.com/thaoanhhaa1');
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [input, init] = fetchSpy.mock.calls[0];
+    expect(input).toBe('https://crawl-seo-info.vercel.app/seo-crawler/crawl');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ url: 'https://github.com/thaoanhhaa1' });
+    expect(preview).toEqual({
+      url: 'https://github.com/thaoanhhaa1',
+      title: 'thaoanhhaa1 (Hà Anh Thảo) · GitHubLinkedInFacebook',
+      description: 'thaoanhhaa1 has 100 repositories available.',
+      imageUrl: 'https://avatars.githubusercontent.com/u/81128952?v=4',
+      siteName: 'GitHub',
+    });
+  });
+
+  it('uses the custom crawler with a static requestBody and a responseMapper', async () => {
+    const mockChatService = {
+      isInitialized: vi.fn().mockReturnValue(true),
+      getConfig: vi.fn().mockReturnValue({
+        linkPreview: {
+          url: 'https://your-crawler.example/crawl',
+          method: 'POST',
+          requestBody: { target: 'https://example.com' },
+          responseMapper: (data: unknown) => {
+            const d = data as { result?: { title?: string; thumb?: string; desc?: string } };
+            return {
+              title: d.result?.title,
+              imageUrl: d.result?.thumb,
+              description: d.result?.desc,
+            };
+          },
+        },
+      }),
+    } as never;
+    service.setChatService(mockChatService);
+
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        result: {
+          title: 'Custom Title',
+          thumb: 'https://example.com/thumb.png',
+          desc: 'Custom description',
+        },
+      }),
+    });
+
+    const preview = await service.fetchLinkPreview('https://example.com');
+
+    const [input, init] = fetchSpy.mock.calls[0];
+    expect(input).toBe('https://your-crawler.example/crawl');
+    expect(JSON.parse(init.body)).toEqual({ target: 'https://example.com' });
+    expect(preview).toEqual({
+      url: 'https://example.com/',
+      title: 'Custom Title',
+      description: 'Custom description',
+      imageUrl: 'https://example.com/thumb.png',
+    });
+  });
+
+  it('falls back to the backend /api/link-preview when the custom crawler fails', async () => {
+    const mockChatService = {
+      isInitialized: vi.fn().mockReturnValue(true),
+      getConfig: vi.fn().mockReturnValue({
+        backendUrl: 'https://backend.test',
+        linkPreview: {
+          url: 'https://crawler.example/crawl',
+        },
+      }),
+    } as never;
+    service.setChatService(mockChatService);
+
+    fetchSpy.mockRejectedValueOnce(new Error('crawler down'));
+    mockFetchBackend.mockResolvedValueOnce({
+      statusCode: 200,
+      message: 'ok',
+      totalRecord: 0,
+      data: {
+        url: 'https://example.com/article',
+        title: 'Backend Title',
+      },
+    });
+
+    const preview = await service.fetchLinkPreview('https://example.com/article');
+
+    expect(preview).toEqual({
+      url: 'https://example.com/article',
+      title: 'Backend Title',
+    });
+    expect(mockFetchBackend).toHaveBeenCalledTimes(1);
+  });
+
+  it('correctly maps rich SEO crawler response with ogTags, twitterTags, images, and keywords', async () => {
+    const mockChatService = {
+      isInitialized: vi.fn().mockReturnValue(true),
+      getConfig: vi.fn().mockReturnValue({
+        linkPreview: {
+          url: 'https://crawl-seo-info.vercel.app/seo-crawler/crawl',
+          method: 'POST',
+        },
+      }),
+    } as never;
+    service.setChatService(mockChatService);
+
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        url: 'https://www.npmjs.com/package/link-preview-js',
+        title: 'link-preview-js - npm',
+        description:
+          'Javascript module to extract and fetch HTTP link information from blocks of text.',
+        keywords: ['javascript', 'link', 'url', 'http', 'preview', 'npm', 'package'],
+        ogTags: {
+          site_name: 'npm',
+          title: 'link-preview-js',
+          description:
+            'Javascript module to extract and fetch HTTP link information from blocks of text.',
+          url: 'https://www.npmjs.com/package/link-preview-js',
+          image: 'https://static.npmjs.com/338e4905a2684ca96e08b7780fc68412.png',
+        },
+        twitterTags: {
+          card: 'summary',
+          title: 'link-preview-js',
+          description:
+            'Javascript module to extract and fetch HTTP link information from blocks of text.',
+          site: 'npm',
+        },
+        canonicalUrl: 'https://www.npmjs.com/package/link-preview-js',
+        images: ['https://static.npmjs.com/338e4905a2684ca96e08b7780fc68412.png'],
+      }),
+    });
+
+    const preview = await service.fetchLinkPreview('https://www.npmjs.com/package/link-preview-js');
+
+    expect(preview).toEqual({
+      url: 'https://www.npmjs.com/package/link-preview-js',
+      title: 'link-preview-js - npm',
+      description:
+        'Javascript module to extract and fetch HTTP link information from blocks of text.',
+      imageUrl: 'https://static.npmjs.com/338e4905a2684ca96e08b7780fc68412.png',
+      siteName: 'npm',
+      favicon: undefined,
+      keywords: ['javascript', 'link', 'url', 'http', 'preview', 'npm', 'package'],
+      canonicalUrl: 'https://www.npmjs.com/package/link-preview-js',
+    });
+  });
 });

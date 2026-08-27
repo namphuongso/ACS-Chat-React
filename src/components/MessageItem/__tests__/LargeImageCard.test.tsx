@@ -186,12 +186,74 @@ describe('LargeImageCard Component', () => {
     });
   });
 
-  it('should conditionally render open folder button based on showOpenFolder prop', () => {
+  it('should call custom onOpen when card container is clicked and onOpen is provided', () => {
+    const onOpen = vi.fn();
+    render(
+      <LargeImageCard
+        fileName="sample.pdf"
+        fileSize={18370}
+        url="https://example.com/sample.pdf"
+        onOpen={onOpen}
+      />
+    );
+
+    const card = screen.getByTestId('file-card');
+    expect(card).toHaveAttribute('role', 'button');
+    expect(card).toHaveAttribute('tabIndex', '0');
+
+    fireEvent.click(card);
+    expect(onOpen).toHaveBeenCalledWith('https://example.com/sample.pdf', 'sample.pdf');
+
+    fireEvent.keyDown(card, { key: 'Enter' });
+    expect(onOpen).toHaveBeenCalledTimes(2);
+
+    fireEvent.keyDown(card, { key: ' ' });
+    expect(onOpen).toHaveBeenCalledTimes(3);
+  });
+
+  it('should not allow preview when disablePreview is true or onOpen is not provided', () => {
+    const onOpen = vi.fn();
+    const { rerender } = render(
+      <LargeImageCard
+        fileName="large-image.jpg"
+        fileSize={50 * 1024 * 1024}
+        url="https://example.com/large-image.jpg"
+        disablePreview={true}
+        onOpen={onOpen}
+        showOpenFolder={true}
+      />
+    );
+
+    const card = screen.getByTestId('file-card');
+    expect(card).not.toHaveAttribute('role', 'button');
+    expect(card).not.toHaveAttribute('tabIndex');
+    expect(screen.queryByTestId('file-open-btn')).not.toBeInTheDocument();
+
+    fireEvent.click(card);
+    expect(onOpen).not.toHaveBeenCalled();
+
+    rerender(
+      <LargeImageCard
+        fileName="large-image.jpg"
+        fileSize={50 * 1024 * 1024}
+        url="https://example.com/large-image.jpg"
+        showOpenFolder={true}
+      />
+    );
+
+    expect(screen.queryByTestId('file-open-btn')).not.toBeInTheDocument();
+    fireEvent.click(card);
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it('should conditionally render open folder button based on showOpenFolder prop when onOpen is provided', () => {
+    const onOpen = vi.fn();
     const { rerender } = render(
       <LargeImageCard
         fileName="document.pdf"
         fileSize={1024}
         url="https://example.com/document.pdf"
+        onOpen={onOpen}
         showOpenFolder={false}
       />
     );
@@ -203,6 +265,7 @@ describe('LargeImageCard Component', () => {
         fileName="document.pdf"
         fileSize={1024}
         url="https://example.com/document.pdf"
+        onOpen={onOpen}
         showOpenFolder={true}
       />
     );

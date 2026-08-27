@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { PinnedMessageBanner } from '../PinnedMessageBanner';
 import { usePinnedMessages } from '../../../hooks/usePinnedMessages';
@@ -74,10 +74,11 @@ describe('PinnedMessageBanner Component', () => {
       />
     );
 
-    expect(screen.getByText('Alice: Important Announcement')).toBeInTheDocument();
+    expect(screen.getByText('Alice:')).toBeInTheDocument();
+    expect(screen.getByText('Important Announcement')).toBeInTheDocument();
   });
 
-  it('should call onJumpToMessage when banner leftSection is clicked', () => {
+  it('should call onJumpToMessage when banner leftSection is clicked', async () => {
     render(
       <PinnedMessageBanner
         conversationId="conv-1"
@@ -86,13 +87,15 @@ describe('PinnedMessageBanner Component', () => {
       />
     );
 
-    const messageText = screen.getByText('Alice: Important Announcement');
-    fireEvent.click(messageText);
+    const messageText = screen.getByText('Important Announcement');
+    await act(async () => {
+      fireEvent.click(messageText);
+    });
 
     expect(mockJumpToMessage).toHaveBeenCalledWith('pin-1');
   });
 
-  it('should trigger store jumpToMessage if onJumpToMessage is not provided', () => {
+  it('should trigger store jumpToMessage if onJumpToMessage is not provided', async () => {
     render(
       <PinnedMessageBanner
         conversationId="conv-1"
@@ -100,8 +103,10 @@ describe('PinnedMessageBanner Component', () => {
       />
     );
 
-    const messageText = screen.getByText('Alice: Important Announcement');
-    fireEvent.click(messageText);
+    const messageText = screen.getByText('Important Announcement');
+    await act(async () => {
+      fireEvent.click(messageText);
+    });
 
     const state = useMessageStore.getState();
     expect(state.jumpTarget?.messageId).toBe('pin-1');
@@ -122,7 +127,7 @@ describe('PinnedMessageBanner Component', () => {
     fireEvent.click(countButton);
 
     // Check second announcement in pinboard list
-    const secondItem = screen.getByText('Bob: Second Announcement');
+    const secondItem = screen.getByText('Second Announcement');
     expect(secondItem).toBeInTheDocument();
 
     fireEvent.click(secondItem);

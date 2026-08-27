@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useEffect, useState } from 'react';
+import React, { useCallback, useMemo, useEffect } from 'react';
 import type { SendMessageOptions } from '../../types/message.types';
 import { useConversations } from '../../hooks/useConversations';
 import { useMessages } from '../../hooks/useMessages';
@@ -14,7 +14,9 @@ import { LoadingState } from '../LoadingState';
 import { EditMessageDialog } from './EditMessageDialog';
 import { ConfirmDialog } from './ConfirmDialog';
 import { PinnedMessageBanner } from './PinnedMessageBanner';
+import { PinReplaceDialog } from './PinReplaceDialog';
 import { FilePreviewModal, type FilePreviewItem } from '../FilePreviewModal';
+import { useConversationActions } from './useConversationActions';
 import { useTranslation } from 'react-i18next';
 import styles from './ConversationView.module.scss';
 
@@ -26,7 +28,6 @@ export interface ConversationViewProps {
   disableOfficeOnlineViewer?: boolean;
   disableInternalPreview?: boolean;
 }
-
 
 export const ConversationView: React.FC<ConversationViewProps> = React.memo(
   ({
@@ -64,14 +65,6 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
       idToUse ? state.messagesByConversation[idToUse]?.pinnedMessages : undefined
     );
 
-    const effectivePinnedMessageIds = useMemo(() => {
-      if (pinnedMessageIds) return pinnedMessageIds;
-      if (pinnedMessagesFromStore) {
-        return new Set(pinnedMessagesFromStore.map((m) => m.messageId));
-      }
-      return undefined;
-    }, [pinnedMessageIds, pinnedMessagesFromStore]);
-
     // Call hooks unconditionally
     const {
       messages,
@@ -87,6 +80,35 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
       pinMessage,
       jumpToMessage,
     } = useMessages(idToUse || '');
+
+    const {
+      effectivePinnedMessageIds,
+      effectivePinnedMessages,
+      editDialog,
+      handleEditMessage,
+      handleSaveEdit,
+      handleCancelEdit,
+      deleteDialog,
+      handleDeleteMessage,
+      handleConfirmDelete,
+      handleCancelDelete,
+      pinReplaceDialog,
+      handlePinReplace,
+      handleCancelPinReplace,
+      handlePinMessage,
+      previewFile,
+      handleOpenAttachment,
+      handleClosePreview,
+    } = useConversationActions({
+      pinnedMessageIds,
+      pinnedMessagesFromStore,
+      messages,
+      pinMessage,
+      editMessage,
+      deleteMessage,
+      onOpenAttachment,
+      disableInternalPreview,
+    });
 
     useEffect(() => {
       if (idToUse && !hasFetched && !loading) {
@@ -126,109 +148,6 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
     const handleTyping = useCallback(() => {
       // Integration point for typing indicators
     }, []);
-
-    const [editDialog, setEditDialog] = useState({
-      isOpen: false,
-      messageId: '',
-      initialContent: '',
-    });
-
-    const handleEditMessage = useCallback(
-      (messageId: string) => {
-        const message = messages.find((m) => m.id === messageId);
-        if (!message) return;
-
-        // Strip HTML if message is HTML type before prompting
-        const contentToEdit =
-          message.type === 'html' ? message.content.replace(/<[^>]*>?/gm, '') : message.content;
-
-        setEditDialog({
-          isOpen: true,
-          messageId,
-          initialContent: contentToEdit,
-        });
-      },
-      [messages]
-    );
-
-    const handleSaveEdit = useCallback(
-      (newContent: string) => {
-        if (editDialog.messageId) {
-          editMessage(editDialog.messageId, newContent);
-        }
-        setEditDialog({ isOpen: false, messageId: '', initialContent: '' });
-      },
-      [editDialog.messageId, editMessage]
-    );
-
-    const handleCancelEdit = useCallback(() => {
-      setEditDialog({ isOpen: false, messageId: '', initialContent: '' });
-    }, []);
-
-    const [deleteDialog, setDeleteDialog] = useState({
-      isOpen: false,
-      messageId: '',
-    });
-
-    const handleDeleteMessage = useCallback((messageId: string) => {
-      setDeleteDialog({ isOpen: true, messageId });
-    }, []);
-
-    const handleConfirmDelete = useCallback(() => {
-      if (deleteDialog.messageId) {
-        deleteMessage(deleteDialog.messageId);
-      }
-      setDeleteDialog({ isOpen: false, messageId: '' });
-    }, [deleteDialog.messageId, deleteMessage]);
-
-    const handleCancelDelete = useCallback(() => {
-      setDeleteDialog({ isOpen: false, messageId: '' });
-    }, []);
-
-    const [previewFile, setPreviewFile] = useState<FilePreviewItem | null>(null);
-
-    const handleOpenAttachment = useCallback(
-      (url: string, fileName?: string, metadata?: FilePreviewItem) => {
-        if (onOpenAttachment) {
-          if (metadata !== undefined) {
-            onOpenAttachment(url, fileName, metadata);
-          } else {
-            onOpenAttachment(url, fileName);
-          }
-        }
-        if (disableInternalPreview) {
-          return;
-        }
-        const resolvedName =
-          fileName ||
-          metadata?.fileName ||
-          url.split('?')[0].split('#')[0].split('/').pop() ||
-          'file';
-
-        setPreviewFile({
-          url,
-          fileName: resolvedName,
-          fileSize: metadata?.fileSize,
-          mimeType: metadata?.mimeType,
-          senderName: metadata?.senderName,
-          senderAvatarUrl: metadata?.senderAvatarUrl,
-          sentAt: metadata?.sentAt,
-        });
-      },
-      [onOpenAttachment, disableInternalPreview]
-    );
-
-
-    const handleClosePreview = useCallback(() => {
-      setPreviewFile(null);
-    }, []);
-
-    const handlePinMessage = useCallback(
-      (messageId: string, pin: boolean) => {
-        pinMessage(messageId, pin);
-      },
-      [pinMessage]
-    );
 
     if (!idToUse || !conversation) {
       if (loading && conversations.length === 0) {
@@ -297,6 +216,13 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
           onCancel={handleCancelDelete}
         />
 
+        <PinReplaceDialog
+          isOpen={pinReplaceDialog.isOpen}
+          pinnedMessages={effectivePinnedMessages}
+          onReplace={handlePinReplace}
+          onCancel={handleCancelPinReplace}
+        />
+
         <FilePreviewModal
           isOpen={Boolean(previewFile)}
           file={previewFile}
@@ -308,4 +234,3 @@ export const ConversationView: React.FC<ConversationViewProps> = React.memo(
     );
   }
 );
-

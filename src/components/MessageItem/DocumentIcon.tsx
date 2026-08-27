@@ -1,74 +1,8 @@
 import React, { SVGProps } from 'react';
+import { getDocumentFileType, type DocumentFileType } from '../../utils/fileUtils';
 
-export type DocumentFileType =
-  | 'pdf'
-  | 'word'
-  | 'excel'
-  | 'ppt'
-  | 'archive'
-  | 'text'
-  | 'image'
-  | 'generic';
-
-export const getDocumentFileType = (
-  fileName?: string,
-  mimeType?: string
-): DocumentFileType => {
-  const rawName = (fileName || '').split('?')[0].split('#')[0].toLowerCase();
-  const mime = (mimeType || '').toLowerCase();
-
-  if (rawName.endsWith('.pdf') || mime === 'application/pdf') {
-    return 'pdf';
-  }
-  if (
-    rawName.endsWith('.doc') ||
-    rawName.endsWith('.docx') ||
-    mime.includes('wordprocessingml') ||
-    mime.includes('msword')
-  ) {
-    return 'word';
-  }
-  if (
-    rawName.endsWith('.xls') ||
-    rawName.endsWith('.xlsx') ||
-    rawName.endsWith('.csv') ||
-    mime.includes('spreadsheetml') ||
-    mime.includes('ms-excel')
-  ) {
-    return 'excel';
-  }
-  if (
-    rawName.endsWith('.ppt') ||
-    rawName.endsWith('.pptx') ||
-    rawName.endsWith('.pps') ||
-    rawName.endsWith('.ppsx') ||
-    mime.includes('presentationml') ||
-    mime.includes('ms-powerpoint')
-  ) {
-    return 'ppt';
-  }
-  if (
-    /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff)$/i.test(rawName) ||
-    mime.startsWith('image/')
-  ) {
-    return 'image';
-  }
-  if (
-    /\.(zip|rar|7z|tar|gz|bz2)$/i.test(rawName) ||
-    mime.includes('zip') ||
-    mime.includes('compressed') ||
-    mime.includes('tar')
-  ) {
-    return 'archive';
-  }
-  if (
-    /\.(txt|json|md|js|ts|tsx|jsx|html|css|xml|yaml|yml|log)$/i.test(rawName) ||
-    mime.startsWith('text/')
-  ) {
-    return 'text';
-  }
-  return 'generic';
-};
+export type { DocumentFileType };
+export { getDocumentFileType };
 
 interface IconConfig {
   bgColor: string;

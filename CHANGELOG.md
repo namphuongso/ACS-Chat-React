@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added configurable link preview / SEO crawler support to `ChatConfig` (`linkPreview`):
+  - New `LinkPreviewConfig` type with custom `url`, `method`, `headers`, `requestBody` (static or a function receiving the URL), and `responseMapper`.
+  - `LinkPreviewService` now resolves previews through the custom crawler first, then falls back to the built-in `/api/link-preview` backend and client-side Open Graph parsing.
+  - Built-in response mapper handles the common crawler response shape (`title`, `description`, `ogTags.image`, `twitterTags.site`, etc.).
+  - `LinkPreviewConfig` is exported from the package.
+
 ## [1.2.1] - 2026-08-26
 
 ### Added
