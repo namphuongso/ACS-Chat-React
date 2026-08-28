@@ -252,6 +252,116 @@ describe('ChatService', () => {
       expect(conv?.unreadCount).toBe(0);
     });
 
+    it('should reset unread count but NOT send WebSocket read directly on message:received for the active conversation (read is delegated to the visible message list)', async () => {
+      useConversationStore.getState().addConversation({
+        id: 'thread-active',
+        type: 'direct',
+        createdAt: new Date(),
+        unreadCount: 3,
+        participants: [],
+        otherParticipant: { id: 'user-2' },
+        name: 'user-2',
+      });
+      useConversationStore.getState().setActiveConversation('thread-active');
+
+      const message: ChatMessage = {
+        id: 'msg-101',
+        conversationId: 'thread-active',
+        type: 'text',
+        content: 'Active chat message',
+        sender: { id: 'user-2' },
+        createdAt: new Date(),
+        status: 'sent',
+      };
+
+      const { websocketService } = await import('../../services/websocketService');
+      const sendReadSpy = vi.spyOn(websocketService, 'sendRead').mockReturnValue(true);
+
+      service.handleDomainEvent({
+        type: 'message:received',
+        conversationId: 'thread-active',
+        timestamp: new Date(),
+        payload: message,
+      });
+
+      expect(sendReadSpy).not.toHaveBeenCalled();
+      const conv = useConversationStore.getState().conversations['thread-active'];
+      expect(conv?.unreadCount).toBe(0);
+      sendReadSpy.mockRestore();
+    });
+
+    it('should NOT send WebSocket read message when message:received is sent by the current user', async () => {
+      useConversationStore.getState().addConversation({
+        id: 'thread-active',
+        type: 'direct',
+        createdAt: new Date(),
+        unreadCount: 0,
+        participants: [],
+        otherParticipant: { id: 'user-2' },
+        name: 'user-2',
+      });
+      useConversationStore.getState().setActiveConversation('thread-active');
+
+      const message: ChatMessage = {
+        id: 'msg-101',
+        conversationId: 'thread-active',
+        type: 'text',
+        content: 'My own message echo from another device',
+        sender: { id: '8:acs:12345' }, // Current user id
+        createdAt: new Date(),
+        status: 'sent',
+      };
+
+      const { websocketService } = await import('../../services/websocketService');
+      const sendReadSpy = vi.spyOn(websocketService, 'sendRead').mockReturnValue(true);
+
+      service.handleDomainEvent({
+        type: 'message:received',
+        conversationId: 'thread-active',
+        timestamp: new Date(),
+        payload: message,
+      });
+
+      expect(sendReadSpy).not.toHaveBeenCalled();
+      sendReadSpy.mockRestore();
+    });
+
+    it('should NOT send WebSocket read message when message:received is for a non-active conversation', async () => {
+      useConversationStore.getState().addConversation({
+        id: 'thread-active',
+        type: 'direct',
+        createdAt: new Date(),
+        unreadCount: 0,
+        participants: [],
+        otherParticipant: { id: 'user-2' },
+        name: 'user-2',
+      });
+      useConversationStore.getState().setActiveConversation('thread-active');
+
+      const message: ChatMessage = {
+        id: 'msg-102',
+        conversationId: 'thread-other',
+        type: 'text',
+        content: 'Other chat message',
+        sender: { id: 'user-3' },
+        createdAt: new Date(),
+        status: 'sent',
+      };
+
+      const { websocketService } = await import('../../services/websocketService');
+      const sendReadSpy = vi.spyOn(websocketService, 'sendRead').mockReturnValue(true);
+
+      service.handleDomainEvent({
+        type: 'message:received',
+        conversationId: 'thread-other',
+        timestamp: new Date(),
+        payload: message,
+      });
+
+      expect(sendReadSpy).not.toHaveBeenCalled();
+      sendReadSpy.mockRestore();
+    });
+
     it('should route message:edited event', () => {
       useMessageStore.getState().addMessage('thread-1', {
         id: 'msg-1',

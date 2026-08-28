@@ -498,6 +498,88 @@ describe('MessageList Component', () => {
     const downloadBtn = screen.getByTestId('file-download-btn');
     fireEvent.click(downloadBtn);
     expect(onDownloadAttachment).toHaveBeenCalledWith('https://example.com/document.docx', 'document.docx');
+  });
 
+  it('marks latest message of other user as read when last message is from current user', async () => {
+    const { websocketService } = await import('../../../services/websocketService');
+    const sendReadSpy = vi.spyOn(websocketService, 'sendRead').mockReturnValue(true);
+
+    const messages: ChatMessage[] = [
+      {
+        id: 'msg-other-user',
+        conversationId: 'conv-1',
+        type: 'text',
+        content: 'Hello from Bob',
+        sender: { id: 'u2', displayName: 'Bob' },
+        createdAt: new Date(Date.now() - 10000),
+        status: 'delivered',
+      },
+      {
+        id: 'msg-current-user',
+        conversationId: 'conv-1',
+        type: 'text',
+        content: 'Hello from Me',
+        sender: { id: 'u1', displayName: 'Alice' },
+        createdAt: new Date(),
+        status: 'sent',
+      },
+    ];
+
+    render(
+      <MessageList
+        messages={messages}
+        conversationId="conv-1"
+        currentUserId="u1"
+        loading={false}
+        loadingMore={false}
+        hasMore={false}
+        onLoadMore={mockLoadMore}
+      />
+    );
+
+    expect(sendReadSpy).toHaveBeenCalledWith('msg-other-user', 'conv-1');
+    sendReadSpy.mockRestore();
+  });
+
+  it('does not mark messages as read when the document is hidden (background tab)', async () => {
+    const { websocketService } = await import('../../../services/websocketService');
+    const sendReadSpy = vi.spyOn(websocketService, 'sendRead').mockReturnValue(true);
+
+    const originalVisibility = document.visibilityState;
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+
+    try {
+      const messages: ChatMessage[] = [
+        {
+          id: 'msg-other-user',
+          conversationId: 'conv-1',
+          type: 'text',
+          content: 'Hello from Bob',
+          sender: { id: 'u2', displayName: 'Bob' },
+          createdAt: new Date(Date.now() - 10000),
+          status: 'delivered',
+        },
+      ];
+
+      render(
+        <MessageList
+          messages={messages}
+          conversationId="conv-1"
+          currentUserId="u1"
+          loading={false}
+          loadingMore={false}
+          hasMore={false}
+          onLoadMore={mockLoadMore}
+        />
+      );
+
+      expect(sendReadSpy).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(document, 'visibilityState', {
+        value: originalVisibility,
+        configurable: true,
+      });
+      sendReadSpy.mockRestore();
+    }
   });
 });

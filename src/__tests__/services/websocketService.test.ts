@@ -211,24 +211,123 @@ describe('WebsocketService', () => {
     });
   });
 
-  it('should send read receipt via sendRead', async () => {
+  it('should send read receipt via sendRead and deduplicate repeated calls in active room', async () => {
     wsService.initialize(mockConfig);
 
     await vi.waitFor(() => {
       expect(wsService.isConnected()).toBe(true);
     });
 
-    const success = wsService.sendRead('msg-999');
-    expect(success).toBe(true);
+    wsService.enterRoom('room-100');
 
     const helper = wsService as unknown as { adapter: { ws: MockWebSocket } };
     const ws = helper.adapter.ws;
+    const initialSentCount = ws.sentData.length;
+
+    const success1 = wsService.sendRead('msg-999');
+    expect(success1).toBe(true);
+    expect(ws.sentData.length).toBe(initialSentCount + 1);
 
     const lastSent = JSON.parse(ws.sentData[ws.sentData.length - 1]);
     expect(lastSent).toEqual({
       type: 'read',
       lastVisibleMessageId: 'msg-999',
     });
+
+    // Second call with same messageId in active room should be deduplicated
+    const success2 = wsService.sendRead('msg-999');
+    expect(success2).toBe(true);
+    expect(ws.sentData.length).toBe(initialSentCount + 1); // No new WS frame sent
+  });
+
+  it('should deduplicate sendRead calls globally when activeRoomId is not set', async () => {
+    wsService.initialize(mockConfig);
+
+    await vi.waitFor(() => {
+      expect(wsService.isConnected()).toBe(true);
+    });
+
+    expect(wsService.getActiveRoomId()).toBeNull();
+
+    const helper = wsService as unknown as { adapter: { ws: MockWebSocket } };
+    const ws = helper.adapter.ws;
+    const initialSentCount = ws.sentData.length;
+
+    const success1 = wsService.sendRead('msg-global-1');
+    expect(success1).toBe(true);
+    expect(ws.sentData.length).toBe(initialSentCount + 1);
+
+    const lastSent = JSON.parse(ws.sentData[ws.sentData.length - 1]);
+    expect(lastSent).toEqual({
+      type: 'read',
+      lastVisibleMessageId: 'msg-global-1',
+    });
+
+    // Second call without active room should be deduplicated globally
+    const success2 = wsService.sendRead('msg-global-1');
+    expect(success2).toBe(true);
+    expect(ws.sentData.length).toBe(initialSentCount + 1);
+
+    // Sending a different message ID sends a new frame
+    const success3 = wsService.sendRead('msg-global-2');
+    expect(success3).toBe(true);
+    expect(ws.sentData.length).toBe(initialSentCount + 2);
+  });
+
+  it('should deduplicate sendRead calls per explicit roomId', async () => {
+    wsService.initialize(mockConfig);
+
+    await vi.waitFor(() => {
+      expect(wsService.isConnected()).toBe(true);
+    });
+
+    const helper = wsService as unknown as { adapter: { ws: MockWebSocket } };
+    const ws = helper.adapter.ws;
+    const initialSentCount = ws.sentData.length;
+
+    // Send for room-A
+    const successA1 = wsService.sendRead('msg-100', 'room-A');
+    expect(successA1).toBe(true);
+    expect(ws.sentData.length).toBe(initialSentCount + 1);
+
+    // Send duplicate for room-A -> deduplicated
+    const successA2 = wsService.sendRead('msg-100', 'room-A');
+    expect(successA2).toBe(true);
+    expect(ws.sentData.length).toBe(initialSentCount + 1);
+
+    // Send same message ID for different room-B -> not deduplicated
+    const successB = wsService.sendRead('msg-100', 'room-B');
+    expect(successB).toBe(true);
+    expect(ws.sentData.length).toBe(initialSentCount + 2);
+  });
+
+  it('should not cache messageId in sendRead when disconnected, allowing subsequent send on reconnect', async () => {
+    // Before initialization / connection, sendRead should return false and not cache
+    const failBeforeConnect = wsService.sendRead('msg-offline-1', 'room-offline');
+    expect(failBeforeConnect).toBe(false);
+
+    // Global sendRead while disconnected also returns false
+    const failGlobalBeforeConnect = wsService.sendRead('msg-offline-global');
+    expect(failGlobalBeforeConnect).toBe(false);
+
+    // Now initialize and wait for connection
+    wsService.initialize(mockConfig);
+    await vi.waitFor(() => {
+      expect(wsService.isConnected()).toBe(true);
+    });
+
+    const helper = wsService as unknown as { adapter: { ws: MockWebSocket } };
+    const ws = helper.adapter.ws;
+    const initialSentCount = ws.sentData.length;
+
+    // Retrying with the same messageId that failed while offline should now send successfully
+    const successRoom = wsService.sendRead('msg-offline-1', 'room-offline');
+    expect(successRoom).toBe(true);
+    expect(ws.sentData.length).toBe(initialSentCount + 1);
+
+    const successGlobal = wsService.sendRead('msg-offline-global');
+    expect(successGlobal).toBe(true);
+    expect(ws.sentData.length).toBe(initialSentCount + 2);
   });
 
   it('should process NewMessage room_event and update stores idempotently', async () => {

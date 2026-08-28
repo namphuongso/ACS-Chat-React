@@ -11,9 +11,12 @@ import { useConversationStore } from '../store/conversationStore';
 import { mapAcsErrorToChatError, mapAcsMessageToMessage } from '../adapters/acs/acsMappers';
 import { AcsChatError } from '../types/errors.types';
 import { logger } from '../utils/logger';
+import { findLastPersistedMessage, isDocumentVisible, isActiveConversation } from '../utils/messageUtils';
+import { resolveRoomId } from '../utils/conversationKeys';
 import { generateId } from '../utils/id';
 import { fetchBackend } from '../utils/apiClient';
 import type { ChatService } from './chatService';
+import { websocketService } from './websocketService';
 
 /**
  * Result of a message operation.
@@ -55,21 +58,7 @@ export class MessageService {
    * Helper to resolve the backend room ID from a conversation/thread ID.
    */
   private getRoomId(conversationId: string): string {
-    const conversations = useConversationStore.getState().conversations;
-    const conv =
-      conversations[conversationId] ||
-      Object.values(conversations).find(
-        (c) =>
-          c.id === conversationId ||
-          c.conversationId === conversationId ||
-          (c as unknown as Record<string, unknown>).threadId === conversationId ||
-          (c as unknown as Record<string, unknown>).roomId === conversationId
-      );
-    return (
-      conv?.conversationId ||
-      ((conv as unknown as Record<string, unknown>)?.roomId as string) ||
-      conversationId
-    );
+    return resolveRoomId(conversationId, useConversationStore.getState().conversations);
   }
 
   /**
@@ -157,6 +146,21 @@ export class MessageService {
 
       msgStore.setMessages(conversationId, mergedMessages, hasMore, nextContinuationToken);
       msgStore.setLoading(conversationId, false);
+
+      // If this conversation is currently active, mark the latest message as read via WebSocket
+      const convStore = useConversationStore.getState();
+      const isActive = isActiveConversation(
+        convStore.activeConversationId,
+        conversationId,
+        roomId,
+        convStore.conversations
+      );
+      if (isActive && isDocumentVisible() && mergedMessages.length > 0) {
+        const lastMsg = findLastPersistedMessage(mergedMessages);
+        if (lastMsg?.id) {
+          websocketService.sendRead(lastMsg.id, roomId);
+        }
+      }
 
       return mergedMessages.map((message) => ({ message }));
     } catch (error) {

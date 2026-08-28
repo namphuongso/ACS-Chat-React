@@ -15,6 +15,10 @@ import { useMessageStore, compareMessages, getConversationKeys } from '../../sto
 import { LoadingState } from '../LoadingState';
 import { MessageItem } from '../MessageItem';
 import { preloadChatImage } from '../MessageItem/ChatImage';
+import { websocketService } from '../../services/websocketService';
+import { useConversationStore } from '../../store/conversationStore';
+import { resolveRoomId } from '../../utils/conversationKeys';
+import { isDocumentVisible } from '../../utils/messageUtils';
 import type { FilePreviewItem } from '../FilePreviewModal';
 import styles from './MessageList.module.scss';
 
@@ -179,6 +183,7 @@ export const MessageList = React.memo(
       const initialScrolledConvRef = useRef<string | null>(null);
       const isInitialMountPhaseRef = useRef<boolean>(true);
       const hasUserScrolledUpRef = useRef<boolean>(false);
+      const lastSentReadMsgIdRef = useRef<string | null>(null);
 
       // Track whether the initial scroll has settled so we can fade in the list
       const [isScrollReady, setIsScrollReady] = useState(false);
@@ -187,6 +192,7 @@ export const MessageList = React.memo(
         initialScrolledConvRef.current = null;
         isInitialMountPhaseRef.current = true;
         hasUserScrolledUpRef.current = false;
+        lastSentReadMsgIdRef.current = null;
         setIsScrollReady(false);
       }, [conversationId]);
 
@@ -280,6 +286,34 @@ export const MessageList = React.memo(
         timeouts: ReturnType<typeof setTimeout>[];
       }>({ rafs: [], timeouts: [] });
 
+      const markLatestMessageAsRead = useCallback(() => {
+        if (!isDocumentVisible()) return;
+        const currentItems = latestItemsRef.current;
+        for (let i = currentItems.length - 1; i >= 0; i--) {
+          const item = currentItems[i];
+          if (
+            item.type === 'message' &&
+            item.data?.id &&
+            !item.data.id.startsWith('temp-') &&
+            item.data.status !== 'sending' &&
+            item.data.status !== 'failed'
+          ) {
+            if (currentUserId && item.data.sender?.id === currentUserId) {
+              continue;
+            }
+            const msgId = item.data.id;
+            if (lastSentReadMsgIdRef.current !== msgId) {
+              lastSentReadMsgIdRef.current = msgId;
+              const roomId = conversationId
+                ? resolveRoomId(conversationId, useConversationStore.getState().conversations)
+                : undefined;
+              websocketService.sendRead(msgId, roomId);
+            }
+            break;
+          }
+        }
+      }, [conversationId, currentUserId]);
+
       // Core scroll-to-bottom function (always reads latest items from ref)
       const scrollToBottomImmediate = useCallback(() => {
         const currentItems = latestItemsRef.current;
@@ -310,6 +344,7 @@ export const MessageList = React.memo(
         // Reveal the list after scroll attempts have had time to settle
         const t6 = setTimeout(() => {
           setIsScrollReady(true);
+          markLatestMessageAsRead();
         }, 200);
         const t7 = setTimeout(() => {
           isInitialMountPhaseRef.current = false;
@@ -319,7 +354,7 @@ export const MessageList = React.memo(
           rafs: [r1, r2],
           timeouts: [t1, t2, t3, t4, t5, t6, t7],
         };
-      }, [scrollToBottomImmediate]);
+      }, [scrollToBottomImmediate, markLatestMessageAsRead]);
 
       // Scroll to bottom on initial mount or when items first become available
       useEffect(() => {
@@ -331,8 +366,16 @@ export const MessageList = React.memo(
         ) {
           initialScrolledConvRef.current = conversationId || '__default__';
           scheduleScrollToBottom();
+          markLatestMessageAsRead();
         }
-      }, [items.length, conversationId, jumpTarget?.messageId, scheduleScrollToBottom]);
+      }, [items.length, conversationId, jumpTarget?.messageId, scheduleScrollToBottom, markLatestMessageAsRead]);
+
+      // When items change while user is at the bottom, mark latest message as read
+      useEffect(() => {
+        if (!hasUserScrolledUpRef.current || isOwnNewLastItem) {
+          markLatestMessageAsRead();
+        }
+      }, [items, isOwnNewLastItem, markLatestMessageAsRead]);
 
       // Cleanup initial scroll timers on unmount
       useEffect(() => {
@@ -772,6 +815,7 @@ export const MessageList = React.memo(
                 if (isInitialMountPhaseRef.current && !isScrollReady) {
                   setIsScrollReady(true);
                 }
+                markLatestMessageAsRead();
               } else if (isInitialMountPhaseRef.current) {
                 // During initial mount, if we detect we're not at bottom, force re-scroll
                 // This self-corrects when layout shifts push us away from the bottom

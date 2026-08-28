@@ -51,8 +51,8 @@ export function useWebSocket() {
     return success;
   }, []);
 
-  const sendRead = useCallback((lastVisibleMessageId: string): boolean => {
-    return websocketService.sendRead(lastVisibleMessageId);
+  const sendRead = useCallback((lastVisibleMessageId: string, roomId?: string): boolean => {
+    return websocketService.sendRead(lastVisibleMessageId, roomId);
   }, []);
 
   const sendHeartbeat = useCallback((lastVisibleMessageId?: string): boolean => {

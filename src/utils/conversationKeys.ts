@@ -86,3 +86,26 @@ export const resolveConversationKeys = (
   }
   return Array.from(keys);
 };
+
+/**
+ * Resolve the backend room ID for a conversation from any of its aliases.
+ *
+ * The WebSocket layer keys its read-state bookkeeping (`lastVisibleMessageIds`,
+ * `activeRoomId`) by the backend room GUID, so every caller that sends a `read`
+ * frame must resolve to the same identifier. Passing a raw thread/conversation
+ * key instead would create a second, divergent bookkeeping entry and break
+ * deduplication and the last-visible-message replayed on heartbeat/reconnect.
+ *
+ * Falls back to the provided `conversationId` when no conversation record is
+ * found (e.g. before the conversation list has loaded).
+ */
+export const resolveRoomId = (
+  conversationId: string,
+  conversations: Record<string, Conversation> | undefined
+): string => {
+  if (!conversationId) return conversationId;
+  const key = conversations ? findConversationKey(conversationId, conversations) : undefined;
+  const conv = key && conversations ? (conversations[key] as unknown as ConversationLike) : undefined;
+  if (!conv) return conversationId;
+  return conv.conversationId || conv.roomId || conversationId;
+};

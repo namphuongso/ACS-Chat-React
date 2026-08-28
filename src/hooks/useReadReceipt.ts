@@ -14,7 +14,7 @@ export interface MessageReadStatus {
  * @param {string} conversationId - The ID of the conversation
  * @returns {Object} Read receipt state and methods
  * @property {Function} getMessageReadStatus - Method to get the read status for a specific message
- * @property {boolean} readReceiptsSupported - Whether read receipts are supported (requires <= 20 participants)
+ * @property {boolean} readReceiptsSupported - Whether read receipts are supported on ACS fallback (requires <= 20 participants; WebSocket realtime mode has no participant limit)
  * @property {Function} sendReadReceipt - Method to send a read receipt for a specific message
  */
 export function useReadReceipt(conversationId: string) {
@@ -70,14 +70,14 @@ export function useReadReceipt(conversationId: string) {
 
   const sendReadReceipt = useCallback(
     async (messageId: string) => {
-      if (!readReceiptsSupported || !conversationId) return;
+      if (!conversationId.trim() || !messageId) return;
       try {
         await readReceiptService.sendReadReceipt(conversationId, messageId);
       } catch (error) {
         console.warn('Failed to send read receipt', error);
       }
     },
-    [conversationId, readReceiptsSupported]
+    [conversationId]
   );
 
   return useMemo(() => ({

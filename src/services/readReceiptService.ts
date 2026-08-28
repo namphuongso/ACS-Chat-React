@@ -1,9 +1,12 @@
 import type { ChatService } from './chatService';
 import { useChatStore } from '../store/chatStore';
 import { useParticipantStore } from '../store/participantStore';
+import { useConversationStore } from '../store/conversationStore';
 import { AcsChatError } from '../types/errors.types';
 import { mapAcsErrorToChatError, mapAcsReadReceiptToReadReceipt } from '../adapters/acs/acsMappers';
+import { findConversationKey, resolveRoomId } from '../utils/conversationKeys';
 import { websocketService } from './websocketService';
+import { logger } from '../utils/logger';
 
 /**
  * Service for managing and sending read receipts.
@@ -50,7 +53,8 @@ export class ReadReceiptService {
 
   /**
    * Request to send a read receipt.
-   * This function is debounced to avoid flooding ACS.
+   * When WebSocket connection is active, sends immediate 'read' message over WebSocket.
+   * When falling back to ACS, debounces to avoid flooding ACS.
    */
   public async sendReadReceipt(
     conversationId: string,
@@ -75,13 +79,6 @@ export class ReadReceiptService {
       });
     }
 
-    // Participant count check (disable for > 20 participants per ACS limits)
-    const participants =
-      useParticipantStore.getState().participantsByConversation[conversationId] || [];
-    if (participants.length > this.MAX_PARTICIPANTS_FOR_READ_RECEIPTS) {
-      return; // Skip sending read receipts for large groups
-    }
-
     // Skip if we've already sent a read receipt for this specific message
     if (this.lastSentMessageIds.get(conversationId) === messageId) {
       return;
@@ -93,22 +90,44 @@ export class ReadReceiptService {
       clearTimeout(existingTimer);
     }
 
-    // Debounce the actual send
+    // When WebSocket is connected, send immediately without waiting for debounce/heartbeat
+    if (websocketService.isConnected()) {
+      try {
+        const conversations = useConversationStore.getState().conversations;
+        const resolved = resolveRoomId(conversationId, conversations);
+        if (resolved === conversationId && !findConversationKey(conversationId, conversations)) {
+          logger.warn(
+            `[ReadReceiptService] Conversation ${conversationId} not found in store; ` +
+              'falling back to raw conversationId as roomId for read frame.'
+          );
+        }
+        const sent = websocketService.sendRead(messageId, resolved);
+        if (sent) {
+          this.lastSentMessageIds.set(conversationId, messageId);
+          return;
+        }
+      } catch (error) {
+        logger.warn(
+          `[ReadReceiptService] Failed to send WebSocket read receipt for ${messageId} in ${conversationId}:`,
+          error
+        );
+      }
+    }
+
+    // ACS fallback: participant count check (disable for > 20 participants per ACS limits)
+    const participants =
+      useParticipantStore.getState().participantsByConversation[conversationId] || [];
+    if (participants.length > this.MAX_PARTICIPANTS_FOR_READ_RECEIPTS) {
+      return; // Skip sending read receipts for large groups on ACS
+    }
+
+    // Debounce the actual send for ACS
     const timer = setTimeout(async () => {
       this.debounceTimers.delete(conversationId);
 
       try {
-        // Prefer the WebSocket channel when the connection is active, so the
-        // backend receives a single read event instead of a duplicate from
-        // both ACS and the WS channel. Fall back to ACS only when the
-        // WebSocket is not available (e.g. ACS-only deployments).
-        const wsSent = websocketService.isConnected() && websocketService.sendRead(messageId);
-        if (!wsSent) {
-          const threadClient = this.getThreadClient(conversationId);
-          await threadClient.sendReadReceipt({ chatMessageId: messageId });
-        }
-
-        // Mark this messageId as the last one we successfully requested a read receipt for
+        const threadClient = this.getThreadClient(conversationId);
+        await threadClient.sendReadReceipt({ chatMessageId: messageId });
         this.lastSentMessageIds.set(conversationId, messageId);
       } catch (error) {
         // Log the error but don't crash, read receipts are not critical
@@ -116,7 +135,7 @@ export class ReadReceiptService {
           conversationId,
           messageId,
         });
-        console.warn(
+        logger.warn(
           `[ReadReceiptService] Failed to send read receipt for ${messageId} in ${conversationId}:`,
           mappedError
         );
@@ -150,7 +169,7 @@ export class ReadReceiptService {
         break; // Typically the first page has the latest receipts
       }
     } catch (error) {
-      console.warn(`[ReadReceiptService] Failed to load read receipts for ${conversationId}:`, error);
+      logger.warn(`[ReadReceiptService] Failed to load read receipts for ${conversationId}:`, error);
     }
   }
 

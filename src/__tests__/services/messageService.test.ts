@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { messageService } from '../../services/messageService';
 import { useMessageStore } from '../../store/messageStore';
 import { useChatStore } from '../../store/chatStore';
+import { useConversationStore } from '../../store/conversationStore';
 import type { ChatMessage } from '../../types/message.types';
 
 describe('MessageService loadMessages and pagination', () => {
@@ -171,5 +172,161 @@ describe('MessageService loadMessages and pagination', () => {
     expect(convData.messages).toHaveLength(2);
     expect(convData.messages.map((m) => m.id)).toEqual(['msg-1', 'msg-2']);
     expect(results).toHaveLength(1);
+  });
+});
+
+describe('MessageService loadMessages read sync', () => {
+  const mockConfig = {
+    backendUrl: 'https://namphuong-api-dev.azurewebsites.net',
+  };
+
+  beforeEach(() => {
+    useMessageStore.getState().reset();
+    useChatStore.getState().reset();
+    useChatStore.getState().setCurrentUser({ id: 'current-user-id', displayName: 'Current User' });
+    useConversationStore.getState().reset();
+
+    const mockChatService = {
+      isInitialized: vi.fn().mockReturnValue(true),
+      getConfig: vi.fn().mockReturnValue(mockConfig),
+    } as never;
+
+    messageService.setChatService(mockChatService);
+  });
+
+  it('should send WebSocket read message when messages are loaded for the active conversation', async () => {
+    useConversationStore.getState().setActiveConversation('room-1');
+
+    const mockApiResponse = {
+      statusCode: 200,
+      message: 'Successful.',
+      totalRecord: 0,
+      data: {
+        items: [
+          {
+            itemType: 'message',
+            createdDate: '2026-08-20T10:00:00Z',
+            data: {
+              id: 'msg-latest',
+              type: 'text',
+              sequenceId: '5',
+              content: { message: 'Latest message' },
+              createdOn: '2026-08-20T10:00:00Z',
+              senderCommunicationIdentifier: { rawId: 'other-user' },
+            },
+          },
+        ],
+        continuationToken: null,
+        hasMore: false,
+      },
+    };
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockApiResponse),
+    }) as never;
+
+    // Spy on websocketService.sendRead
+    const { websocketService } = await import('../../services/websocketService');
+    const sendReadSpy = vi.spyOn(websocketService, 'sendRead').mockReturnValue(true);
+
+    await messageService.loadMessages('room-1', { maxPageSize: 50 });
+
+    expect(sendReadSpy).toHaveBeenCalledWith('msg-latest', 'room-1');
+
+    sendReadSpy.mockRestore();
+  });
+
+  it('should NOT send WebSocket read message when loading messages for a non-active conversation', async () => {
+    const mockApiResponse = {
+      statusCode: 200,
+      message: 'Successful.',
+      totalRecord: 0,
+      data: {
+        items: [
+          {
+            itemType: 'message',
+            createdDate: '2026-08-20T10:00:00Z',
+            data: {
+              id: 'msg-latest',
+              type: 'text',
+              sequenceId: '5',
+              content: { message: 'Latest message' },
+              createdOn: '2026-08-20T10:00:00Z',
+              senderCommunicationIdentifier: { rawId: 'other-user' },
+            },
+          },
+        ],
+        continuationToken: null,
+        hasMore: false,
+      },
+    };
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockApiResponse),
+    }) as never;
+
+    const { websocketService } = await import('../../services/websocketService');
+    const sendReadSpy = vi.spyOn(websocketService, 'sendRead').mockReturnValue(true);
+
+    await messageService.loadMessages('room-other', { maxPageSize: 50 });
+
+    expect(sendReadSpy).not.toHaveBeenCalled();
+
+    sendReadSpy.mockRestore();
+  });
+
+  it('should skip trailing temp messages and send read for the last persisted message on active conversation', async () => {
+    useConversationStore.getState().setActiveConversation('room-1');
+
+    // Pre-insert an optimistic sending message into the store
+    useMessageStore.getState().addMessage('room-1', {
+      id: 'temp-123456',
+      conversationId: 'room-1',
+      type: 'text',
+      content: 'Sending optimistic message',
+      sender: { id: 'current-user-id' },
+      createdAt: new Date('2026-08-20T10:05:00Z'),
+      status: 'sending',
+    });
+
+    const mockApiResponse = {
+      statusCode: 200,
+      message: 'Successful.',
+      totalRecord: 0,
+      data: {
+        items: [
+          {
+            itemType: 'message',
+            createdDate: '2026-08-20T10:00:00Z',
+            data: {
+              id: 'msg-persisted-real',
+              type: 'text',
+              sequenceId: '10',
+              content: { message: 'Real persisted message' },
+              createdOn: '2026-08-20T10:00:00Z',
+              senderCommunicationIdentifier: { rawId: 'other-user' },
+            },
+          },
+        ],
+        continuationToken: null,
+        hasMore: false,
+      },
+    };
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockApiResponse),
+    }) as never;
+
+    const { websocketService } = await import('../../services/websocketService');
+    const sendReadSpy = vi.spyOn(websocketService, 'sendRead').mockReturnValue(true);
+
+    await messageService.loadMessages('room-1', { maxPageSize: 50 });
+
+    expect(sendReadSpy).toHaveBeenCalledWith('msg-persisted-real', 'room-1');
+
+    sendReadSpy.mockRestore();
   });
 });

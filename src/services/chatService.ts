@@ -278,6 +278,8 @@ export class ChatService {
           event.conversationId;
         if (activeKey !== eventKey && msg.sender?.id !== currentUserId) {
           convStore.incrementUnreadCount(event.conversationId, 1);
+        } else if (activeKey === eventKey) {
+          convStore.resetUnreadCount(event.conversationId);
         }
         if (msg.sender?.id) {
           partStore.removeTypingUser(event.conversationId, msg.sender.id);

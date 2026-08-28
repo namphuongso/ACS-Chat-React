@@ -24,6 +24,7 @@ import type { Contact } from '../types/contact.types';
 import type { ChatError } from '../types/errors.types';
 import { AcsChatError } from '../types/errors.types';
 import { logger } from '../utils/logger';
+import { findLastPersistedMessage } from '../utils/messageUtils';
 import type { ChatService } from './chatService';
 import { websocketService } from './websocketService';
 
@@ -558,6 +559,13 @@ export class ConversationService {
       store.resetUnreadCount(conversationId);
       useMessageStore.getState().trimInactiveConversations(conversationId, 50);
       this.enterRoomWithLeave(roomId);
+
+      const msgs = useMessageStore.getState().messagesByConversation[conversationId]?.messages;
+      const lastMsg = findLastPersistedMessage(msgs);
+      if (lastMsg?.id) {
+        websocketService.sendRead(lastMsg.id, roomId);
+      }
+
       logger.info(`Conversation ${conversationId} opened`);
       return;
     }
@@ -618,6 +626,13 @@ export class ConversationService {
       useMessageStore.getState().trimInactiveConversations(threadId, 50);
       const roomId = directConv.conversationId || threadId;
       this.enterRoomWithLeave(roomId);
+
+      const msgs = useMessageStore.getState().messagesByConversation[threadId]?.messages;
+      const lastMsg = findLastPersistedMessage(msgs);
+      if (lastMsg?.id) {
+        websocketService.sendRead(lastMsg.id, roomId);
+      }
+
       logger.info(`Conversation ${threadId} created and opened for contact ${conversationId}`);
     } catch (e) {
       const chatError = mapAcsErrorToChatError(e, 'openConversation', { conversationId });

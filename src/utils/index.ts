@@ -11,3 +11,4 @@ export * from './imageUtils';
 export * from './linkUtils';
 export * from './pinnedUtils';
 export * from './fileUtils';
+export * from './messageUtils';

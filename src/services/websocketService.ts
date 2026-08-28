@@ -49,6 +49,7 @@ export class WebsocketService {
 
   private activeRoomId: string | null = null;
   private lastVisibleMessageIds = new Map<string, string>();
+  private lastGlobalSentReadId: string | null = null;
 
   private isExplicitlyClosed = false;
   private isReconnecting = false;
@@ -532,26 +533,41 @@ export class WebsocketService {
       return false;
     }
 
+    // Capture the last visible message ID before pruning, so it can be included
+    // in the leave_room frame even after the map entry is cleaned up.
+    const lastVisibleId =
+      lastVisibleMessageId ||
+      (currentActiveRoom ? this.lastVisibleMessageIds.get(currentActiveRoom) : undefined);
+    if (currentActiveRoom) {
+      this.lastVisibleMessageIds.delete(currentActiveRoom);
+    }
+
     const msg: WsClientMessage = {
       type: 'leave_room',
-      lastVisibleMessageId:
-        lastVisibleMessageId ||
-        (currentActiveRoom ? this.lastVisibleMessageIds.get(currentActiveRoom) : undefined),
+      lastVisibleMessageId: lastVisibleId,
     };
     return this.adapter.send(msg);
   }
 
   /**
    * Send an immediate read acknowledgement for a specific message.
+   * Deduplicates by roomId if provided or currently active, otherwise by global socket state.
    */
-  public sendRead(lastVisibleMessageId: string): boolean {
+  public sendRead(lastVisibleMessageId: string, roomId?: string): boolean {
     if (!lastVisibleMessageId || lastVisibleMessageId.trim() === '') {
       logger.warn('[WebsocketService] sendRead called without lastVisibleMessageId.');
       return false;
     }
 
-    if (this.activeRoomId) {
-      this.lastVisibleMessageIds.set(this.activeRoomId, lastVisibleMessageId);
+    const targetRoomId = roomId || this.activeRoomId;
+    if (targetRoomId) {
+      if (this.lastVisibleMessageIds.get(targetRoomId) === lastVisibleMessageId) {
+        return true;
+      }
+    } else {
+      if (this.lastGlobalSentReadId === lastVisibleMessageId) {
+        return true;
+      }
     }
 
     if (!this.adapter || !this.adapter.isConnected()) {
@@ -562,7 +578,17 @@ export class WebsocketService {
       type: 'read',
       lastVisibleMessageId,
     };
-    return this.adapter.send(msg);
+    const sent = this.adapter.send(msg);
+
+    if (sent) {
+      if (targetRoomId) {
+        this.lastVisibleMessageIds.set(targetRoomId, lastVisibleMessageId);
+      } else {
+        this.lastGlobalSentReadId = lastVisibleMessageId;
+      }
+    }
+
+    return sent;
   }
 
   /* -------------------------------------------------------------------------- */
@@ -626,6 +652,7 @@ export class WebsocketService {
     this.sessionId = null;
     this.activeRoomId = null;
     this.lastVisibleMessageIds.clear();
+    this.lastGlobalSentReadId = null;
     this.customListeners.clear();
     this.heartbeatIntervalSec = DEFAULT_HEARTBEAT_INTERVAL_SEC;
     this.heartbeatTimeoutSec = DEFAULT_HEARTBEAT_TIMEOUT_SEC;
